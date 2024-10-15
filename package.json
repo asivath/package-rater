@@ -16,7 +16,7 @@
   "type": "module",
   "workspaces": [
     "app",
-    "package-rater"
+    "package-rater-cli"
   ],
   "scripts": {
     "build": "yarn workspaces foreach -A --parallel run build",
