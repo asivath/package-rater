@@ -1,0 +1,39 @@
+{
+  "name": "package-rater-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ECE 461 Project Phase 2",
+  "homepage": "https://github.com/asivath/ECE461_Phase2_group31#readme",
+  "bugs": {
+    "url": "https://github.com/asivath/ECE461_Phase2_group31/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asivath/ECE461_Phase2_group31.git"
+  },
+  "license": "MIT",
+  "author": "Aditya Sivathanu, Kevin Chang, Ellis Selznick",
+  "type": "module",
+  "workspaces": [
+    "app",
+    "package-rater"
+  ],
+  "scripts": {
+    "build": "yarn workspaces foreach -A --parallel run build",
+    "dev": "yarn workspace package-rater-app dev",
+    "format": "yarn prettier --write app/src package-rater/src '*.json' '.github/workflows/*.yml'",
+    "lint": "cd app && yarn lint && cd ../package-rater && yarn lint",
+    "quality": "yarn format && yarn lint && yarn clean",
+    "test": "yarn workspaces foreach -A --parallel run test",
+    "test:ci": "yarn workspacse foreach -A --parallel run test:ci",
+    "test:coverage": "yarn workspaces foreach -A --parallel run test:coverage",
+    "test:coverage-ci": "yarn workspaces foreach -A --parallel run test:coverage-ci",
+    "clean": "yarn workspaces foreach -A run clean && rm -rf coverage node_modules"
+  },
+  "devDependencies": {
+    "eslint": "^9.11.1",
+    "prettier": "^3.3.3",
+    "typescript": "5.5.4"
+  },
+  "packageManager": "yarn@4.5.0"
+}

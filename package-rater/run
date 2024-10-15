@@ -1,0 +1,40 @@
+#!/bin/bash
+set -o pipefail
+
+# Function to run the install mode
+install_mode() {
+  echo "Running install mode..."
+  yarn set version berry
+  yarn install
+  yarn build
+}
+
+# Function to run the URL_File mode
+url_file_mode() {
+  if [ -z "$1" ]; then
+    echo "Please provide a URL file."
+    exit 1
+  fi
+  URL_FILE="$1"
+  yarn start $URL_FILE
+}
+
+# Function to run the test mode
+test_mode() {
+  # echo "Running tests..."
+  yarn start test
+  # npx jest --coverage
+}
+
+# Check the first argument
+case "$1" in
+  install)
+    install_mode
+    ;;
+  test)
+    test_mode
+    ;;
+  *)
+    url_file_mode "$1"
+    ;;
+esac
