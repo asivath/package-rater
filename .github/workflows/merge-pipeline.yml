@@ -117,7 +117,7 @@ jobs:
         id: playwright-cache
         with:
           path: |
-            '/home/runner/.cache/ms-playwright/'
+            ~/.cache/ms-playwright
           key: '${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}'
           restore-keys: |
             ${{ runner.os }}-playwright-
