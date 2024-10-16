@@ -21,8 +21,8 @@
   "scripts": {
     "build": "yarn workspaces foreach -A --parallel run build",
     "dev": "yarn workspace package-rater-app dev",
-    "format": "yarn prettier --write app/src package-rater/src '*.json' '.github/workflows/*.yml'",
-    "lint": "cd app && yarn lint && cd ../package-rater && yarn lint",
+    "format": "yarn prettier --write app/src package-rater-cli/src '*.json' '.github/workflows/*.yml'",
+    "lint": "cd app && yarn lint && cd ../package-rater-cli && yarn lint",
     "quality": "yarn format && yarn lint && yarn clean",
     "test": "yarn workspaces foreach -A --parallel run test",
     "test:ci": "yarn workspacse foreach -A --parallel run test:ci",
