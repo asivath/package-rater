@@ -65,17 +65,7 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Cache Yarn dependencies
-        uses: actions/cache@v3
-        id: cache
-        with:
-          path: .yarn/cache
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
       - name: Install Dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
         run: yarn
 
       - name: Run ESLint and Prettier
@@ -121,15 +111,17 @@ jobs:
         with:
           path: |
             '~/.cache/ms-playwright'
-            .yarn/cache
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          key: '${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}'
           restore-keys: |
-            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-playwright-
 
       - name: Install Dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: yarn && yarn dlx playwright install --with-deps
+        run: yarn
 
+      - name: Install Playwright dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: yarn dlx playwright install --with-deps
+        
       - name: Build the project
         id: build
         run: |
