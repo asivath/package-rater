@@ -2,13 +2,13 @@
   "name": "package-rater-cli",
   "version": "1.0.0",
   "description": "ECE 461 Project Phase 2",
-  "homepage": "https://github.com/asivath/ECE461_Phase2_group31#readme",
+  "homepage": "https://github.com/asivath/package-rater#readme",
   "bugs": {
-    "url": "https://github.com/asivath/ECE461_Phase2_group31/issues"
+    "url": "https://github.com/asivath/package-rater/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/asivath/ECE461_Phase2_group31.git"
+    "url": "git+https://github.com/asivath/package-rater.git"
   },
   "license": "MIT",
   "author": "Aditya Sivathanu, Kevin Chang, Ellis Selznick",
