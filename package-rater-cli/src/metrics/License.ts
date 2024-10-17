@@ -96,7 +96,6 @@ export async function calculateLicense(owner: string, repo: string, repoDir: str
     const packageFilePath = path.join(repoDir, "package.json");
     const readmeFilePath = path.join(repoDir, "README.md");
     // Check package.json for license
-    if (await fileExists(packageFilePath)) {
       try {
         const packageJson = JSON.parse(await fs.readFile(packageFilePath, "utf8"));
         const packageLicense = packageJson.license;
@@ -107,12 +106,8 @@ export async function calculateLicense(owner: string, repo: string, repoDir: str
       } catch (error) {
         logger.warn(`Error reading package.json for ${owner}/${repo}:`, error);
       }
-    } else {
-      logger.info(`No package.json found for ${owner}/${repo}`);
-    }
 
     // Check LICENSE file for license
-
     try {
       const licenseContent = await fs.readFile(licenseFilePath, "utf8");
       for (const [license, score] of compatibilityTable) {
