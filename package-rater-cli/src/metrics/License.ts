@@ -80,20 +80,6 @@ const compatibilityTable = new Map([
 ]);
 
 /**
- * Check if a file exists at the given path.
- * @param filePath The path to the file.
- * @returns True if the file exists, false otherwise.
- */
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Calculate the license score by checking LICENSE, README, and package.json files.
  * @param owner The owner of the repository.
  * @param repo The name of the repository.
@@ -126,37 +112,30 @@ export async function calculateLicense(owner: string, repo: string, repoDir: str
     }
 
     // Check LICENSE file for license
-    if (await fileExists(licenseFilePath)) {
-      try {
-        const licenseContent = await fs.readFile(licenseFilePath, "utf8");
-        for (const [license, score] of compatibilityTable) {
-          if (licenseContent.includes(license)) {
-            logger.info(`Found license ${license} in LICENSE file for ${owner}/${repo}`);
-            return score;
-          }
+
+    try {
+      const licenseContent = await fs.readFile(licenseFilePath, "utf8");
+      for (const [license, score] of compatibilityTable) {
+        if (licenseContent.includes(license)) {
+          logger.info(`Found license ${license} in LICENSE file for ${owner}/${repo}`);
+          return score;
         }
-      } catch (error) {
-        logger.warn(`Error reading LICENSE file for ${owner}/${repo}:`, error);
       }
-    } else {
-      logger.info(`No LICENSE file found for ${owner}/${repo}`);
+    } catch (error) {
+      logger.warn(`Error reading LICENSE file for ${owner}/${repo}:`, error);
     }
 
     // Check README.md for license information
-    if (await fileExists(readmeFilePath)) {
-      try {
-        const readmeContent = await fs.readFile(readmeFilePath, "utf8");
-        for (const [license, score] of compatibilityTable) {
-          if (readmeContent.toLowerCase().includes(license.toLowerCase())) {
-            logger.info(`Found license ${license} in README.md for ${owner}/${repo}`);
-            return score;
-          }
+    try {
+      const readmeContent = await fs.readFile(readmeFilePath, "utf8");
+      for (const [license, score] of compatibilityTable) {
+        if (readmeContent.toLowerCase().includes(license.toLowerCase())) {
+          logger.info(`Found license ${license} in README.md for ${owner}/${repo}`);
+          return score;
         }
-      } catch (error) {
-        logger.warn(`Error reading README.md for ${owner}/${repo}:`, error);
       }
-    } else {
-      logger.info(`No README.md found for ${owner}/${repo}`);
+    } catch (error) {
+      logger.warn(`Error reading README.md for ${owner}/${repo}:`, error);
     }
   } catch (error) {
     logger.error(`Error calculating license score for ${owner}/${repo}:`, error);
