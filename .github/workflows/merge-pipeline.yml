@@ -108,22 +108,7 @@ jobs:
       - name: Install Dependencies
         run: yarn
 
-      - name: Get installed Playwright version
-        id: playwright-version
-        run: echo "::set-output name=version::$(yarn why --json @playwright/test | grep -h 'workspace:.' | jq --raw-output '.children[].locator' | sed -e 's/@playwright\/test@.*://')"
-
-      - name: Cache Yarn dependencies
-        uses: actions/cache@v3
-        id: playwright-cache
-        with:
-          path: |
-            ~/.cache/ms-playwright
-          key: '${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}'
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install Playwright dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: yarn dlx playwright install --with-deps
 
       - name: Build the project
