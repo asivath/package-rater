@@ -1,7 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
 import { getLogger } from "../logger.js";
-import { cloneRepository } from "../util.js";
 
 const logger = getLogger();
 
@@ -77,7 +76,7 @@ const compatibilityTable = new Map([
   ["University of Illinois/NCSA Open Source License", 1],
   ["NCSA", 1],
   ["The Unlicense", 1],
-  ["zLib License", 1],
+  ["zLib License", 1]
 ]);
 
 /**
@@ -101,64 +100,60 @@ async function fileExists(filePath: string): Promise<boolean> {
  * @param repoDir The path to the cloned repository directory.
  * @returns The compatibility score based on the license.
  */
-export async function calculateLicense(
-  owner: string,
-  repo: string,
-  repoDir: string
-): Promise<number> {
+export async function calculateLicense(owner: string, repo: string, repoDir: string): Promise<number> {
   const licenseFilePath = path.join(repoDir, "LICENSE");
   const packageFilePath = path.join(repoDir, "package.json");
   const readmeFilePath = path.join(repoDir, "README.md");
-    // Check package.json for license
-    if (await fileExists(packageFilePath)) {
-      try {
-        const packageJson = JSON.parse(await fs.readFile(packageFilePath, "utf8"));
-        const packageLicense = packageJson.license;
-        if (packageLicense && compatibilityTable.has(packageLicense)) {
-          logger.info(`Found license ${packageLicense} in package.json for ${owner}/${repo}`);
-          return compatibilityTable.get(packageLicense)!;
-        }
-      } catch (error) {
-        logger.warn(`Error reading package.json for ${owner}/${repo}:`, error);
+  // Check package.json for license
+  if (await fileExists(packageFilePath)) {
+    try {
+      const packageJson = JSON.parse(await fs.readFile(packageFilePath, "utf8"));
+      const packageLicense = packageJson.license;
+      if (packageLicense && compatibilityTable.has(packageLicense)) {
+        logger.info(`Found license ${packageLicense} in package.json for ${owner}/${repo}`);
+        return compatibilityTable.get(packageLicense)!;
       }
-    } else {
-      logger.info(`No package.json found for ${owner}/${repo}`);
+    } catch (error) {
+      logger.warn(`Error reading package.json for ${owner}/${repo}:`, error);
     }
-  
-    // Check LICENSE file for license
-    if (await fileExists(licenseFilePath)) {
-      try {
-        const licenseContent = await fs.readFile(licenseFilePath, "utf8");
-        for (const [license, score] of compatibilityTable) {
-          if (licenseContent.includes(license)) {
-            logger.info(`Found license ${license} in LICENSE file for ${owner}/${repo}`);
-            return score;
-          }
-        }
-      } catch (error) {
-        logger.warn(`Error reading LICENSE file for ${owner}/${repo}:`, error);
-      }
-    } else {
-      logger.info(`No LICENSE file found for ${owner}/${repo}`);
-    }
-  
-    // Check README.md for license information
-    if (await fileExists(readmeFilePath)) {
-      try {
-        const readmeContent = await fs.readFile(readmeFilePath, "utf8");
-        for (const [license, score] of compatibilityTable) {
-          if (readmeContent.toLowerCase().includes(license.toLowerCase())) {
-            logger.info(`Found license ${license} in README.md for ${owner}/${repo}`);
-            return score;
-          }
-        }
-      } catch (error) {
-        logger.warn(`Error reading README.md for ${owner}/${repo}:`, error);
-      }
-    } else {
-      logger.info(`No README.md found for ${owner}/${repo}`);
-    }
-  
-    logger.info(`No valid license found for ${owner}/${repo}`);
-    return 0; // Return 0 if no license information was found in License, README, or package.json
+  } else {
+    logger.info(`No package.json found for ${owner}/${repo}`);
   }
+
+  // Check LICENSE file for license
+  if (await fileExists(licenseFilePath)) {
+    try {
+      const licenseContent = await fs.readFile(licenseFilePath, "utf8");
+      for (const [license, score] of compatibilityTable) {
+        if (licenseContent.includes(license)) {
+          logger.info(`Found license ${license} in LICENSE file for ${owner}/${repo}`);
+          return score;
+        }
+      }
+    } catch (error) {
+      logger.warn(`Error reading LICENSE file for ${owner}/${repo}:`, error);
+    }
+  } else {
+    logger.info(`No LICENSE file found for ${owner}/${repo}`);
+  }
+
+  // Check README.md for license information
+  if (await fileExists(readmeFilePath)) {
+    try {
+      const readmeContent = await fs.readFile(readmeFilePath, "utf8");
+      for (const [license, score] of compatibilityTable) {
+        if (readmeContent.toLowerCase().includes(license.toLowerCase())) {
+          logger.info(`Found license ${license} in README.md for ${owner}/${repo}`);
+          return score;
+        }
+      }
+    } catch (error) {
+      logger.warn(`Error reading README.md for ${owner}/${repo}:`, error);
+    }
+  } else {
+    logger.info(`No README.md found for ${owner}/${repo}`);
+  }
+
+  logger.info(`No valid license found for ${owner}/${repo}`);
+  return 0; // Return 0 if no license information was found in License, README, or package.json
+}
