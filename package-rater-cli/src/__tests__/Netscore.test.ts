@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import calculateMetrics from "../metrics/Netscore"; // Adjust this import as needed
-import { getGithubRepo } from "../graphql"; // Adjust this import as needed
-import { getLogger } from "../logger"; // Adjust this import as needed
+import calculateMetrics from "../metrics/Netscore"; // Ensure this path is correct
+import { getGithubRepo } from "../graphql"; // Ensure this path is correct
+import { getLogger } from "../logger";
 
-// Mock the getGithubRepo response with explicit typing
+// Mocking modules
 vi.mock("../graphql", () => ({
-  getGithubRepo: vi.fn<(...args: Parameters<typeof getGithubRepo>) => Promise<string>>()
+  getGithubRepo: vi.fn() // Simplified mock
 }));
 
 vi.mock("../metrics/Correctness", () => ({
@@ -28,20 +28,22 @@ vi.mock("../metrics/BusFactor", () => ({
   calculateBusFactor: vi.fn().mockResolvedValue(0.8)
 }));
 
-vi.mock("../logger", () => {
-  return {
-    getLogger: vi.fn().mockReturnValue({
-      error: vi.fn(),
-      info: vi.fn()
-    })
-  };
-});
+vi.mock("../logger", () => ({
+  getLogger: vi.fn().mockReturnValue({
+    error: vi.fn(),
+    info: vi.fn()
+  })
+}));
+
+vi.mock("../util", () => ({
+  cloneRepo: vi.fn()
+}));
 
 describe("calculateMetrics", () => {
   const logger = getLogger();
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.clearAllMocks(); // Ensure all mocks are reset before each test
   });
 
   it("should calculate metrics correctly with valid data", async () => {
@@ -49,7 +51,7 @@ describe("calculateMetrics", () => {
     const result = await calculateMetrics("https://github.com/owner/repo");
 
     expect(result.URL).toBe("https://github.com/owner/repo");
-    expect(result.NetScore).toBe(0.8); // Adjust based on the formula
+    expect(result.NetScore).toBe(0.8);
     expect(result.Correctness).toBe(0.8);
     expect(result.License).toBe(0.8);
     expect(result.RampUp).toBe(0.8);
@@ -79,30 +81,28 @@ describe("calculateMetrics", () => {
   });
 
   it("should handle errors in individual metric calculations gracefully", async () => {
-    // Mock the getGithubRepo response
     getGithubRepo.mockResolvedValue("https://github.com/owner/repo");
 
     const result = await calculateMetrics("https://github.com/owner/repo");
 
     expect(result.URL).toBe("https://github.com/owner/repo");
-    expect(result.NetScore).toBe(0.8); // Adjust based on the formula
-    expect(result.Correctness).toBe(0.8); // Correctness failed
+    expect(result.NetScore).toBe(0.8);
+    expect(result.Correctness).toBe(0.8);
     expect(result.License).toBe(0.8);
     expect(result.RampUp).toBe(0.8);
-    expect(result.ResponsiveMaintainer).toBe(0.8); // Responsiveness failed
+    expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
 
     expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("should handle repository cloning errors", async () => {
-    // Mock the getGithubRepo response to cause an error
     getGithubRepo.mockRejectedValue(new Error("Failed to clone repo"));
 
     const result = await calculateMetrics("https://github.com/owner/repo");
 
     expect(result.URL).toBe("https://github.com/owner/repo");
-    expect(result.NetScore).toBe(0); // All scores should be 0
+    expect(result.NetScore).toBe(0);
     expect(result.Correctness).toBe(0);
     expect(result.License).toBe(0);
     expect(result.RampUp).toBe(0);

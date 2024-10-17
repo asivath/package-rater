@@ -126,9 +126,11 @@ export async function calculateBusFactor(owner: string, name: string): Promise<n
     }
 
     busfactor /= commitnumbers.length;
+    logger.info(`Bus factor for ${owner}/${name}: ${busfactor}`);
+    return busfactor;
   } catch (error) {
     logger.error("Error fetching data from GitHub API:", error);
   }
-  logger.info(`Bus factor for ${owner}/${name}: ${busfactor}`);
-  return busfactor;
+
+  return 0;
 }
