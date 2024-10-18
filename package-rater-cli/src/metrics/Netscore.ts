@@ -5,6 +5,7 @@ import { calculateLicense } from "./License.js";
 import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
+import { cloneRepo } from "../util.js";
 
 const logger = getLogger();
 
@@ -28,7 +29,14 @@ async function latencyWrapper(calculateFn: () => Promise<number>): Promise<{ res
   }
 }
 
-async function getRepoOwner(url: string): Promise<[string, string] | null> {
+/**
+ * Get the owner and repository name from a GitHub URL
+ * @param url The GitHub URL
+ * @returns The owner and repository name
+ * Note that getGithubRepo will return same url if it is a GitHub URL,
+ * otherwise it will convert NPM url to GitHub URL
+ */
+async function getRepoOwner(url: string): Promise<[string, string, string] | null> {
   try {
     const response = await getGithubRepo(url);
     if (response) {
@@ -36,7 +44,7 @@ async function getRepoOwner(url: string): Promise<[string, string] | null> {
       const urlObj = new URL(cleanUrl);
       const pathnameParts = urlObj.pathname.split("/").filter(Boolean);
       if (pathnameParts.length === 2) {
-        return [pathnameParts[1], pathnameParts[0]];
+        return [pathnameParts[1], pathnameParts[0], cleanUrl];
       } else {
         logger.error(`Invalid package URL: ${response}`);
         throw new Error(`Invalid package URL: ${response}`);
@@ -44,16 +52,13 @@ async function getRepoOwner(url: string): Promise<[string, string] | null> {
     }
   } catch (error) {
     logger.info(`Error fetching package info for ${url}:`, error);
-    return null;
   }
   return null;
 }
 
 /**
  * Calculate the metrics for a package or repository
- * @param ownerOrPackage The owner of the repository or the name of the package
- * @param originalURL The original URL of the package
- * @param repo The name of the repository (if applicable)
+ * @param url The original URL of the package
  * @returns The metrics for the package or repository
  */
 export default async function calculateMetrics(url: string): Promise<Record<string, string | number>> {
@@ -62,10 +67,11 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
     if (!repoInfo) {
       throw new Error(`Unable to retrieve repository information for URL: ${url}`);
     }
-    const [repoName, repoOwner] = repoInfo;
+    const [repoName, repoOwner, gitUrl] = repoInfo;
+    const repoDir = await cloneRepo(gitUrl, repoName);
     const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor] = await Promise.all([
       latencyWrapper(() => calculateCorrectness(repoOwner, repoName)),
-      latencyWrapper(() => calculateLicense(repoOwner, repoName)),
+      latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
       latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
       latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
       latencyWrapper(() => calculateRampup(repoOwner, repoName))
