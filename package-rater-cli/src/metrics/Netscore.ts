@@ -5,6 +5,7 @@ import { calculateLicense } from "./License.js";
 import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
+import { calculatePinnedDependencyFraction } from "./Dependencies.js";
 import { cloneRepo } from "../util.js";
 
 const logger = getLogger();
@@ -69,12 +70,13 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
     }
     const [repoName, repoOwner, gitUrl] = repoInfo;
     const repoDir = await cloneRepo(gitUrl, repoName);
-    const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor] = await Promise.all([
+    const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor, dependencies] = await Promise.all([
       latencyWrapper(() => calculateCorrectness(repoOwner, repoName)),
       latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
       latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
       latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
-      latencyWrapper(() => calculateRampup(repoOwner, repoName))
+      latencyWrapper(() => calculateRampup(repoOwner, repoName)),
+      latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir))
     ]);
 
     const netscore =
@@ -99,8 +101,12 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       ResponsiveMaintainer: parseFloat(responsiveness.result.toFixed(2)),
       ResponsiveMaintainer_Latency: parseFloat(responsiveness.time.toFixed(2)),
       License: parseFloat(licenseCompatibility.result.toFixed(2)),
-      License_Latency: parseFloat(licenseCompatibility.time.toFixed(2))
+      License_Latency: parseFloat(licenseCompatibility.time.toFixed(2)),
+      Dependencies: parseFloat(dependencies.result.toFixed(2)),
+      Dependencies_Latency: parseFloat(dependencies.time.toFixed(2))
     };
+
+    logger.info(ndjsonOutput);
 
     return ndjsonOutput;
   } catch (error) {
@@ -118,7 +124,9 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       ResponsiveMaintainer: 0,
       ResponsiveMaintainer_Latency: 0,
       License: 0,
-      License_Latency: 0
+      License_Latency: 0,
+      Dependencies: 0,
+      Dependencies_Latency: 0
     };
   }
 }
