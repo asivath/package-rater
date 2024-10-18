@@ -11,8 +11,3 @@ coverage
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
-.amplify
-
-# amplify
-amplify_outputs*
-amplifyconfiguration*
