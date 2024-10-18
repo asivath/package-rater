@@ -38,6 +38,17 @@ vi.mock("../metrics/BusFactor", () => ({
   calculateBusFactor: vi.fn().mockResolvedValue(0.8)
 }));
 
+vi.mock("../metrics/Dependencies", () => ({
+  calculatePinnedDependencyFraction: vi.fn().mockResolvedValue(0.8)
+}));
+
+vi.mock("../logger", () => ({
+  getLogger: vi.fn().mockReturnValue({
+    error: vi.fn(),
+    info: vi.fn()
+  })
+}));
+
 vi.mock("../util", () => ({
   cloneRepo: vi.fn().mockResolvedValue("repoDir")
 }));
@@ -61,8 +72,9 @@ describe("calculateMetrics", () => {
     expect(result.RampUp).toBe(0.8);
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
+    expect(result.Dependencies).toBe(0.8);
 
-    expect(logger.info).toHaveBeenCalled();
+    expect(logger.info).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -78,6 +90,7 @@ describe("calculateMetrics", () => {
     expect(result.RampUp).toBe(0);
     expect(result.ResponsiveMaintainer).toBe(0);
     expect(result.BusFactor).toBe(0);
+    expect(result.Dependencies).toBe(0);
 
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining("Unable to retrieve repository information for URL: invalid-url")
@@ -96,6 +109,7 @@ describe("calculateMetrics", () => {
     expect(result.RampUp).toBe(0.8);
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
+    expect(result.Dependencies).toBe(0.8);
 
     expect(logger.error).not.toHaveBeenCalled();
   });
@@ -112,6 +126,7 @@ describe("calculateMetrics", () => {
     expect(result.RampUp).toBe(0);
     expect(result.ResponsiveMaintainer).toBe(0);
     expect(result.BusFactor).toBe(0);
+    expect(result.Dependencies).toBe(0);
 
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Error calculating metrics"));
   });
