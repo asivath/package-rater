@@ -1,8 +1,8 @@
 import fs from "fs/promises";
 import calculateMetrics from "../metrics/Netscore.js";
-import { getLogger } from "../logger.js";
+import { getLogger } from "@package-rater/shared";
 
-const logger = getLogger();
+const logger = getLogger("cli");
 
 export class URLFileCommand {
   public static async run(file: string): Promise<void> {

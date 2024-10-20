@@ -1,4 +1,3 @@
-import { uploadData } from "aws-amplify/storage";
 import { styled } from "@mui/material/styles";
 import Button from "@mui/material/Button";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -19,17 +18,7 @@ export default function InputFileUpload() {
   return (
     <Button component="label" role={undefined} variant="contained" tabIndex={-1} startIcon={<CloudUploadIcon />}>
       Upload files
-      <VisuallyHiddenInput
-        type="file"
-        onChange={(event) => {
-          const file = event.target.files![0];
-          uploadData({
-            path: `packages/${file.name}`,
-            data: file
-          });
-        }}
-        multiple
-      />
+      <VisuallyHiddenInput type="file" multiple />
     </Button>
   );
 }

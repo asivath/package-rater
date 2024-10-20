@@ -19,7 +19,7 @@ vi.mock("../graphql", () => ({
 }));
 
 describe("calculateCorrectness", () => {
-  const logger = getLogger();
+  const logger = getLogger("test");
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -40,7 +40,7 @@ vi.mock("../util", () => ({
 }));
 
 describe("calculateMetrics", () => {
-  const logger = getLogger();
+  const logger = getLogger("test");
 
   beforeEach(() => {
     vi.clearAllMocks(); // Ensure all mocks are reset before each test

@@ -5,9 +5,9 @@ import { SimpleGit, simpleGit } from "simple-git";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs/promises";
-import { getLogger } from "./logger.js";
+import { getLogger } from "@package-rater/shared";
 
-const logger = getLogger();
+const logger = getLogger("cli");
 
 /**
  * Clone a repository from a given URL

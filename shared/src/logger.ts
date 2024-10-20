@@ -8,8 +8,9 @@ let bareLogger: Logger | null = null;
 
 /**
  * Initialize the logger instance.
+ * @param source The source of the logger.
  */
-const initializeLogger = () => {
+const initializeLogger = (source: string) => {
   const logLevel = (() => {
     const level = process.env.LOG_LEVEL;
     switch (level) {
@@ -30,11 +31,11 @@ const initializeLogger = () => {
       if (typeof message === "object") {
         message = JSON.stringify(message, null, 2);
       }
-      return `${timestamp} [${level}]: ${message}`;
+      return `${timestamp} [${level}] [${source}]: ${message}`;
     })
   );
 
-  const logDir = process.env.LOG_FILE || "./app.log";
+  const logDir = process.env.LOG_FILE || "../package-rater.log";
 
   bareLogger = winston.createLogger({
     level: logLevel,
@@ -46,11 +47,12 @@ const initializeLogger = () => {
 
 /**
  * Get the logger instance.
+ * @param source The source of the logger.
  * @returns The logger instance.
  */
-export const getLogger = () => {
+export const getLogger = (source: string) => {
   if (!bareLogger) {
-    initializeLogger();
+    initializeLogger(source);
     if (!bareLogger) {
       throw new Error("Unable to initialize logger");
     }
@@ -63,7 +65,7 @@ export const getLogger = () => {
  */
 export const reinitializeLogger = () => {
   bareLogger = null;
-  initializeLogger();
+  initializeLogger("test");
   if (!bareLogger) {
     throw new Error("Unable to reinitialize logger");
   }

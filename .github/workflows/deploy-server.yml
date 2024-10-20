@@ -11,18 +11,17 @@ jobs:
   ssh-and-build:
     runs-on: ubuntu-latest
     steps:
-    - name: Executing remote ssh commands to deploy server
-      uses: appleboy/ssh-action@v1.1.0
-      with:
-        host: ${{ secrets.AWS_EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.AWS_ECE_SSH_KEY }}
-        script: |
-          cd package-rater
-          git pull
-          cd server
-          yarn stop
-          yarn build
-          yarn start
-          yarn pm2 status
-      
+      - name: Executing remote ssh commands to deploy server
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.AWS_ECE_SSH_KEY }}
+          script: |
+            cd package-rater
+            git pull
+            cd server
+            yarn stop
+            yarn build
+            yarn start
+            yarn pm2 status

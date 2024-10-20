@@ -1,9 +1,9 @@
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import path from "path";
-import { getLogger } from "../logger.js";
+import { getLogger } from "@package-rater/shared";
 
-const logger = getLogger();
+const logger = getLogger("cli");
 
 export class TestCommand {
   public static run(): void {

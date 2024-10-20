@@ -1,4 +1,4 @@
-import { getLogger } from "../logger.js";
+import { getLogger } from "@package-rater/shared";
 import { getGithubRepo } from "../graphql.js";
 import { calculateCorrectness } from "./Correctness.js";
 import { calculateLicense } from "./License.js";
@@ -7,7 +7,7 @@ import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { cloneRepo } from "../util.js";
 
-const logger = getLogger();
+const logger = getLogger("cli");
 
 /**
  * Calculate the score of a function and return the score and latency

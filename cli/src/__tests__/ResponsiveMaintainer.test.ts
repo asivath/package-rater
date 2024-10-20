@@ -18,7 +18,7 @@ vi.mock("../logger", () => {
 });
 
 describe("calculateResponsiveMaintainer", () => {
-  const logger = getLogger();
+  const logger = getLogger("test");
   it("should calculate responsiveness correctly when issues exist", async () => {
     const mockRepoResponse = {
       data: {
@@ -92,7 +92,7 @@ describe("calculateResponsiveMaintainer", () => {
 
     expect(result).toBe(0.5);
 
-    const logger = getLogger();
+    const logger = getLogger("test");
     expect(logger.info).toHaveBeenCalledWith("No issues found");
   });
 
@@ -100,7 +100,7 @@ describe("calculateResponsiveMaintainer", () => {
     const mockError = new Error("GitHub API failed");
     (getGitHubData as Mock).mockRejectedValueOnce(mockError);
 
-    const logger = getLogger();
+    const logger = getLogger("test");
 
     await expect(calculateResponsiveMaintainer("test-owner", "test-repo")).rejects.toThrow("GitHub API failed");
 

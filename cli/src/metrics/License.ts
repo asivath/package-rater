@@ -1,8 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
-import { getLogger } from "../logger.js";
+import { getLogger } from "@package-rater/shared";
 
-const logger = getLogger();
+const logger = getLogger("cli");
 
 const compatibilityTable = new Map([
   ["LGPL-2.1", 0.75],

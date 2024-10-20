@@ -1,12 +1,18 @@
 import Fastify from "fastify";
+import { uploadPackage } from "./routes/uploadPackage.js";
+import { mkdir, access, constants } from "fs/promises";
 
 const fastify = Fastify({
   logger: false
 });
 
-fastify.get("/", async (_request, _reply) => {
-  return { hello: "bye" };
-});
+try {
+  await access("./packages", constants.F_OK);
+} catch {
+  await mkdir("./packages");
+}
+
+fastify.post("/package", uploadPackage);
 
 const start = async () => {
   try {

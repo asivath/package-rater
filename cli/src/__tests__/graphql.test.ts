@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 describe("getGithubRepo", () => {
-  const logger = getLogger();
+  const logger = getLogger("test");
 
   it("should return the GitHub URL if a valid GitHub URL is provided", async () => {
     const url = "https://github.com/owner/repo";

@@ -1,41 +1,37 @@
 {
   "name": "package-rater-monorepo",
-  "version": "1.0.0",
-  "private": true,
   "description": "ECE 461 Project Phase 2",
-  "homepage": "https://github.com/asivath/package-rater#readme",
-  "bugs": {
-    "url": "https://github.com/asivath/package-rater/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/asivath/package-rater.git"
-  },
-  "license": "MIT",
+  "version": "1.0.0",
   "author": "Aditya Sivathanu, Kevin Chang, Ellis Selznick",
-  "type": "module",
-  "workspaces": [
-    "app",
-    "package-rater-cli",
-    "server"
-  ],
-  "scripts": {
-    "build": "yarn workspaces foreach -A --parallel run build",
-    "dev": "concurrently \"yarn workspace package-rater-app dev\" \"yarn workspace package-rater-server dev\"",
-    "format": "yarn prettier --write app/src package-rater-cli/src server/src '*.json' '.github/workflows/*.yml'",
-    "lint": "cd app && yarn lint && cd ../package-rater-cli && yarn lint && cd ../server && yarn lint",
-    "quality": "yarn format && yarn lint && yarn clean",
-    "test": "yarn workspaces foreach -A --parallel run test",
-    "test:ci": "yarn workspacse foreach -A --parallel run test:ci",
-    "test:coverage": "yarn workspaces foreach -A --parallel run test:coverage",
-    "test:coverage-ci": "yarn workspaces foreach -A --parallel run test:coverage-ci",
-    "clean": "yarn workspaces foreach -A run clean && rm -rf coverage node_modules"
-  },
+  "bugs": "https://github.com/asivath/package-rater/issues",
   "devDependencies": {
     "concurrently": "^9.0.0",
     "eslint": "^9.11.1",
     "prettier": "^3.3.3",
     "typescript": "5.5.4"
   },
-  "packageManager": "yarn@4.5.0"
+  "homepage": "https://github.com/asivath/package-rater#readme",
+  "license": "MIT",
+  "packageManager": "yarn@4.5.0",
+  "private": true,
+  "repository": "asivath/package-rater.git",
+  "scripts": {
+    "build": "yarn workspace @package-rater/shared build && yarn workspaces foreach -A --parallel --exclude @package-rater/shared run build",
+    "clean": "yarn workspaces foreach -A run clean && rm -rf coverage node_modules",
+    "dev": "concurrently \"yarn workspace @package-rater/app dev\" \"yarn workspace @package-rater/server dev\" \"yarn workspace @package-rater/server dev\"",
+    "format": "yarn prettier --write app/src cli/src server/src shared/src '*.json' '.github/workflows/*.yml'",
+    "lint": "cd app && yarn lint && cd ../cli && yarn lint && cd ../server && yarn lint",
+    "quality": "yarn format && yarn lint",
+    "test": "yarn workspaces foreach -A --parallel run test",
+    "test:ci": "yarn workspacse foreach -A --parallel run test:ci",
+    "test:coverage": "yarn workspaces foreach -A --parallel run test:coverage",
+    "test:coverage-ci": "yarn workspaces foreach -A --parallel run test:coverage-ci"
+  },
+  "type": "module",
+  "workspaces": [
+    "app",
+    "cli",
+    "server",
+    "shared"
+  ]
 }

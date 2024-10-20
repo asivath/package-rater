@@ -1,7 +1,7 @@
-import { getLogger } from "../logger.js";
+import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
 
-const logger = getLogger();
+const logger = getLogger("cli");
 
 const repo_query = `
   query($owner: String!, $name: String!) {

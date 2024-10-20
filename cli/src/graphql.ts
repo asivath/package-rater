@@ -1,7 +1,7 @@
 import "dotenv/config";
-import { getLogger } from "./logger.js";
+import { getLogger } from "@package-rater/shared";
 
-const logger = getLogger();
+const logger = getLogger("cli");
 
 export async function getGitHubData(
   packageName: string,

@@ -18,7 +18,7 @@ vi.mock("../logger", () => {
 });
 
 describe("calculateRampup", () => {
-  const logger = getLogger();
+  const logger = getLogger("test");
 
   it("should calculate the ramp-up score correctly when pull requests exist", async () => {
     const mockPRResponse = {
@@ -59,7 +59,7 @@ describe("calculateRampup", () => {
     expect(result).toBeGreaterThan(0);
     expect(result).toBeLessThan(1);
 
-    const logger = getLogger();
+    const logger = getLogger("test");
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringMatching(/^Ramp-up score for test-owner\/test-repo: \d+(\.\d+)?$/)
     );
@@ -145,7 +145,7 @@ describe("calculateRampup", () => {
     expect(result).toBeGreaterThan(0);
     expect(result).toBeLessThan(1);
 
-    const logger = getLogger();
+    const logger = getLogger("test");
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringMatching(/^Ramp-up score for test-owner\/test-repo: \d+(\.\d+)?$/)
     );
@@ -155,7 +155,7 @@ describe("calculateRampup", () => {
     const mockError = new Error("GitHub API failed");
     (getGitHubData as Mock).mockRejectedValueOnce(mockError);
 
-    const logger = getLogger();
+    const logger = getLogger("test");
 
     await expect(calculateRampup("test-owner", "test-repo")).rejects.toThrow("GitHub API failed");
 
