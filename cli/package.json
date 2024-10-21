@@ -7,14 +7,12 @@
   "bugs": "https://github.com/asivath/package-rater/issues",
   "dependencies": {
     "@package-rater/shared": "workspace:1.0.0",
-    "commander": "^12.1.0",
     "dotenv": "^16.4.5",
     "simple-git": "^3.27.0",
     "vitest": "2.1.2",
     "winston": "^3.15.0"
   },
   "devDependencies": {
-    "@commander-js/extra-typings": "^12.1.0",
     "@eslint/eslintrc": "^3.1.0",
     "@eslint/js": "^9.9.1",
     "@types/eslint__eslintrc": "^2.1.2",

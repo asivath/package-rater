@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
-import { getLogger } from "../logger";
+import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql";
 import { calculateCorrectness } from "../metrics/Correctness"; // Adjust the import path as necessary
 
 // Mocking the logger
-vi.mock("../logger", () => {
+vi.mock("@package-rater/shared", () => {
   return {
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),

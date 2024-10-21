@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, Mock } from "vitest";
 import { calculateRampup } from "../metrics/RampUp";
 import { getGitHubData } from "../graphql";
-import { getLogger } from "../logger";
+import { getLogger } from "@package-rater/shared";
 
 // Mock getGitHubData and logger
 vi.mock("../graphql", () => ({
   getGitHubData: vi.fn()
 }));
 
-vi.mock("../logger", () => {
+vi.mock("@package-rater/shared", () => {
   return {
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),

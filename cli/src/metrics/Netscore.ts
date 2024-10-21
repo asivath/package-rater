@@ -6,6 +6,7 @@ import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { cloneRepo } from "../util.js";
+import { rm } from "fs/promises";
 
 const logger = getLogger("cli");
 
@@ -102,6 +103,15 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       License_Latency: parseFloat(licenseCompatibility.time.toFixed(2))
     };
 
+    if (repoDir) {
+      try {
+        await rm(repoDir, { recursive: true, force: true });
+      } catch (error) {
+        if (!(error as Error).message.includes("no such file or directory")) {
+          logger.debug("Error removing repos directory", error);
+        }
+      }
+    }
     return ndjsonOutput;
   } catch (error) {
     logger.error(`Error calculating metrics: ${error}`);

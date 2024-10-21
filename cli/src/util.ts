@@ -3,9 +3,9 @@
  */
 import { SimpleGit, simpleGit } from "simple-git";
 import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs/promises";
 import { getLogger } from "@package-rater/shared";
+import fs from "fs/promises";
+import os from "os";
 
 const logger = getLogger("cli");
 
@@ -24,9 +24,7 @@ export async function cloneRepo(repoUrl: string, repoName: string): Promise<stri
   }
 
   const git: SimpleGit = simpleGit();
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const repoDir = path.resolve(__dirname, "..", "repos", repoName);
+  const repoDir = path.resolve(os.tmpdir(), repoName);
 
   try {
     // Clean up the directory if it exists to ensure a fresh clone

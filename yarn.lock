@@ -250,15 +250,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@commander-js/extra-typings@npm:^12.1.0":
-  version: 12.1.0
-  resolution: "@commander-js/extra-typings@npm:12.1.0"
-  peerDependencies:
-    commander: ~12.1.0
-  checksum: 10c0/5d29eaa724b577e2a52a393ad54992924d2559931b8e493ab892477b7a4e878e475c6bf771260f8585d835f7d8e17ae4a2656c191e9595d210ae0b48291c0b3d
-  languageName: node
-  linkType: hard
-
 "@dabh/diagnostics@npm:^2.0.2":
   version: 2.0.3
   resolution: "@dabh/diagnostics@npm:2.0.3"
@@ -1061,7 +1052,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@package-rater/cli@workspace:cli"
   dependencies:
-    "@commander-js/extra-typings": "npm:^12.1.0"
     "@eslint/eslintrc": "npm:^3.1.0"
     "@eslint/js": "npm:^9.9.1"
     "@package-rater/shared": "workspace:1.0.0"
@@ -1071,7 +1061,6 @@ __metadata:
     "@typescript-eslint/eslint-plugin": "npm:^8.3.0"
     "@typescript-eslint/parser": "npm:^8.3.0"
     "@vitest/coverage-istanbul": "npm:2.1.2"
-    commander: "npm:^12.1.0"
     dotenv: "npm:^16.4.5"
     eslint: "npm:^9.11.1"
     eslint-config-prettier: "npm:^9.1.0"
@@ -2374,13 +2363,6 @@ __metadata:
   version: 2.15.1
   resolution: "commander@npm:2.15.1"
   checksum: 10c0/26793fd4c798a691bf354331fb19a8accb03a32fdd774a948099c829b5fc32ccb7c60b7071d3df8381fb699121fd0e944ca4ac9d07ecaf702ce8a64b49aba6f4
-  languageName: node
-  linkType: hard
-
-"commander@npm:^12.1.0":
-  version: 12.1.0
-  resolution: "commander@npm:12.1.0"
-  checksum: 10c0/6e1996680c083b3b897bfc1cfe1c58dfbcd9842fd43e1aaf8a795fbc237f65efcc860a3ef457b318e73f29a4f4a28f6403c3d653d021d960e4632dd45bde54a9
   languageName: node
   linkType: hard
 

@@ -10,7 +10,7 @@ export class URLFileCommand {
   }
 }
 
-async function processURLFile(file: string): Promise<void> {
+export async function processURLFile(file: string): Promise<void> {
   try {
     const data = await fs.readFile(file, "utf8");
     const urls = data
@@ -33,5 +33,3 @@ async function processURLFile(file: string): Promise<void> {
     console.error("Error reading file:", error);
   }
 }
-
-export { calculateMetrics, processURLFile };

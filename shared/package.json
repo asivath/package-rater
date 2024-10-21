@@ -32,7 +32,7 @@
   "license": "ISC",
   "scripts": {
     "build": "tsc -b",
-    "dev": "concurrently \"tsc -b -w\" \"nodemon dist/index.js\"",
+    "dev": "tsc -b -w",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },

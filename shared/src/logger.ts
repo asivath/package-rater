@@ -19,9 +19,9 @@ const initializeLogger = (source: string) => {
       case "1":
         return "info";
       case "2":
-        return "debug";
-      default:
         return "error";
+      default:
+        return "info";
     }
   })();
 

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
 import { getGithubRepo } from "../graphql"; // Update the import path
-import { getLogger } from "../logger";
+import { getLogger } from "@package-rater/shared";
 
-vi.mock("../logger", () => {
+vi.mock("@package-rater/shared", () => {
   return {
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),

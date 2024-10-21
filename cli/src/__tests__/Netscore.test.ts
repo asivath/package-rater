@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import calculateMetrics from "../metrics/Netscore"; // Ensure this path is correct
 import { getGithubRepo } from "../graphql"; // Ensure this path is correct
-import { getLogger } from "../logger";
+import { getLogger } from "@package-rater/shared";
 
 // Mocking modules
 vi.mock("../graphql", () => ({
@@ -28,7 +28,7 @@ vi.mock("../metrics/BusFactor", () => ({
   calculateBusFactor: vi.fn().mockResolvedValue(0.8)
 }));
 
-vi.mock("../logger", () => ({
+vi.mock("@package-rater/shared", () => ({
   getLogger: vi.fn().mockReturnValue({
     error: vi.fn(),
     info: vi.fn()

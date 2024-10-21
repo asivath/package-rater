@@ -1,6 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import unzipper from "unzipper";
 import { getLogger } from "@package-rater/shared";
+import { hash } from "crypto";
+import { savePackage } from "./util.js";
 
 /**
  * Uploads a package to the server
@@ -25,26 +27,25 @@ export const uploadPackage = async (
     const buffer = Buffer.from(Content, "base64");
     try {
       const files = await unzipper.Open.buffer(buffer);
-      const topLevelDirs = new Set<string>();
-      files.files.forEach((file) => {
-        const topLevelDir = file.path.split("/")[0];
-        if (topLevelDir) {
-          topLevelDirs.add(topLevelDir);
-        }
-      });
-      const packageName = Array.from(topLevelDirs)[0];
-      if (!packageName) {
-        logger.error("No top-level directory found in package");
-        reply.code(400).send({ error: "No top-level directory found in package" });
+      const packageJson = files.files.find((file) => file.path === "package.json");
+      if (!packageJson) {
+        logger.error("No package.json found in the package uploaded");
+        reply.code(400).send({ error: "No package.json found in the package" });
+        return;
       }
-      logger.info(`Package ${packageName} uploaded`);
-      console.log(`Package ${packageName} uploaded`);
+      const packageData = await packageJson.buffer();
+      const { name: packageName, version: version } = JSON.parse(packageData.toString());
+      if (!packageName || !version) {
+        logger.error("Invalid package.json found in the package uploaded");
+        reply.code(400).send({ error: "Invalid package.json found in the package" });
+        return;
+      }
+      const id = hash("sha256", packageName + version).digest("hex");
+      await savePackage(packageName, version, id, buffer, 0, "private");
     } catch (error) {
       logger.error(`Error uploading package: ${error}`);
     }
-  }
-  if (debloat) {
-    console.log("Debloating package...");
+  } else {
   }
   reply.code(200).send({ message: "Package uploaded successfully" });
 };

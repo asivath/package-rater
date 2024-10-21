@@ -1,22 +1,114 @@
-import { Command } from "@commander-js/extra-typings";
-import { URLFileCommand } from "./commands/URLFileCommand.js";
-import { TestCommand } from "./commands/TestCommand.js";
+import { spawn } from "child_process";
+import fs from "fs/promises";
+import path, { dirname } from "path";
+import { getLogger } from "@package-rater/shared";
+import calculateMetrics from "./metrics/Netscore.js";
+import { fileURLToPath } from "url";
+import "dotenv/config";
 
-const program = new Command();
+const logger = getLogger("cli");
 
-program
-  .command("test")
-  .description("Run tests")
-  .action(() => {
-    TestCommand.run();
-  });
+async function runTests(): Promise<void> {
+  try {
+    const testProcess = spawn("yarn", ["test:coverage", "--reporter=json"], { stdio: ["pipe"] });
 
-// This command will handle any file path passed as an argument
-program
-  .arguments("<file>")
-  .description("Process a URL file")
-  .action((file) => {
-    URLFileCommand.run(file);
-  });
+    let stdout = "";
+    let stderr = "";
 
-program.parse(process.argv);
+    testProcess.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    testProcess.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      testProcess.on("close", (code) => {
+        if (code !== 0) {
+          return reject(new Error(stderr));
+        }
+        resolve();
+      });
+    });
+
+    const results = JSON.parse(stdout);
+
+    const totalTests = results.numTotalTests;
+    const totalPassed = results.numPassedTests;
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const coverageFilePath = path.resolve(__dirname, "..", "coverage", "coverage-summary.json");
+    const coverageSummaryFile = await fs.readFile(coverageFilePath, "utf-8");
+    const coverage = JSON.parse(coverageSummaryFile);
+    const lineCoverage = parseInt(coverage.total.lines.pct);
+
+    console.log(`Total: ${totalTests}`);
+    console.log(`Passed: ${totalPassed}`);
+    console.log(`Coverage: ${lineCoverage}%`);
+    console.log(`${totalPassed}/${totalTests} test cases passed. ${lineCoverage}% line coverage achieved.`);
+  } catch (error) {
+    console.error(`Error running tests: ${(error as Error).message}`);
+    throw error;
+  }
+}
+
+async function processURLFile(file: string): Promise<void> {
+  try {
+    const data = await fs.readFile(file, "utf8");
+    const urls = data
+      .split("\n")
+      .map((url) => url.trim())
+      .filter((url) => url !== "");
+    for (const url of urls) {
+      try {
+        logger.info("*".repeat(80));
+        logger.info(`Processing URL: ${url}`);
+        const result = JSON.stringify(await calculateMetrics(url));
+        console.log(result);
+        logger.info("Result:", result);
+        logger.info("*".repeat(80));
+      } catch (error) {
+        console.error(`Error processing URL ${url}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error("Error reading file:", error);
+  }
+}
+
+const args = process.argv.slice(2);
+
+if (args.length === 0) {
+  console.log("Usage:");
+  console.log("  test               Run tests");
+  console.log("  <file>             Process a URL file");
+  console.log("  --url <url>        Process a single URL");
+  process.exit(1);
+}
+
+if (args[0] === "test") {
+  try {
+    await runTests();
+  } catch (error) {
+    console.error("Error running tests:", error);
+    process.exit(1);
+  }
+} else if (args[0] === "--url") {
+  if (args.length !== 2) {
+    console.error("Usage: --url <url>");
+    process.exit(1);
+  }
+  const url = args[1];
+  try {
+    logger.info(`Processing URL: ${url}`);
+    const result = JSON.stringify(await calculateMetrics(url));
+    console.log(result);
+    logger.info("Result:", result);
+  } catch (error) {
+    console.error(`Error processing URL ${url}:`, error);
+  }
+} else {
+  processURLFile(args[0]);
+}
