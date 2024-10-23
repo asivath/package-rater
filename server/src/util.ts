@@ -1,4 +1,4 @@
-import { readFile, mkdir, writeFile, rename, unlink } from "fs/promises";
+import { readFile, mkdir, writeFile, rm, cp } from "fs/promises";
 import { createWriteStream } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -44,7 +44,7 @@ export const savePackage = async (
       await mkdir(packagePath, { recursive: true });
 
       const newPackageFilePath = path.join(packagePath, path.basename(packageFilePath));
-      await rename(packageFilePath, newPackageFilePath);
+      await cp(packageFilePath, newPackageFilePath, { recursive: true });
 
       const tarGzFilePath = path.join(newPackageFilePath, `${id}.tgz`);
       await create(
@@ -55,10 +55,12 @@ export const savePackage = async (
         },
         [path.basename(newPackageFilePath)]
       );
-      await unlink(newPackageFilePath);
+      await rm(newPackageFilePath);
     } else {
       const execAsync = promisify(exec);
-      const { stdout, stderr } = await execAsync(`./run --url ${url}`, { cwd: path.join(__dirname, "..", "..", "cli") });
+      const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
+        cwd: path.join(__dirname, "..", "..", "cli")
+      });
       if (stderr) {
         return { success: false, reason: stderr };
       }

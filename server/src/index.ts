@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import { uploadPackage } from "./routes/uploadPackage.js";
 import { promises as fs } from "fs";
 import { dirname } from "path";
@@ -6,7 +7,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const fastify = Fastify({
-  logger: false
+  logger: false,
+  bodyLimit: 30 * 1024 * 1024 // 30MB
+});
+
+fastify.register(cors, {
+  origin: process.env.APP_ORIGIN || "http://localhost:5173",
+  methods: ["POST", "GET", "OPTIONS"]
 });
 
 const __filename = fileURLToPath(import.meta.url);

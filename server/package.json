@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "author": "",
   "dependencies": {
+    "@fastify/cors": "^10.0.1",
     "@package-rater/shared": "workspace:1.0.0",
     "dotenv": "^16.4.5",
     "fastify": "^5.0.0",
@@ -34,7 +35,7 @@
   "license": "ISC",
   "scripts": {
     "build": "tsc -b",
-    "dev": "concurrently \"tsc -b -w\" \"nodemon dist/index.js\"",
+    "dev": "concurrently \"tsc -b -w\" \"nodemon --watch dist dist/index.js\"",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
     "start": "pm2 start dist/index.js",
     "stop": "pm2 stop dist/index.js",
