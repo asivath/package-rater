@@ -37,7 +37,7 @@
     "preview": "vite preview",
     "test": "yarn playwright test",
     "test:ci": "CI=true yarn test",
-    "test:coverage": "nyc yarn test && nyc check-coverage",
+    "test:coverage": "nyc yarn test && nyc check-coverage && nyc report --reporter=html",
     "test:coverage-ci": "nyc yarn test:ci && nyc check-coverage",
     "test:watch": "yarn playwright test --ui"
   },

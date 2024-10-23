@@ -1,11 +1,11 @@
-import { getLogger, getGithubRepo, cloneRepo } from "@package-rater/shared";
+import { getLogger, getGithubRepo } from "@package-rater/shared";
 import { calculateCorrectness } from "./Correctness.js";
 import { calculateLicense } from "./License.js";
 import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { calculatePinnedDependencyFraction } from "./Dependencies.js";
-import { cloneRepo } from "../util.js";
+import { cloneRepo } from "@package-rater/shared";
 
 const logger = getLogger("cli");
 
@@ -100,7 +100,9 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       ResponsiveMaintainer: parseFloat(responsiveness.result.toFixed(2)),
       ResponsiveMaintainer_Latency: parseFloat(responsiveness.time.toFixed(2)),
       License: parseFloat(licenseCompatibility.result.toFixed(2)),
-      License_Latency: parseFloat(licenseCompatibility.time.toFixed(2))
+      License_Latency: parseFloat(licenseCompatibility.time.toFixed(2)),
+      Dependencies: parseFloat(dependencies.result.toFixed(2)),
+      Dependendencies_Latency: parseFloat(dependencies.time.toFixed(2))
     };
 
     return ndjsonOutput;

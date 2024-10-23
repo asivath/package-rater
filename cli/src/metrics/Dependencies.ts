@@ -1,8 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
-import { getLogger } from "../logger.js";
+import { getLogger } from "@package-rater/shared";
 
-const logger = getLogger();
+const logger = getLogger("Dependencies");
 
 /**
  * Check if a version string is pinned to a specific major.minor version.
