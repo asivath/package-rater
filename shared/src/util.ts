@@ -7,58 +7,47 @@ import os from "os";
 const logger = getLogger("shared");
 
 /**
- * Fetches the GitHub repository URL from the provided URL
+ * Fetches the GitHub repository owner and package name from a provided URL (npm or GitHub)
  * @param url The URL to fetch the GitHub repository from
- * @returns The GitHub repository URL
+ * @returns The GitHub repository URL or null if an error occurred
  */
-export async function getGithubRepo(url: string): Promise<string> {
-  // Check if the provided URL is a GitHub URL
-  const githubRegex = /^(https?:\/\/)?(www\.)?github\.com\/.+\/.+/;
-  if (githubRegex.test(url)) {
-    // It's a GitHub URL, return it as-is
-    return url;
-  }
-
-  // Otherwise, assume it's an npm URL and fetch the GitHub URL from npm registry
-  const npmRegex = /^https?:\/\/(www\.)?npmjs\.com\/package\/(.+)$/;
-  const match = url.match(npmRegex);
-  if (match) {
-    const packageName = match[2]; // Extract the package name from the npm URL
-    const npmUrl = `https://registry.npmjs.org/${packageName}`;
+export async function getGithubRepo(url: string): Promise<string | null> {
+  const trimmedUrl = url.trim();
+  const npmRegex = /npmjs\.com\/package\/(?<packageName>[^/]+)/;
+  const githubRegex = /github\.com\/(?<owner>[^/]+)\/(?<packageName>[^/]+)/;
+  if (trimmedUrl.includes("npmjs.com")) {
+    logger.info("Handling NPM URL");
+    const npmMatch = trimmedUrl.match(npmRegex);
+    if (!npmMatch?.groups?.packageName) {
+      logger.info("Invalid NPM URL");
+      return null;
+    }
+    const packageName = npmMatch.groups.packageName;
     try {
-      const response = await fetch(npmUrl);
-      if (!response.ok) {
-        throw new Error(`Error fetching package info: ${response.statusText}`);
-      }
+      const response = await fetch(`https://registry.npmjs.org/${packageName}`);
       const data = await response.json();
-      const latestVersion = data["dist-tags"].latest;
-      const latestVersionData = data.versions[latestVersion];
 
-      // Check for the GitHub repository in the package data
-      let gitHubAPI = latestVersionData.repository && latestVersionData.repository.url;
-      if (gitHubAPI) {
-        gitHubAPI = gitHubAPI
-        .replace(/^git\+/, "")
-        .replace(/^git:\/\//, "https://")
-        .replace(/\.git$/, "");
+      let repoURL = data?.repository?.url;
+      if (repoURL) {
+        repoURL = repoURL.replace(/^git\+/, "").replace(/\.git$/, "");
+        const githubMatch = repoURL.match(githubRegex);
+        if (githubMatch?.groups) {
+          logger.info(`Owner: ${githubMatch.groups.owner}, Package: ${githubMatch.groups.packageName}`);
+          return `https://github.com/${githubMatch.groups.owner}/${githubMatch.groups.packageName}`;
+        }
+      }
 
-      if (!gitHubAPI.startsWith("https://")) {
-        gitHubAPI = `https://${gitHubAPI}`;
-      }
-        return gitHubAPI;
-      } else {
-        logger.error("No GitHub repository found");
-        throw new Error("No GitHub repository found");
-      }
+      logger.error("No valid GitHub repository found in the NPM package");
     } catch (error) {
-      logger.error("Error fetching package info:", error);
-      throw error;
+      logger.error(`Error fetching NPM package: ${error}`);
+      return null;
     }
   }
-
-  // If the URL is neither a GitHub URL nor an npm URL
-  logger.error("Invalid URL: Not a GitHub or npm URL");
-  throw new Error("Invalid URL: Not a GitHub or npm URL");
+  if (trimmedUrl.includes("github.com")) {
+    return trimmedUrl;
+  }
+  logger.error("Invalid URL format");
+  return null;
 }
 
 /**
