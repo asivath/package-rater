@@ -1,8 +1,10 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import unzipper from "unzipper";
-import { getLogger } from "@package-rater/shared";
-import { hash } from "crypto";
-import { savePackage } from "./util.js";
+import { getGithubRepo, getLogger, cloneRepo } from "@package-rater/shared";
+import { createHash } from "crypto";
+import { savePackage } from "../util.js";
+import { writeFile, readFile, rm } from "fs/promises";
+import { tmpdir } from "os";
 
 /**
  * Uploads a package to the server
@@ -23,29 +25,79 @@ export const uploadPackage = async (
     });
     return;
   }
-  if (Content) {
-    const buffer = Buffer.from(Content, "base64");
-    try {
+  let packageName = "";
+  let version = "";
+  let id = "";
+  try {
+    if (Content) {
+      const buffer = Buffer.from(Content, "base64");
       const files = await unzipper.Open.buffer(buffer);
-      const packageJson = files.files.find((file) => file.path === "package.json");
-      if (!packageJson) {
+      const packageJsonFile = files.files.find((file) => file.path === "package.json");
+      if (!packageJsonFile) {
         logger.error("No package.json found in the package uploaded");
         reply.code(400).send({ error: "No package.json found in the package" });
         return;
       }
-      const packageData = await packageJson.buffer();
-      const { name: packageName, version: version } = JSON.parse(packageData.toString());
+      const packageData = await packageJsonFile.buffer();
+      const packageJson = JSON.parse(packageData.toString());
+      packageName = packageJson.name;
+      version = packageJson.version;
       if (!packageName || !version) {
         logger.error("Invalid package.json found in the package uploaded");
         reply.code(400).send({ error: "Invalid package.json found in the package" });
         return;
       }
-      const id = hash("sha256", packageName + version).digest("hex");
-      await savePackage(packageName, version, id, buffer, 0, "private");
-    } catch (error) {
-      logger.error(`Error uploading package: ${error}`);
+      id = createHash("sha256")
+        .update(packageName + version)
+        .digest("hex");
+      const tempPath = tmpdir();
+      await writeFile(`${tempPath}/${id}.zip`, buffer);
+      const result = await savePackage(packageName, version, id, tempPath);
+      if (result.success === false) {
+        logger.error(`Error saving the package: ${result.reason}`);
+        reply.code(500).send({ error: "Error saving the package" });
+        return;
+      }
+    } else {
+      const githubURL = await getGithubRepo(URL);
+      const repoDir = await cloneRepo(githubURL, "repo");
+      if (!repoDir) {
+        logger.error("Error cloning the repository");
+        reply.code(400).send({ error: "Error cloning the repository" });
+        return;
+      }
+      const packageJsonFile = await readFile(`${repoDir}/package.json`);
+      await rm(repoDir, { recursive: true });
+      if (!packageJsonFile) {
+        logger.error("No package.json found in the package uploaded");
+        reply.code(400).send({ error: "No package.json found in the package" });
+        return;
+      }
+      const packageJson = JSON.parse(packageJsonFile.toString());
+      packageName = packageJson.name;
+      version = packageJson.version;
+      if (!packageName || !version) {
+        logger.error("Invalid package.json found in the package uploaded");
+        reply.code(400).send({ error: "Invalid package.json found in the package" });
+        return;
+      }
+      id = createHash("sha256")
+        .update(packageName + version)
+        .digest("hex");
+      const result = await savePackage(packageName, version, id, undefined, URL);
+      if (result.success === false) {
+        logger.error(`Error saving the package: ${result.reason}`);
+        reply.code(500).send({ error: "Error saving the package" });
+        return;
+      }
     }
-  } else {
+    if (debloat) {
+      logger.info("Debloating not implemented yet");
+    }
+  } catch (error) {
+    logger.error("Error uploading the package:", error);
+    reply.code(500).send({ error: "Error uploading the package" });
+    return;
   }
-  reply.code(200).send({ message: "Package uploaded successfully" });
+  reply.code(201).send({ metadata: { "Name": package} });
 };

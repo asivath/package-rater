@@ -1,11 +1,9 @@
-import { getLogger } from "@package-rater/shared";
-import { getGithubRepo } from "../graphql.js";
+import { getLogger, getGithubRepo, cloneRepo } from "@package-rater/shared";
 import { calculateCorrectness } from "./Correctness.js";
 import { calculateLicense } from "./License.js";
 import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
-import { cloneRepo } from "../util.js";
 import { rm } from "fs/promises";
 
 const logger = getLogger("cli");
@@ -112,6 +110,7 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
         }
       }
     }
+    logger.info(`Metrics calculated for ${url}:`, ndjsonOutput);
     return ndjsonOutput;
   } catch (error) {
     logger.error(`Error calculating metrics: ${error}`);

@@ -1,20 +1,9 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
-import { getGithubRepo } from "../graphql"; // Update the import path
-import { getLogger } from "@package-rater/shared";
+import { getGithubRepo } from "../util";
+import { getLogger } from "../logger";
 
-vi.mock("@package-rater/shared", () => {
-  return {
-    getLogger: vi.fn().mockReturnValue({
-      error: vi.fn(),
-      info: vi.fn()
-    })
-  };
-});
-
-// Mock the fetch API
 global.fetch = vi.fn();
 
-// Clear mocks before each test
 beforeEach(() => {
   vi.clearAllMocks();
 });

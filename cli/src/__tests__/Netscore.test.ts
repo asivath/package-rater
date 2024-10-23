@@ -1,11 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import calculateMetrics from "../metrics/Netscore"; // Ensure this path is correct
-import { getGithubRepo } from "../graphql"; // Ensure this path is correct
-import { getLogger } from "@package-rater/shared";
+import calculateMetrics from "../metrics/Netscore";
+import * as sharedModule from "@package-rater/shared";
 
-// Mocking modules
-vi.mock("../graphql", () => ({
-  getGithubRepo: vi.fn() // Simplified mock
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof sharedModule>();
+  return {
+    ...actual,
+    getGithubRepo: vi.fn(),
+    getLogger: vi.fn().mockReturnValue({
+      error: vi.fn(),
+      info: vi.fn()
+    })
+  };
+});
+
+vi.mock("fs/promises", () => ({
+  rm: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock("../metrics/Correctness", () => ({
@@ -28,26 +38,20 @@ vi.mock("../metrics/BusFactor", () => ({
   calculateBusFactor: vi.fn().mockResolvedValue(0.8)
 }));
 
-vi.mock("@package-rater/shared", () => ({
-  getLogger: vi.fn().mockReturnValue({
-    error: vi.fn(),
-    info: vi.fn()
-  })
-}));
-
 vi.mock("../util", () => ({
-  cloneRepo: vi.fn()
+  cloneRepo: vi.fn().mockResolvedValue("repoDir")
 }));
 
 describe("calculateMetrics", () => {
-  const logger = getLogger("test");
+  const logger = sharedModule.getLogger("test");
 
   beforeEach(() => {
-    vi.clearAllMocks(); // Ensure all mocks are reset before each test
+    vi.clearAllMocks();
   });
 
   it("should calculate metrics correctly with valid data", async () => {
-    getGithubRepo.mockResolvedValue("https://github.com/owner/repo");
+    vi.spyOn(sharedModule, "getGithubRepo").mockResolvedValueOnce("https://github.com/owner/repo");
+
     const result = await calculateMetrics("https://github.com/owner/repo");
 
     expect(result.URL).toBe("https://github.com/owner/repo");
@@ -58,13 +62,13 @@ describe("calculateMetrics", () => {
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
 
-    expect(logger.info).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("should return zero scores when repo information is invalid", async () => {
-    // Mock getGithubRepo to return null or invalid response
-    getGithubRepo.mockResolvedValue("not/a/url");
+    vi.spyOn(sharedModule, "getGithubRepo").mockResolvedValueOnce("not/a/url");
+
     const result = await calculateMetrics("invalid-url");
 
     expect(result.URL).toBe("invalid-url");
@@ -81,7 +85,7 @@ describe("calculateMetrics", () => {
   });
 
   it("should handle errors in individual metric calculations gracefully", async () => {
-    getGithubRepo.mockResolvedValue("https://github.com/owner/repo");
+    vi.spyOn(sharedModule, "getGithubRepo").mockResolvedValueOnce("https://github.com/owner/repo");
 
     const result = await calculateMetrics("https://github.com/owner/repo");
 
@@ -97,7 +101,7 @@ describe("calculateMetrics", () => {
   });
 
   it("should handle repository cloning errors", async () => {
-    getGithubRepo.mockRejectedValue(new Error("Failed to clone repo"));
+    vi.spyOn(sharedModule, "getGithubRepo").mockRejectedValueOnce(new Error("Failed to clone repo"));
 
     const result = await calculateMetrics("https://github.com/owner/repo");
 
