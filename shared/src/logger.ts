@@ -10,20 +10,6 @@ let bareLogger: Logger | null = null;
  * Initialize the logger instance.
  */
 const initializeLogger = () => {
-  const logLevel = (() => {
-    const level = process.env.LOG_LEVEL;
-    switch (level) {
-      case "0":
-        return "silent";
-      case "1":
-        return "info";
-      case "2":
-        return "error";
-      default:
-        return "info";
-    }
-  })();
-
   const fileLogFormat = winston.format.combine(
     winston.format.timestamp({ format: "DD/MM/YYYY HH:mm:ss" }),
     winston.format.printf(({ timestamp, level, message, label }) => {
@@ -37,10 +23,9 @@ const initializeLogger = () => {
   const logDir = process.env.LOG_FILE || "../package-rater.log";
 
   bareLogger = winston.createLogger({
-    level: logLevel,
+    level: "info",
     format: fileLogFormat,
-    transports: [new winston.transports.File({ filename: logDir })],
-    silent: logLevel === "silent"
+    transports: [new winston.transports.File({ filename: logDir })]
   });
 };
 

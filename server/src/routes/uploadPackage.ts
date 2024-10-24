@@ -78,26 +78,25 @@ export const uploadPackage = async (
     } else {
       if (URL.includes("npmjs.com")) {
         const npmPackageMatch = URL.match(/npmjs\.com\/package\/([^/]+)(?:\/v\/([^/]+))?/);
-        if (npmPackageMatch) {
-          const npmPackageName = npmPackageMatch[1];
-          const npmPackageVersion = npmPackageMatch[2];
-          if (!npmPackageVersion) {
-            const npmPackageDetails = await getNpmPackageDetails(npmPackageName);
-            if (!npmPackageDetails) {
-              logger.error(`Invalid npm package name: ${npmPackageName}`);
-              reply.code(400).send({ error: "Invalid npm package name" });
-              return;
-            }
-            version = npmPackageDetails.version;
-          } else {
-            version = npmPackageVersion;
-          }
-          packageName = npmPackageName;
-        } else {
+        if (!npmPackageMatch) {
           logger.error(`Invalid npm URL: ${URL}`);
           reply.code(400).send({ error: "Invalid npm URL" });
           return;
         }
+        const npmPackageName = npmPackageMatch[1];
+        const npmPackageVersion = npmPackageMatch[2];
+        if (!npmPackageVersion) {
+          const npmPackageDetails = await getNpmPackageDetails(npmPackageName);
+          if (!npmPackageDetails) {
+            logger.error(`Invalid npm package name: ${npmPackageName}`);
+            reply.code(400).send({ error: "Invalid npm package name" });
+            return;
+          }
+          version = npmPackageDetails.version;
+        } else {
+          version = npmPackageVersion;
+        }
+        packageName = npmPackageName;
       } else {
         const details = await getGithubDetails(URL);
         if (!details) {

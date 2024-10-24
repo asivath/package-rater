@@ -2,7 +2,6 @@
   "name": "@package-rater/cli",
   "description": "ECE 461 Project Phase 2",
   "version": "1.0.0",
-  "author": "Aditya Sivathanu, Kevin Chang, Ellis Selznick",
   "bin": "./dist/install.js",
   "bugs": "https://github.com/asivath/package-rater/issues",
   "dependencies": {

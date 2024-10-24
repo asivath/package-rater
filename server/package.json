@@ -1,7 +1,6 @@
 {
   "name": "@package-rater/server",
   "version": "1.0.0",
-  "author": "",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.678.0",
     "@fastify/cors": "^10.0.1",
@@ -46,6 +45,7 @@
     "test:watch": "vitest",
     "start": "pm2 start dist/index.js",
     "stop": "pm2 stop dist/index.js",
+    "restart": "pm2 restart dist/index.js",
     "clean": "rm -rf tsconfig.tsbuildinfo"
   },
   "type": "module"
