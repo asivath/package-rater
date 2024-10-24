@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "author": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.678.0",
     "@fastify/cors": "^10.0.1",
+    "@fastify/static": "^8.0.2",
     "@package-rater/shared": "workspace:1.0.0",
     "dotenv": "^16.4.5",
     "fastify": "^5.0.0",
@@ -37,9 +39,14 @@
     "build": "tsc -b",
     "dev": "concurrently \"tsc -b -w\" \"nodemon --watch dist dist/index.js\"",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
+    "test": "vitest run",
+    "test:ci": "vitest run --no-color",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage-ci": "vitest run --coverage --no-color",
+    "test:watch": "vitest",
     "start": "pm2 start dist/index.js",
     "stop": "pm2 stop dist/index.js",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+    "clean": "rm -rf tsconfig.tsbuildinfo"
   },
   "type": "module"
 }

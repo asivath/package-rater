@@ -1,10 +1,12 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
 import { promises as fs } from "fs";
 import { dirname } from "path";
 import path from "path";
 import { fileURLToPath } from "url";
+import "dotenv/config";
 
 const fastify = Fastify({
   logger: false,
@@ -12,14 +14,18 @@ const fastify = Fastify({
 });
 
 fastify.register(cors, {
-  origin: process.env.APP_ORIGIN || "http://localhost:5173",
-  methods: ["POST", "GET", "OPTIONS"]
+  origin: ["http://127.0.0.1:3000", "http://localhost:5173"],
+  methods: ["GET", "POST", "PUT", "OPTIONS"]
+});
+
+fastify.register(fastifyStatic, {
+  root: process.cwd() + "/../app/dist",
+  prefix: "/"
 });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const metadataPath = path.join(__dirname, "..", "packages", "metadata.json");
-
 try {
   await fs.access(metadataPath);
 } catch {

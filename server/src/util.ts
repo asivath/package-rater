@@ -1,3 +1,4 @@
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { readFile, mkdir, writeFile, rm, cp } from "fs/promises";
 import { createWriteStream } from "fs";
 import path from "path";
@@ -8,12 +9,16 @@ import { promisify } from "util";
 import { getLogger } from "@package-rater/shared";
 import { create } from "tar";
 import { pipeline } from "stream/promises";
+import "dotenv/config";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "packages");
 const metadataPath = path.join(packagesDirPath, "metadata.json");
+
+const s3Client = new S3Client({ region: process.env.AWS_REGION });
+const bucketName = process.env.AWS_BUCKET_NAME;
 
 /**
  * Moves a package to the packages directory and saves its metadata
@@ -38,7 +43,8 @@ export const savePackage = async (
     return { success: false, reason: "Provide either package file path or URL, not both" };
   }
   try {
-    const packagePath = path.join(packagesDirPath, id);
+    const packageBasePath = path.join(packagesDirPath, packageName);
+    const packagePath = path.join(packageBasePath, id);
     let ndjson = null;
     if (packageFilePath) {
       await mkdir(packagePath, { recursive: true });
@@ -46,16 +52,21 @@ export const savePackage = async (
       const newPackageFilePath = path.join(packagePath, path.basename(packageFilePath));
       await cp(packageFilePath, newPackageFilePath, { recursive: true });
 
-      const tarGzFilePath = path.join(newPackageFilePath, `${id}.tgz`);
+      const tarGzFilePath = path.join(packagePath, `${packageName}.tgz`);
       await create(
         {
           gzip: true,
           file: tarGzFilePath,
           cwd: packagePath
         },
-        [path.basename(newPackageFilePath)]
+        ["."]
       );
-      await rm(newPackageFilePath);
+      await rm(newPackageFilePath, { recursive: true });
+
+      if (process.env.NODE_ENV === "prod") {
+        await uploadToS3(packageName, id, tarGzFilePath);
+        await rm(packageBasePath, { recursive: true });
+      }
     } else {
       const execAsync = promisify(exec);
       const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
@@ -77,9 +88,14 @@ export const savePackage = async (
       }
 
       await mkdir(packagePath, { recursive: true });
-      const tarballPath = path.join(packagePath, `${id}.tgz`);
+      const tarballPath = path.join(packagePath, `${packageName}.tgz`);
       const tarballStream = createWriteStream(tarballPath);
       await pipeline(response.body, tarballStream);
+
+      if (process.env.NODE_ENV === "prod") {
+        await uploadToS3(packageName, id, tarballPath);
+        await rm(packageBasePath, { recursive: true });
+      }
     }
 
     const metadata = await readFile(metadataPath, "utf-8");
@@ -117,4 +133,29 @@ export const getPackageMetadata = async (id: string) => {
     return null;
   }
   return packageMetadata;
+};
+
+/**
+ * Uploads a package to the S3 bucket
+ * @param packageName The name of the package
+ * @param id The ID of the package
+ * @param tarGzFilePath The path to the .tgz file to upload
+ */
+const uploadToS3 = async (packageName: string, id: string, tarGzFilePath: string) => {
+  const tarballBuffer = await readFile(tarGzFilePath);
+  const s3Key = `${packageName}/${id}/${path.basename(tarGzFilePath)}`;
+
+  try {
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: s3Key,
+      Body: tarballBuffer
+    });
+
+    await s3Client.send(command);
+    logger.info(`Uploaded package ${packageName} to S3: ${s3Key}`);
+  } catch (error) {
+    logger.error(`Error uploading ${packageName} to S3:`, error);
+    throw error;
+  }
 };
