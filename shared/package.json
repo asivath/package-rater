@@ -35,7 +35,7 @@
     "build": "tsc -b",
     "dev": "tsc -b -w",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+    "clean": "rm -rf tsconfig.tsbuildinfo"
   },
   "type": "module"
 }

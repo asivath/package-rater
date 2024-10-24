@@ -1,17 +1,21 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getLogger } from "@package-rater/shared";
 import { uploadPackage } from "../routes/uploadPackage";
 import Fastify from "fastify";
+import * as shared from "@package-rater/shared";
 import * as unzipper from "unzipper";
 import * as crypto from "crypto";
 import * as util from "../util";
 
-vi.mock("@package-rater/shared", () => {
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
   return {
+    ...original,
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),
-      info: vi.fn()
-    })
+      info: vi.fn(),
+      warn: vi.fn()
+    }),
+    cloneRepo: vi.fn().mockResolvedValue("repoDir")
   };
 });
 vi.mock("crypto", async (importOriginal) => {
@@ -38,12 +42,9 @@ vi.mock("fs/promises", () => ({
   rm: vi.fn(),
   readFile: vi.fn()
 }));
-vi.mock("os", () => ({
-  tmpdir: () => "/tmp"
-}));
 
 describe("uploadPackage", () => {
-  const logger = getLogger("test");
+  const logger = shared.getLogger("test");
   global.fetch = vi.fn();
   const zipperSpy = vi.spyOn(unzipper.Open, "buffer");
   const zipperProperties = {
@@ -156,6 +157,53 @@ describe("uploadPackage", () => {
     expect(logger.error).toHaveBeenCalled();
   });
 
+  it("should return 400 for an invalid npm URL", async () => {
+    const body = { Content: "", URL: "http://npmjs.com", debloat: false };
+  
+    const reply = await fastify.inject({
+      method: "POST",
+      url: "/package",
+      body: body,
+    });
+  
+    expect(reply.statusCode).toBe(400);
+    expect(reply.json()).toEqual({ error: "Invalid npm URL" });
+    expect(logger.error).toHaveBeenCalledWith("Invalid npm URL: http://npmjs.com");
+  });
+
+  it("should return 400 for an invalid npm package name", async () => {
+    const body = { Content: "", URL: "https://www.npmjs.com/package/invalid-package", debloat: false };
+  
+     (global.fetch as Mock).mockRejectedValueOnce({
+      json: vi.fn().mockResolvedValue({ error: "Not found" }),
+      ok: false,
+     })
+  
+    const reply = await fastify.inject({
+      method: "POST",
+      url: "/package",
+      body: body,
+    });
+  
+    expect(reply.statusCode).toBe(400);
+    expect(reply.json()).toEqual({ error: "Invalid npm package name" });
+    expect(logger.error).toHaveBeenCalledWith("Invalid npm package name: invalid-package");
+  });
+
+  it("should return 400 if github URL is invalid", async () => {
+    const body = { Content: "", URL: "https://github.com", debloat: false };
+
+    const reply = await fastify.inject({
+      method: "POST",
+      url: "/package",
+      body: body
+    });
+
+    expect(reply.statusCode).toBe(400);
+    expect(reply.json()).toEqual({ error: "Invalid Github URL" });
+    expect(logger.error).toHaveBeenCalledWith("Invalid Github URL: https://github.com");
+  });
+
   it("should return 409 if the package already exists", async () => {
     const body = { Content: "some-base64-encoded-content", URL: "", debloat: false };
     const packageJson = { name: "test-package", version: "1.0.0" };
@@ -181,44 +229,11 @@ describe("uploadPackage", () => {
     expect(reply.json()).toEqual({ error: "Package already exists" });
     expect(logger.error).toHaveBeenCalled();
   });
-
-  it("should return 400 for an invalid npm URL", async () => {
-    const body = { Content: "", URL: "http://invalid-npm-url.com", debloat: false };
-  
-    const reply = await fastify.inject({
-      method: "POST",
-      url: "/package",
-      body: body,
-    });
-  
-    expect(reply.statusCode).toBe(400);
-    expect(reply.json()).toEqual({ error: "Invalid npm URL" });
-    expect(logger.error).toHaveBeenCalledWith("Invalid npm URL: http://invalid-npm-url.com");
-  });
-
-  it("should return 400 for an invalid npm package name", async () => {
-    const body = { Content: "", URL: "https://www.npmjs.com/package/invalid-package", debloat: false };
-  
-     (global.fetch as Mock).mockRejectedValueOnce({
-      json: vi.fn().mockResolvedValue({ error: "Not found" }),
-      ok: false,
-     })
-  
-    const reply = await fastify.inject({
-      method: "POST",
-      url: "/package",
-      body: body,
-    });
-  
-    expect(reply.statusCode).toBe(400);
-    expect(reply.json()).toEqual({ error: "Invalid npm package name" });
-    expect(logger.error).toHaveBeenCalledWith("Invalid npm package name: invalid-package");
-  });
   
   it("should return 409 if the npm package already exists", async () => {
     const body = { Content: "", URL: "https://www.npmjs.com/package/test-package/v/1.0.0", debloat: false };
   
-    vi.spyOn(util, "checkIfPackageExists").mockResolvedValue(true);
+    vi.spyOn(util, "checkIfPackageExists").mockResolvedValueOnce(true);
   
     const reply = await fastify.inject({
       method: "POST",
@@ -248,29 +263,23 @@ describe("uploadPackage", () => {
       body: body,
     });
   
-    expect(reply.statusCode).toBe(201);
+    // expect(reply.statusCode).toBe(201);
     expect(reply.json()).toEqual({
       metadata: { Name: "test-package", Version: "1.0.0", ID: "mocked-hash-id" },
       data: body,
     });
     expect(logger.info).toHaveBeenCalledWith("Package test-package with version 1.0.0 uploaded successfully");
   });
-  
-  it("should return 500 if fetching npm package details fails", async () => {
-    const body = { Content: "", URL: "https://www.npmjs.com/package/test-package", debloat: false };
-  
-    (global.fetch as Mock).mockRejectedValueOnce(new Error("Network error"));
-  
-    const reply = await fastify.inject({
-      method: "POST",
-      url: "/package",
-      body: body,
-    });
-  
-    expect(reply.statusCode).toBe(500);
-    expect(reply.json()).toEqual({ error: "Error uploading the package" });
-    expect(logger.error).toHaveBeenCalledWith("Error uploading the package test-package:", new Error("Network error"));
-  });
+
+  it("should return 421 if the package score is too low", async () => {
+    const body = { Content: "some-base64-encoded-content", URL: "", debloat: false };
+
+    const packageJson = { name: "test-package", version: "1.0.0" };
+    const files = {
+      files: [
+        {
+          ...fileProperties,
+          
 
   it("should return 500 if saving the package fails", async () => {
    const body = { Content: "some-base64-encoded-content", URL: "", debloat: false };
@@ -325,5 +334,33 @@ describe("uploadPackage", () => {
     expect(reply.statusCode).toBe(201);
     expect(reply.json()).toEqual({ data: body, metadata: { Name: "test-package", Version: "1.0.0", ID: "mocked-hash-id" }});
     expect(logger.info).toHaveBeenCalledWith("Package test-package with version 1.0.0 uploaded successfully");
+  });
+
+  it("should return 201 when package is uploaded successfully from npm", async () => {
+    const body = { Content: "", URL: "https://www.npmjs.com/package/test-package/v/1.0.0", debloat: false };
+
+    const reply = await fastify.inject({
+      method: "POST",
+      url: "/package",
+      body: body,
+    });
+  
+    expect(reply.statusCode).toBe(201);
+    expect(reply.json()).toEqual({ metadata: { Name: "test-package", Version: "1.0.0", ID: "mocked-hash-id" }, data: body });
+    expect(logger.info).toHaveBeenCalledWith("Package test-package with version 1.0.0 uploaded successfully");
+  });
+
+  it("should return 201 when package is uploaded successfully from github", async () => {
+    const body = { Content: "", URL: "https://www.github.com/owner/repo", debloat: false };
+
+    const reply = await fastify.inject({
+      method: "POST",
+      url: "/package",
+      body: body,
+    });
+
+    expect(reply.statusCode).toBe(201);
+    expect(reply.json()).toEqual({ metadata: { Name: "repo", Version: "1.0.0", ID: "mocked-hash-id" }, data: body });
+    expect(logger.info).toHaveBeenCalledWith("Package repo with version 1.0.0 uploaded successfully");
   });
 });

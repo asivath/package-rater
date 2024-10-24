@@ -18,10 +18,15 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_ECE_SSH_KEY }}
           script: |
-            cd package-rater
-            git pull
-            cd server
+            cd package-rater/server
             yarn stop
+            cd ..
+            git pull
+            yarn
             yarn build
+            cd server
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+            echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}" >> .env
+            echo "NODE_ENV=prod" >> .env
             yarn start
             yarn pm2 status

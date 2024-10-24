@@ -101,7 +101,8 @@ export const uploadPackage = async (
       } else {
         const details = await getGithubDetails(URL);
         if (!details) {
-          reply.code(400).send({ error: "Invalid URL" });
+          logger.error(`Invalid Github URL: ${URL}`);
+          reply.code(400).send({ error: "Invalid Github URL" });
           return;
         }
         packageName = details.packageName;
@@ -202,12 +203,17 @@ const getGithubDetails = async (url: string) => {
  * @returns Object containing packageName and version
  */
 async function getNpmPackageDetails(packageName: string): Promise<{ packageName: string; version: string } | null> {
-  const npmUrl = `https://registry.npmjs.org/${packageName}`;
-  const response = await fetch(npmUrl);
-  if (!response.ok) return null;
-  const data = await response.json();
-  return {
-    packageName: data.name,
-    version: data["dist-tags"].latest
-  };
+  try {
+    const npmUrl = `https://registry.npmjs.org/${packageName}`;
+    const response = await fetch(npmUrl);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return {
+      packageName: data.name,
+      version: data["dist-tags"].latest
+    };
+  } catch (error) {
+    logger.error(`Error fetching npm package details for ${packageName}:`, error);
+    return null;
+  }
 }
