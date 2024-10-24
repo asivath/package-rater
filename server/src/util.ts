@@ -110,17 +110,6 @@ export const savePackage = async (
 };
 
 /**
- * Checks if the package exists
- * @param id The package ID
- * @returns Whether the package exists
- */
-export const checkIfPackageExists = async (id: string) => {
-  const metadata = await readFile(metadataPath, "utf-8");
-  const metadataJson = JSON.parse(metadata);
-  return metadataJson[id] ? true : false;
-};
-
-/**
  * Gets the metadata of a package
  * @param id The package ID
  * @returns The package metadata or null if it doesn't exist
@@ -136,16 +125,26 @@ export const getPackageMetadata = async (id: string) => {
 };
 
 /**
+ * Checks if the package exists
+ * @param id The package ID
+ * @returns Whether the package exists
+ */
+export const checkIfPackageExists = async (id: string) => {
+  const packageMetadata = await getPackageMetadata(id);
+  return packageMetadata !== null;
+};
+
+/**
  * Uploads a package to the S3 bucket
  * @param packageName The name of the package
  * @param id The ID of the package
  * @param tarGzFilePath The path to the .tgz file to upload
  */
 const uploadToS3 = async (packageName: string, id: string, tarGzFilePath: string) => {
-  const tarballBuffer = await readFile(tarGzFilePath);
-  const s3Key = `${packageName}/${id}/${path.basename(tarGzFilePath)}`;
-
   try {
+    const tarballBuffer = await readFile(tarGzFilePath);
+    const s3Key = `${packageName}/${id}/${path.basename(tarGzFilePath)}`;
+
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,

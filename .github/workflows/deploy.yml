@@ -3,9 +3,7 @@ name: Build and Restart EC2 Server
 on:
   push:
     branches:
-      - main
-    paths:
-      - "server/**"
+      - server-setup-for-ec2
 
 jobs:
   ssh-and-build:
@@ -18,14 +16,17 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_ECE_SSH_KEY }}
           script: |
+            export NVM_DIR=~/.nvm
+            source ~/.nvm/nvm.sh
             cd package-rater/server
             yarn stop
             cd ..
-            git pull
+            ls
+            git status
             yarn
             yarn build
             cd server
-            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" > .env
             echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}" >> .env
             echo "NODE_ENV=prod" >> .env
             yarn start
