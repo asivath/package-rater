@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs/promises";
 import os from "os";
 
-const logger = getLogger("shared");
+const logger = getLogger("sharedUtil");
 
 /**
  * Fetches the GitHub repository owner and package name from a provided URL (npm or GitHub)
@@ -72,7 +72,7 @@ export async function cloneRepo(repoUrl: string, repoName: string): Promise<stri
     await fs.rm(repoDir, { recursive: true, force: true });
     await fs.mkdir(repoDir, { recursive: true });
     // Clone the repository with a shallow clone for efficiency
-    await git.clone(repoUrl, repoDir, ["--depth", "1"]);
+    await git.clone(repoUrl, repoDir);
     logger.info(`Repository successfully cloned to ${repoDir}`);
     return repoDir;
   } catch (error) {

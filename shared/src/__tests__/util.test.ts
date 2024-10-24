@@ -1,69 +1,132 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
-import { getGithubRepo } from "../util";
+import { getGithubRepo, cloneRepo } from "../util"; // Adjust to the correct file path
+import { fileURLToPath } from "url";
 import { getLogger } from "../logger";
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
+import { simpleGit } from "simple-git";
 
-global.fetch = vi.fn();
-
-beforeEach(() => {
-  vi.clearAllMocks();
+vi.mock("fs/promises");
+vi.mock("simple-git");
+vi.mock("../logger", () => {
+  return {
+    getLogger: vi.fn().mockReturnValue({
+      error: vi.fn(),
+      info: vi.fn()
+    })
+  };
 });
 
-describe("getGithubRepo", () => {
-  const logger = getLogger("test");
+// Mocking the fetch API
+global.fetch = vi.fn();
 
-  it("should return the GitHub URL if a valid GitHub URL is provided", async () => {
-    const url = "https://github.com/owner/repo";
-    const result = await getGithubRepo(url);
-    expect(result).toBe(url);
+describe("getGithubRepo", () => {
+  const logger = getLogger("utilTest");
+
+  beforeEach(() => {
+    vi.clearAllMocks(); // Clear mocks before each test
   });
 
-  it("should fetch GitHub URL from npm registry if provided an npm URL", async () => {
-    const npmUrl = "https://www.npmjs.com/package/example-package";
-    const expectedGithubUrl = "https://github.com/owner/repo";
+  it("should fetch the GitHub repo URL from a valid NPM URL", async () => {
+    const npmUrl = "https://www.npmjs.com/package/some-package";
+    const mockResponse = {
+      repository: {
+        url: "git+https://github.com/user/some-package.git"
+      }
+    };
 
-    // Mock the fetch response for npm URL
-    (fetch as unknown as Mock).mockResolvedValueOnce({
-      ok: true,
-      json: vi.fn().mockResolvedValueOnce({
-        "dist-tags": { latest: "1.0.0" },
-        versions: {
-          "1.0.0": {
-            repository: {
-              url: expectedGithubUrl
-            }
-          }
-        }
-      })
+    (fetch as Mock).mockResolvedValueOnce({
+      json: vi.fn().mockResolvedValueOnce(mockResponse)
     });
 
     const result = await getGithubRepo(npmUrl);
-    expect(result).toBe(expectedGithubUrl);
+
+    expect(result).toBe("https://github.com/user/some-package");
+    expect(logger.info).toHaveBeenCalledWith("Handling NPM URL");
+    expect(logger.info).toHaveBeenCalledWith("Owner: user, Package: some-package");
   });
 
-  it("should throw an error if the npm package does not have a GitHub repository", async () => {
-    const npmUrl = "https://www.npmjs.com/package/example-package";
+  it("should return null for an invalid NPM URL", async () => {
+    const npmUrl = "https://www.npmjs.com/onvalid-package";
 
-    // Mock the fetch response without a GitHub repo
-    (fetch as unknown as Mock).mockResolvedValueOnce({
-      ok: true,
-      json: vi.fn().mockResolvedValueOnce({
-        "dist-tags": { latest: "1.0.0" },
-        versions: {
-          "1.0.0": {
-            // No repository field
-          }
-        }
-      })
-    });
+    const result = await getGithubRepo(npmUrl);
 
-    await expect(getGithubRepo(npmUrl)).rejects.toThrow("No GitHub repository found");
-    expect(logger.error).toHaveBeenCalledWith("No GitHub repository found");
+    expect(result).toBe(null);
+    expect(logger.info).toHaveBeenCalledWith("Invalid NPM URL");
   });
 
-  it("should throw an error for invalid URLs", async () => {
-    const invalidUrl = "https://not-a-valid-url.com";
+  it("should return a valid GitHub URL directly", async () => {
+    const githubUrl = "https://github.com/user/repo";
 
-    await expect(getGithubRepo(invalidUrl)).rejects.toThrow("Invalid URL: Not a GitHub or npm URL");
-    expect(logger.error).toHaveBeenCalledWith("Invalid URL: Not a GitHub or npm URL");
+    const result = await getGithubRepo(githubUrl);
+
+    expect(result).toBe(githubUrl);
+    expect(logger.error).not.toHaveBeenCalled(); // No error should be logged
+  });
+
+  it("should return null for an invalid URL format", async () => {
+    const invalidUrl = "https://invalid.url.com";
+
+    const result = await getGithubRepo(invalidUrl);
+
+    expect(result).toBe(null);
+    expect(logger.error).toHaveBeenCalledWith("Invalid URL format");
+  });
+
+  it("should handle fetch errors gracefully", async () => {
+    const npmUrl = "https://www.npmjs.com/package/some-package";
+
+    (fetch as Mock).mockRejectedValueOnce(new Error("Fetch error"));
+
+    const result = await getGithubRepo(npmUrl);
+
+    expect(result).toBe(null);
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Error fetching NPM package:"));
+  });
+});
+
+describe("getGithubRepo", () => {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const repoUrl = "https://github.com/user/repo.git";
+  const repoName = "repo";
+  const expectedRepoDir = path.resolve(os.tmpdir(), repoName); // Use a temp directory for expected path
+  const logger = getLogger("utilTest");
+  const mkdirSpy = vi.spyOn(fs, "mkdir");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should clone a repository to the specified directory", async () => {
+    const gitClone = vi.fn().mockResolvedValue(undefined);
+    (simpleGit as Mock).mockReturnValueOnce({ clone: gitClone });
+
+    const repoDir = await cloneRepo(repoUrl, repoName);
+
+    expect(logger.info).toHaveBeenCalledWith(`Repository successfully cloned to ${expectedRepoDir}`);
+    expect(repoDir).toBe(expectedRepoDir);
+    expect(mkdirSpy).toHaveBeenCalledWith(expectedRepoDir, { recursive: true });
+    expect(gitClone).toHaveBeenCalledWith(repoUrl, expectedRepoDir);
+  });
+
+  it("should return null if the file path is invalid", async () => {
+    const invalidRepoName = "..";
+    const repoDir = await cloneRepo(repoUrl, invalidRepoName);
+
+    expect(repoDir).toBeNull();
+    expect(logger.info).toHaveBeenCalledWith("Invalid file path");
+    expect(mkdirSpy).not.toHaveBeenCalled();
+  });
+
+  it("should return null if there is an with cloning the repo'", async () => {
+    const gitClone = vi.fn().mockRejectedValueOnce(new Error("some other error"));
+    (simpleGit as Mock).mockReturnValueOnce({ clone: gitClone });
+
+    const repoDir = await cloneRepo(repoUrl, repoName);
+
+    expect(repoDir).toBeNull();
+    expect(logger.error).toHaveBeenCalledWith(`Error cloning repository ${repoUrl}:`, new Error("some other error"));
   });
 });
