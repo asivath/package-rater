@@ -34,8 +34,15 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b -w",
+    "clean": "rm -rf coverage node_modules dist tsconfig.tsbuildinfo",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
-    "clean": "rm -rf tsconfig.tsbuildinfo"
+    "quality": "yarn format && yarn lint",
+    "start": "yarn build && node dist/index.js",
+    "test": "vitest run",
+    "test:ci": "vitest run --no-color",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage-ci": "vitest run --coverage --no-color",
+    "test:watch": "vitest"
   },
   "type": "module"
 }
