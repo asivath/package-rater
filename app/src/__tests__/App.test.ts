@@ -36,4 +36,11 @@ test.describe("Main Page Tests", () => {
 
     expect(logs).toContain("as;dlkfajs;ldkfja;s");
   });
+
+  test("should load the main page and display the upload package button", async ({ page }) => {
+    await page.goto("http://localhost:5173");
+
+    const uploadButton = page.locator('role=button[name="Upload Package"]');
+    await expect(uploadButton).toBeVisible();
+  });
 });

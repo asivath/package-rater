@@ -1,0 +1,52 @@
+{
+  "name": "@package-rater/server",
+  "version": "1.0.0",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.678.0",
+    "@fastify/cors": "^10.0.1",
+    "@fastify/static": "^8.0.2",
+    "@package-rater/shared": "workspace:1.0.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "pm2": "^5.4.2",
+    "tar": "^7.4.3",
+    "unzipper": "^0.12.3",
+    "winston": "^3.15.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.1.0",
+    "@eslint/js": "^9.9.1",
+    "@types/eslint__eslintrc": "^2.1.2",
+    "@types/eslint__js": "^8.42.3",
+    "@types/node": "^22.7.5",
+    "@types/unzipper": "^0",
+    "@typescript-eslint/eslint-plugin": "^8.3.0",
+    "@typescript-eslint/parser": "^8.3.0",
+    "@vitest/coverage-istanbul": "2.1.2",
+    "concurrently": "^9.0.0",
+    "eslint": "^9.11.1",
+    "eslint-config-prettier": "^9.1.0",
+    "nodemon": "^3.1.7",
+    "prettier": "^3.3.3",
+    "typescript": "5.5.4",
+    "typescript-eslint": "^8.8.0",
+    "vitest": "2.1.2"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "concurrently \"tsc -b -w\" \"nodemon --watch dist dist/index.js\"",
+    "lint": "eslint '**/*.{ts,mjs,json}' --fix",
+    "test": "vitest run",
+    "test:ci": "vitest run --no-color",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage-ci": "vitest run --coverage --no-color",
+    "test:watch": "vitest",
+    "start": "pm2 start dist/index.js",
+    "stop": "pm2 stop dist/index.js",
+    "restart": "pm2 restart dist/index.js",
+    "clean": "rm -rf tsconfig.tsbuildinfo"
+  },
+  "type": "module"
+}

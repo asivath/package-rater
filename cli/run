@@ -1,0 +1,16 @@
+#!/bin/bash
+set -o pipefail
+
+# Check the first argument
+case "$1" in
+  install)
+    yarn set version berry
+    yarn install
+    yarn build
+    ;;
+  test)
+    yarn start test
+    ;;
+  *)
+    yarn start "$@"
+esac
