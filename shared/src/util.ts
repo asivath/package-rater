@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs/promises";
 import os from "os";
 
-const logger = getLogger("sharedUtil");
+const logger = getLogger("util");
 
 /**
  * Fetches the GitHub repository owner and package name from a provided URL (npm or GitHub)
