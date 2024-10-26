@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { getLogger } from "@package-rater/shared";
 
-const logger = getLogger("Dependencies");
+const logger = getLogger("cli");
 
 /**
  * Check if a version string is pinned to a specific major.minor version.
@@ -10,7 +10,7 @@ const logger = getLogger("Dependencies");
  * @returns True if pinned to a major.minor version, false otherwise.
  */
 export function isPinnedToMajorMinor(versionConstraint: string): boolean {
-  console.log("Version Constraint: ", versionConstraint);
+  logger.info("Version Constraint: ", versionConstraint);
   // Reject versions with caret (^)
   if (versionConstraint.startsWith("^")) {
     return false;
@@ -76,7 +76,6 @@ export async function calculatePinnedDependencyFraction(
 
   for (const packageJsonPath of packageJsonFiles) {
     try {
-      console.log("PackageJsonPath: ", packageJsonPath);
       const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8"));
       const dependencies = {
         ...packageJson.dependencies,

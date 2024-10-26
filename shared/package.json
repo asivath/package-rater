@@ -22,7 +22,6 @@
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
     "@vitest/coverage-istanbul": "2.1.2",
-    "@vitest/coverage-v8": "2.1.2",
     "concurrently": "^9.0.0",
     "eslint": "^9.11.1",
     "eslint-config-prettier": "^9.1.0",
@@ -33,7 +32,8 @@
   "keywords": [],
   "license": "ISC",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
+    "dev": "tsc -b -w",
     "clean": "rm -rf coverage node_modules dist tsconfig.tsbuildinfo",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
     "quality": "yarn format && yarn lint",
