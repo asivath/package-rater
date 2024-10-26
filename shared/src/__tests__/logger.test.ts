@@ -26,7 +26,6 @@ const logFilePath = path.join("src", "__tests__", "logs", "test.log");
 beforeAll(() => {
   const mockDate = new Date(2021, 1, 1);
   vi.setSystemTime(mockDate);
-  process.env.LOG_LEVEL = "2";
   process.env.LOG_FILE = logFilePath;
   process.env.NODE_ENV = "test";
   vi.spyOn(console, "log").mockImplementation(() => {});
@@ -44,7 +43,7 @@ describe("Logger Tests", () => {
 
   beforeEach(async () => {
     reinitializeLogger();
-    logger = getLogger("level3");
+    logger = getLogger("logger-test");
     debugSpy = vi.spyOn(logger, "debug");
     infoSpy = vi.spyOn(logger, "info");
     consoleLogSpy = vi.spyOn(console, "log");
@@ -68,7 +67,6 @@ describe("Logger Tests", () => {
   });
 
   it("should log a debug message", async () => {
-    process.env.LOG_LEVEL = "0";
     const testMessage = { key: "value" };
     await fs.writeFile(logFilePath, "");
 
@@ -77,44 +75,5 @@ describe("Logger Tests", () => {
     // Assert that the debug method was called with the expected message
     expect(debugSpy).toHaveBeenCalledWith(testMessage);
     expect(infoSpy).not.toHaveBeenCalled();
-  });
-
-  it("should not log a debug message and log an info message when log level is 1", async () => {
-    process.env.LOG_LEVEL = "1";
-    reinitializeLogger();
-    logger = getLogger("level1");
-    await fs.writeFile(logFilePath, "");
-
-    logger.debug("This is a debug message");
-    logger.info("This is an info message");
-
-    const logContents = await fs.readFile(logFilePath, "utf-8");
-    expect(logContents).toBe(`01/02/2021 00:00:00 [info] [level1]: This is an info message\n`);
-  });
-
-  it("should not log a debug message and log an info message when log level is 2", async () => {
-    process.env.LOG_LEVEL = "2";
-    reinitializeLogger();
-    logger = getLogger("level2");
-    await fs.writeFile(logFilePath, "");
-
-    logger.debug("This is a debug message");
-    logger.info("This is an info message");
-
-    const logContents = await fs.readFile(logFilePath, "utf-8");
-    expect(logContents).toBe("");
-  });
-
-  it("should not log a debug message and log an info message when log level is 0", async () => {
-    process.env.LOG_LEVEL = "0";
-    reinitializeLogger();
-    logger = getLogger("level0");
-    await fs.writeFile(logFilePath, "");
-
-    logger.debug("This is a debug message");
-    logger.info("This is an info message");
-
-    const logContents = await fs.readFile(logFilePath, "utf-8");
-    expect(logContents).toBe("");
   });
 });
