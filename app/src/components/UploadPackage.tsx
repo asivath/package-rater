@@ -15,7 +15,7 @@ import {
   Alert,
   Fade
 } from "@mui/material";
-import { fetcher } from "./util";
+import { fetcher } from "../util";
 
 export const UploadPackageForm: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
