@@ -60,7 +60,18 @@ vi.mock("util", () => ({
 }));
 
 const mockMetadataJson = {
-  "existing-package-id": { packageName: "test-package", version: "1.0.0" }
+  express: {
+    versions: {
+      "4.0.0": {
+        id: "06c7a539fff97f20059486decea07c201359ff69f458f0a26668123575df6da5",
+        ndjson: null
+      },
+      "3.5.1": {
+        id: "9030b43c015797d5f7100206fcfa72fefb110d2dbcab20ebef2882a390d4e644",
+        ndjson: null
+      }
+    }
+  }
 };
 
 describe("savePackage", () => {
@@ -152,13 +163,13 @@ describe("savePackage", () => {
 
 describe("checkIfPackageExists", () => {
   it("should return true if package exists", async () => {
-    const result = await checkIfPackageExists("existing-package-id");
+    const result = await checkIfPackageExists("express", "4.0.0");
 
     expect(result).toBe(true);
   });
 
   it("should return false if package does not exist", async () => {
-    const result = await checkIfPackageExists("non-existing-package-id");
+    const result = await checkIfPackageExists("non-existing-package-name", "non-existing-version");
 
     expect(result).toBe(false);
   });
@@ -166,9 +177,9 @@ describe("checkIfPackageExists", () => {
 
 describe("getPackageMetadata", () => {
   it("should return package metadata if package exists", async () => {
-    const result = await getPackageMetadata("existing-package-id");
+    const result = await getPackageMetadata("express");
 
-    expect(result).toEqual(mockMetadataJson["existing-package-id"]);
+    expect(result).toEqual(mockMetadataJson["express"]);
   });
 
   it("should return null if package does not exist", async () => {

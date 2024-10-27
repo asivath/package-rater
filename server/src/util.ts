@@ -100,7 +100,15 @@ export const savePackage = async (
 
     const metadata = await readFile(metadataPath, "utf-8");
     const metadataJson = JSON.parse(metadata);
-    metadataJson[id] = { packageName, version, ndjson };
+    if (!metadataJson[packageName]) {
+      metadataJson[packageName] = { versions: {} };
+    }
+
+    metadataJson[packageName].versions[version] = {
+      id,
+      ndjson
+    };
+
     await writeFile(metadataPath, JSON.stringify(metadataJson, null, 2));
     logger.info(`Saved package ${packageName} v${version} with ID ${id}`);
     return { success: true, id };
@@ -114,13 +122,15 @@ export const savePackage = async (
  * @param id The package ID
  * @returns The package metadata or null if it doesn't exist
  */
-export const getPackageMetadata = async (id: string) => {
+export const getPackageMetadata = async (packageName: string) => {
   const metadata = await readFile(metadataPath, "utf-8");
   const metadataJson = JSON.parse(metadata);
-  const packageMetadata = metadataJson[id];
-  if (!packageMetadata) {
+  if (!metadataJson[packageName] || !metadataJson[packageName].versions) {
     return null;
   }
+
+  const packageMetadata = metadataJson[packageName];
+
   return packageMetadata;
 };
 
@@ -129,9 +139,13 @@ export const getPackageMetadata = async (id: string) => {
  * @param id The package ID
  * @returns Whether the package exists
  */
-export const checkIfPackageExists = async (id: string) => {
-  const packageMetadata = await getPackageMetadata(id);
-  return packageMetadata !== null;
+export const checkIfPackageExists = async (packageName: string, version: string) => {
+  const metadata = await readFile(metadataPath, "utf-8");
+  const metadataJson = JSON.parse(metadata);
+  if (!metadataJson[packageName]) {
+    return false; // Package doesn't exist
+  }
+  return metadataJson[packageName].versions[version] ? true : false;
 };
 
 /**

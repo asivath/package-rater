@@ -52,7 +52,7 @@ export const uploadPackage = async (
       id = createHash("sha256")
         .update(packageName + version)
         .digest("hex");
-      if (await checkIfPackageExists(id)) {
+      if (await checkIfPackageExists(packageName, version)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
@@ -110,7 +110,7 @@ export const uploadPackage = async (
       id = createHash("sha256")
         .update(packageName + version)
         .digest("hex");
-      if (await checkIfPackageExists(id)) {
+      if (await checkIfPackageExists(packageName, version)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
@@ -119,7 +119,7 @@ export const uploadPackage = async (
       if (result.success === false) {
         if (result.reason === "Package score is too low") {
           logger.error(`Package ${packageName} is not uploaded due to the disqualified rating.`);
-          reply.code(421).send({ error: "Package is not uploaded due to the disqualified rating." });
+          reply.code(424).send({ error: "Package is not uploaded due to the disqualified rating." });
         } else {
           logger.error(`Error saving the package ${packageName}: ${result.reason}`);
           reply.code(500).send({ error: "Error saving the package" });
