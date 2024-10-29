@@ -1,74 +1,24 @@
 import { getLogger } from "@package-rater/shared";
+import * as fs from "fs";
 import { getGitHubData } from "../graphql.js";
 
 const logger = getLogger("cli");
 
-const GET_PR_COMMITS_QUERY = `
-query GetPRCommits($owner: String!, $repo: String!, $after: String) {
-  repository(owner: $owner, name: $repo) {
-    pullRequests(states: MERGED, baseRefName: "main", first: 50, after: $after) {
-      nodes {
-        number
-        commits(first: 50) {
-          nodes {
-            commit {
-              oid
-              additions
-              deletions
-            }
-          }
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
-}
+type PRNode = {
+  number: number;
+  additions: number;
+  deletions: number;
+  reviewDecision: string;
+  comments: {
+    totalCount: number;
+  };
+};
 
-`;
-
-const GET_MAIN_COMMITS_QUERY = `
-query GetMainCommits($owner: String!, $repo: String!, $after: String) {
-  repository(owner: $owner, name: $repo) {
-    ref(qualifiedName: "refs/heads/main") {
-      target {
-        ... on Commit {
-          history(first: 50, after: $after) {
-            nodes {
-              oid
-              additions
-              deletions
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`;
-
-type PRCommitsData = {
+type PRResponse = {
   data: {
     repository: {
       pullRequests: {
-        nodes: Array<{
-          number: number;
-          commits: {
-            nodes: Array<{
-              commit: {
-                oid: string;
-                additions: number;
-                deletions: number;
-              };
-            }>;
-          };
-        }>;
+        nodes: PRNode[];
         pageInfo: {
           hasNextPage: boolean;
           endCursor: string | null;
@@ -78,102 +28,101 @@ type PRCommitsData = {
   };
 };
 
-type MainCommitsData = {
-  data: {
-    repository: {
-      ref: {
-        target: {
-          history: {
-            nodes: Array<{
-              oid: string;
-              additions: number;
-              deletions: number;
-            }>;
-            pageInfo: {
-              hasNextPage: boolean;
-              endCursor: string | null;
-            };
-          };
-        };
-      };
-    };
-  };
-};
-
-async function fetchAllPRCommits(owner: string, repo: string): Promise<Set<string>> {
-  let hasNextPage = true;
-  let after: string | undefined = undefined;
-  const prCommitSet = new Set<string>();
-
-  while (hasNextPage) {
-    const data = (await getGitHubData(repo, owner, GET_PR_COMMITS_QUERY, { after })) as PRCommitsData;
-
-    const pullRequests = data.data.repository.pullRequests;
-
-    pullRequests.nodes.forEach((pr) => pr.commits.nodes.forEach((commit) => prCommitSet.add(commit.commit.oid)));
-
-    hasNextPage = pullRequests.pageInfo.hasNextPage;
-    after = pullRequests.pageInfo.endCursor ?? undefined;
-
-    logger.info(`Fetched PR commits, next page: ${hasNextPage}, cursor: ${after}`);
-  }
-
-  return prCommitSet;
-}
-
-async function fetchAllMainCommits(
-  owner: string,
-  repo: string
-): Promise<Array<{ oid: string; additions: number; deletions: number }>> {
-  let hasNextPage = true;
-  let after: string | undefined = undefined;
-  const mainCommits: Array<{ oid: string; additions: number; deletions: number }> = [];
-
-  while (hasNextPage) {
-    const data = (await getGitHubData(repo, owner, GET_MAIN_COMMITS_QUERY, { after })) as MainCommitsData;
-
-    const history = data.data.repository.ref.target.history;
-
-    history.nodes.forEach((commit) =>
-      mainCommits.push({
-        oid: commit.oid,
-        additions: commit.additions,
-        deletions: commit.deletions
-      })
-    );
-
-    hasNextPage = history.pageInfo.hasNextPage;
-    after = history.pageInfo.endCursor ?? undefined;
-
-    logger.info(`Fetched main commits, next page: ${hasNextPage}, cursor: ${after}`);
-  }
-
-  return mainCommits;
-}
-
-export async function calculatePRImpact(owner: string, repo: string): Promise<number> {
-  try {
-    const prCommits = await fetchAllPRCommits(owner, repo);
-    logger.info("successfully fetched PR commits");
-    const mainCommits = await fetchAllMainCommits(owner, repo);
-    logger.info("successfully fetched main commits");
-
-    let prTotal = 0;
-    let mainTotal = 0;
-
-    mainCommits.forEach(({ oid, additions, deletions }) => {
-      if (prCommits.has(oid)) {
-        prTotal += additions + deletions;
+// Fetch merged PRs for a specific branch (either 'main' or 'master')
+async function fetchMergedPRs(owner: string, repo: string, baseRef: string): Promise<PRNode[]> {
+  const query = `
+    query GetPRSummary($owner: String!, $repo: String!, $baseRef: String!, $after: String) {
+      repository(owner: $owner, name: $repo) {
+        pullRequests(states: MERGED, baseRefName: $baseRef, first: 50, after: $after) {
+          nodes {
+            number
+            additions
+            deletions
+            reviewDecision
+            comments {
+            totalCount
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
       }
-      mainTotal += additions + deletions;
-    });
+    }
+  `;
 
-    const percentage = mainTotal > 0 ? prTotal / mainTotal : 0;
+  logger.debug(`Fetching merged PRs for ${repo} on branch ${baseRef}`);
 
-    logger.info(`Percentage of code changes via PRs: ${percentage.toFixed(2)}`);
-    return percentage;
-  } catch (error) {
-    logger.error("Error calculating PR code percentage:", error);
+  const results: PRNode[] = [];
+  let hasNextPage = true;
+  let after: string | null = null;
+
+  while (hasNextPage) {
+    const data = (await getGitHubData(repo, owner, query, {
+      baseRef,
+      after
+    })) as PRResponse;
+
+    const { nodes, pageInfo } = data.data.repository.pullRequests;
+    results.push(...nodes);
+
+    hasNextPage = pageInfo.hasNextPage;
+    after = pageInfo.endCursor ?? null;
+
+    logger.debug(`Fetched ${nodes.length} PRs. Next page: ${hasNextPage}`);
   }
-  return 0;
+
+  logger.info(`Total merged PRs fetched from ${baseRef} for ${repo}: ${results.length}`);
+  return results;
+}
+
+// Fetch and combine merged PRs from both 'main' and 'master' branches
+async function fetchAllMergedPRs(owner: string, repo: string): Promise<PRNode[]> {
+  const [mainPRs, masterPRs] = await Promise.all([
+    fetchMergedPRs(owner, repo, "main"),
+    fetchMergedPRs(owner, repo, "master")
+  ]);
+
+  const allPRs = [...mainPRs, ...masterPRs];
+  logger.info(`Total merged PRs from 'main' and 'master' for ${repo}: ${allPRs.length}`);
+  return allPRs;
+}
+
+export async function calculatePRImpact(owner: string, repo: string, tocMain: number): Promise<number> {
+  try {
+    // Fetch merged PRs from both 'main' and 'master' branches
+    const mergedPRs = await fetchAllMergedPRs(owner, repo);
+
+    // Filter PRs that have either a non-null reviewDecision OR at least 1 comment AND deletion is not 1.5x greater than addition to deal wtih weird edge cases
+    // where 1000000 lines are deleted and 1000 line is added
+    const validPRs = mergedPRs.filter(
+      (pr) => (pr.reviewDecision !== null || pr.comments.totalCount > 0) && pr.additions > 1.25 * pr.deletions
+    );
+    writeMergedPRs(mergedPRs, repo);
+    // Calculate the total LOC impact from valid PRs
+    const prLOC = validPRs.reduce((total, pr) => total + (pr.additions - pr.deletions), 0);
+
+    // Calculate the fraction of PR LOC relative to the total code in default branch
+    logger.info(`PR Impact for ${repo}: ${prLOC} / ${tocMain}`);
+    const fractionFromPR = tocMain > 0 ? prLOC / tocMain : 0;
+    logger.info(`PR Impact for ${repo}: ${(fractionFromPR * 100).toFixed(2)}%`);
+    return Math.max(0, Math.min(fractionFromPR, 1));
+  } catch (error) {
+    logger.error(`Error calculating PR impact for ${repo}:`, error);
+    return 0;
+  }
+}
+
+async function writeMergedPRs(mergedPRs: PRNode[], repo: string) {
+  const prData = mergedPRs.map((pr) => ({
+    number: pr.number,
+    additions: pr.additions,
+    deletions: pr.deletions,
+    reviewDecision: pr.reviewDecision,
+    comments: pr.comments.totalCount
+  }));
+  const fileName = `./${repo}-merged-prs.json`;
+  fs.writeFileSync(fileName, JSON.stringify(prData, null, 2));
+  logger.info(`Merged PRs written to ${fileName}`);
 }

@@ -58,7 +58,9 @@ export const savePackage = async (
       await unlink(newPackageFilePath);
     } else {
       const execAsync = promisify(exec);
-      const { stdout, stderr } = await execAsync(`./run --url ${url}`, { cwd: path.join(__dirname, "..", "..", "cli") });
+      const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
+        cwd: path.join(__dirname, "..", "..", "cli")
+      });
       if (stderr) {
         return { success: false, reason: stderr };
       }

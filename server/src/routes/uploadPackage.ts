@@ -99,5 +99,5 @@ export const uploadPackage = async (
     reply.code(500).send({ error: "Error uploading the package" });
     return;
   }
-  reply.code(201).send({ metadata: { "Name": package} });
+  reply.code(201).send({ metadata: { Name: package } });
 };

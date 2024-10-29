@@ -1,10 +1,11 @@
 import { getLogger, getGithubRepo, cloneRepo } from "@package-rater/shared";
-import { calculateCorrectness } from "./Correctness.js";
+import { calculateLOC, calculateCorrectness } from "./Correctness.js";
 import { calculateLicense } from "./License.js";
 import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { rm } from "fs/promises";
+import { calculatePRImpact } from "./FracCodePR.js";
 
 const logger = getLogger("cli");
 
@@ -68,13 +69,17 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
     }
     const [repoName, repoOwner, gitUrl] = repoInfo;
     const repoDir = await cloneRepo(gitUrl, repoName);
-    const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor] = await Promise.all([
-      latencyWrapper(() => calculateCorrectness(repoOwner, repoName)),
+    const totalLinesOfCode = await calculateLOC(repoOwner, repoName);
+    const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor, percentagePR] = await Promise.all([
+      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
       latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
-      latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
+      latencyWrapper(() => calculateRampup(repoOwner, repoName)),
       latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
-      latencyWrapper(() => calculateRampup(repoOwner, repoName))
+      latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
+      latencyWrapper(() => calculatePRImpact(repoOwner, repoName, totalLinesOfCode))
     ]);
+
+    console.log(percentagePR);
 
     const netscore =
       0.15 * busFactor.result +
