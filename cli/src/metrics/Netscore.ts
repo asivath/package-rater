@@ -1,11 +1,11 @@
-import { getLogger, getGithubRepo } from "@package-rater/shared";
-import { calculateCorrectness } from "./Correctness.js";
+import { getLogger, getGithubRepo, cloneRepo } from "@package-rater/shared";
+import { calculateLOC, calculateCorrectness } from "./Correctness.js";
 import { calculateLicense } from "./License.js";
 import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
+import { calculatePRImpact } from "./FracCodePR.js";
 import { calculatePinnedDependencyFraction } from "./Dependencies.js";
-import { cloneRepo } from "@package-rater/shared";
 
 const logger = getLogger("cli");
 
@@ -69,21 +69,25 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
     }
     const [repoName, repoOwner, gitUrl] = repoInfo;
     const repoDir = await cloneRepo(gitUrl, repoName);
-    const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor, dependencies] = await Promise.all([
-      latencyWrapper(() => calculateCorrectness(repoOwner, repoName)),
+    const totalLinesOfCode = await calculateLOC(repoOwner, repoName);
+    const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor, percentagePR, pinnedDependencies] = await Promise.all([
+      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
       latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
-      latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
-      latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
       latencyWrapper(() => calculateRampup(repoOwner, repoName)),
+      latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
+      latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
+      latencyWrapper(() => calculatePRImpact(repoOwner, repoName, totalLinesOfCode)),
       latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir))
     ]);
 
     const netscore =
       0.15 * busFactor.result +
-      0.24 * correctness.result +
+      0.15 * correctness.result +
       0.15 * rampUp.result +
-      0.2 * responsiveness.result +
-      0.26 * licenseCompatibility.result;
+      0.15 * responsiveness.result +
+      0.15 * licenseCompatibility.result
+      0.10 * percentagePR.result +
+      0.15 * pinnedDependencies.result;
 
     const ndjsonOutput: Record<string, number | string> = {
       URL: url,
@@ -101,8 +105,8 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       ResponsiveMaintainer_Latency: parseFloat(responsiveness.time.toFixed(2)),
       License: parseFloat(licenseCompatibility.result.toFixed(2)),
       License_Latency: parseFloat(licenseCompatibility.time.toFixed(2)),
-      Dependencies: parseFloat(dependencies.result.toFixed(2)),
-      Dependendencies_Latency: parseFloat(dependencies.time.toFixed(2))
+      Dependencies: parseFloat(pinnedDependencies.result.toFixed(2)),
+      Dependendencies_Latency: parseFloat(pinnedDependencies.time.toFixed(2))
     };
 
     return ndjsonOutput;

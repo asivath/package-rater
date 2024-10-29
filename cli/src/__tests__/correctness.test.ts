@@ -70,7 +70,7 @@ describe("calculateCorrectness", () => {
     (getGitHubData as Mock).mockResolvedValueOnce(mockIssuesData); // Mock for fetchIssues
     (getGitHubData as Mock).mockResolvedValueOnce(mockLOCData); // Mock for calculateLOC
 
-    const correctness = await calculateCorrectness("owner", "repo");
+    const correctness = await calculateCorrectness("owner", "repo", 3);
 
     expect(correctness).toBeCloseTo(0.7 * (7 / 10) + 0.3 * (1 - 3 / 5)); // Adjusted for the mock data
     expect(logger.info).toHaveBeenCalledWith(`Correctness for owner/repo:`, expect.any(Number));
@@ -101,7 +101,7 @@ describe("calculateCorrectness", () => {
     (getGitHubData as Mock).mockResolvedValueOnce(mockIssuesData); // Mock for fetchIssues
     (getGitHubData as Mock).mockResolvedValueOnce(mockLOCData); // Mock for calculateLOC
 
-    const correctness = await calculateCorrectness("owner", "repo");
+    const correctness = await calculateCorrectness("owner", "repo", 3);
 
     expect(correctness).toBe(0);
     expect(logger.info).toHaveBeenCalledWith(`No LOC found for owner/repo`);
@@ -111,7 +111,7 @@ describe("calculateCorrectness", () => {
     (getGitHubData as Mock).mockRejectedValueOnce(new Error("Network Error")); // Simulate fetchIssues error
     (getGitHubData as Mock).mockResolvedValueOnce({ data: { repository: { object: { entries: [] } } } }); // Mock LOC response
 
-    const correctness = await calculateCorrectness("owner", "repo");
+    const correctness = await calculateCorrectness("owner", "repo", 3);
 
     expect(correctness).toBe(0);
     expect(logger.error).toHaveBeenCalledWith(`Error fetching issues for owner/repo:`, expect.any(Error));
@@ -131,7 +131,7 @@ describe("calculateCorrectness", () => {
     (getGitHubData as Mock).mockResolvedValueOnce(mockIssuesData); // Mock for fetchIssues
     (getGitHubData as Mock).mockRejectedValueOnce(new Error("Network Error")); // Simulate LOC calculation error
 
-    const correctness = await calculateCorrectness("owner", "repo");
+    const correctness = await calculateCorrectness("owner", "repo", 3);
 
     expect(correctness).toBe(0); // Since there was an error calculating LOC
     expect(logger.error).toHaveBeenCalledWith(`Error calculating LOC for owner/repo:`, expect.any(Error));

@@ -8,47 +8,104 @@ type IssuesData = {
     repository: {
       issues: {
         totalCount: number;
+        pageInfo: {
+          hasNextPage: boolean;
+          endCursor: string | null;
+        };
       };
       closedIssues: {
         totalCount: number;
+        pageInfo: {
+          hasNextPage: boolean;
+          endCursor: string | null;
+        };
       };
       bugIssues: {
         totalCount: number;
+        pageInfo: {
+          hasNextPage: boolean;
+          endCursor: string | null;
+        };
       };
     };
   };
 };
 
 async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
+  let totalIssues = 0;
+  let totalClosedIssues = 0;
+  let totalBugIssues = 0;
+  let afterCursor: string | null = null;
+  let hasNextPage = true;
+
   try {
-    const query = `
-        query($owner: String!, $repo: String!) {
-          repository(owner: $owner, name: $repo) { 
-            issues {
+    while (hasNextPage) {
+      const query = `
+        query($owner: String!, $repo: String!, $after: String) {
+          repository(owner: $owner, name: $repo) {
+            issues(first: 100, after: $after) {
               totalCount
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
             }
-            closedIssues: issues(states: CLOSED) {
+            closedIssues: issues(states: CLOSED, first: 100, after: $after) {
               totalCount
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
             }
-            bugIssues: issues(first: 5, labels: ["type: bug"]) {
+            bugIssues: issues(labels: ["type: bug"], first: 100, after: $after) {
               totalCount
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
             }
           }
         }
       `;
 
-    const result = await getGitHubData(repo, owner, query);
-    logger.info(`Fetched issues for ${owner}/${repo}:`, result);
-    return result as IssuesData;
+      const variables = { owner, repo, after: afterCursor };
+      const result = (await getGitHubData(repo, owner, query, variables)) as IssuesData;
+
+      // Accumulate the totals
+      totalIssues += result.data.repository.issues.totalCount;
+      totalClosedIssues += result.data.repository.closedIssues.totalCount;
+      totalBugIssues += result.data.repository.bugIssues.totalCount;
+
+      // Update pagination state
+      hasNextPage = result.data.repository.issues.pageInfo.hasNextPage;
+      afterCursor = result.data.repository.issues.pageInfo.endCursor;
+    }
+
+    logger.info(`Fetched issues for ${owner}/${repo}: ${totalIssues} issues.`);
+    return {
+      data: {
+        repository: {
+          issues: { totalCount: totalIssues, pageInfo: { hasNextPage: false, endCursor: null } },
+          closedIssues: { totalCount: totalClosedIssues, pageInfo: { hasNextPage: false, endCursor: null } },
+          bugIssues: { totalCount: totalBugIssues, pageInfo: { hasNextPage: false, endCursor: null } }
+        }
+      }
+    };
   } catch (error) {
     logger.error(`Error fetching issues for ${owner}/${repo}:`, error);
     return {
-      data: { repository: { issues: { totalCount: 0 }, closedIssues: { totalCount: 0 }, bugIssues: { totalCount: 0 } } }
+      data: {
+        repository: {
+          issues: { totalCount: 0, pageInfo: { hasNextPage: false, endCursor: null } },
+          closedIssues: { totalCount: 0, pageInfo: { hasNextPage: false, endCursor: null } },
+          bugIssues: { totalCount: 0, pageInfo: { hasNextPage: false, endCursor: null } }
+        }
+      }
     };
   }
 }
 
-async function calculateLOC(owner: string, repo: string): Promise<number> {
+export async function calculateLOC(owner: string, repo: string): Promise<number> {
   try {
     type TreeEntry = {
       name: string;
@@ -121,7 +178,7 @@ async function calculateLOC(owner: string, repo: string): Promise<number> {
       logger.error("No entries found in the repository object.");
     }
 
-    logger.info(`Calculated LOC for ${owner}/${repo}:`, totalLines);
+    logger.info(`Fetched LOC for ${owner}/${repo}: ${totalLines} lines.`);
     return totalLines;
   } catch (error) {
     logger.error(`Error calculating LOC for ${owner}/${repo}:`, error);
@@ -129,9 +186,8 @@ async function calculateLOC(owner: string, repo: string): Promise<number> {
   }
 }
 
-export async function calculateCorrectness(owner: string, repo: string) {
+export async function calculateCorrectness(owner: string, repo: string, totalLinesOfCode: number) {
   const issuesData = await fetchIssues(owner, repo);
-  const totalLinesOfCode = await calculateLOC(owner, repo);
   const totalIssues = issuesData.data.repository.issues.totalCount;
   const resolvedIssues = issuesData.data.repository.closedIssues.totalCount;
   const totalBugs = issuesData.data.repository.bugIssues.totalCount;
