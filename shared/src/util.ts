@@ -38,13 +38,13 @@ export async function getGithubRepo(url: string): Promise<string> {
       let gitHubAPI = latestVersionData.repository && latestVersionData.repository.url;
       if (gitHubAPI) {
         gitHubAPI = gitHubAPI
-        .replace(/^git\+/, "")
-        .replace(/^git:\/\//, "https://")
-        .replace(/\.git$/, "");
+          .replace(/^git\+/, "")
+          .replace(/^git:\/\//, "https://")
+          .replace(/\.git$/, "");
 
-      if (!gitHubAPI.startsWith("https://")) {
-        gitHubAPI = `https://${gitHubAPI}`;
-      }
+        if (!gitHubAPI.startsWith("https://")) {
+          gitHubAPI = `https://${gitHubAPI}`;
+        }
         return gitHubAPI;
       } else {
         logger.error("No GitHub repository found");
