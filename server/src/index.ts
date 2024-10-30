@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
-import { getVersions } from "./routes/getVersions.js";
+import { postPackages } from "./routes/postPackages.js";
 import { promises as fs } from "fs";
 import { dirname } from "path";
 import path from "path";
@@ -31,11 +31,11 @@ try {
   await fs.access(metadataPath);
 } catch {
   await fs.mkdir(dirname(metadataPath), { recursive: true });
-  await fs.writeFile(metadataPath, JSON.stringify({}));
+  await fs.writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {} }));
 }
 
 fastify.post("/package", uploadPackage);
-fastify.post("/versions", getVersions);
+fastify.post("/packages", postPackages);
 
 const start = async () => {
   try {

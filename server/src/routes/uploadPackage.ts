@@ -52,7 +52,7 @@ export const uploadPackage = async (
       id = createHash("sha256")
         .update(packageName + version)
         .digest("hex");
-      if (await checkIfPackageExists(packageName, version)) {
+      if (await checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
@@ -110,7 +110,7 @@ export const uploadPackage = async (
       id = createHash("sha256")
         .update(packageName + version)
         .digest("hex");
-      if (await checkIfPackageExists(packageName, version)) {
+      if (await checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
