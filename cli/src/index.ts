@@ -1,59 +1,12 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { spawn } from "child_process";
 import fs from "fs/promises";
-import path, { dirname } from "path";
 import { getLogger } from "@package-rater/shared";
 import calculateMetrics from "./metrics/Netscore.js";
 import { fileURLToPath } from "url";
 import "dotenv/config";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const logger = getLogger("cli");
-
-async function runTests(): Promise<void> {
-  try {
-    const testProcess = spawn("yarn", ["test:coverage", "--reporter=json"], { stdio: ["pipe"] });
-
-    let stdout = "";
-    let stderr = "";
-
-    testProcess.stdout.on("data", (data) => {
-      stdout += data.toString();
-    });
-
-    testProcess.stderr.on("data", (data) => {
-      stderr += data.toString();
-    });
-
-    await new Promise<void>((resolve, reject) => {
-      testProcess.on("close", (code) => {
-        if (code !== 0) {
-          return reject(new Error(stderr));
-        }
-        resolve();
-      });
-    });
-
-    const results = JSON.parse(stdout);
-
-    const totalTests = results.numTotalTests;
-    const totalPassed = results.numPassedTests;
-
-    const coverageFilePath = path.resolve(__dirname, "..", "coverage", "coverage-summary.json");
-    const coverageSummaryFile = await fs.readFile(coverageFilePath, "utf-8");
-    const coverage = JSON.parse(coverageSummaryFile);
-    const lineCoverage = parseInt(coverage.total.lines.pct);
-
-    console.log(`Total: ${totalTests}`);
-    console.log(`Passed: ${totalPassed}`);
-    console.log(`Coverage: ${lineCoverage}%`);
-    console.log(`${totalPassed}/${totalTests} test cases passed. ${lineCoverage}% line coverage achieved.`);
-  } catch (error) {
-    console.error(`Error running tests: ${(error as Error).message}`);
-    throw error;
-  }
-}
 
 async function processURLFile(file: string): Promise<void> {
   try {
@@ -90,14 +43,7 @@ if (process.argv[1] === __filename) {
     process.exit(1);
   }
 
-  if (args[0] === "test") {
-    try {
-      await runTests();
-    } catch (error) {
-      console.error("Error running tests:", error);
-      process.exit(1);
-    }
-  } else if (args[0] === "--url") {
+  if (args[0] === "--url") {
     if (args.length !== 2) {
       console.error("Usage: --url <url>");
       process.exit(1);

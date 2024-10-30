@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - ec2-to-lambda
+      - main
 
 jobs:
   build-and-deploy:
@@ -67,22 +67,31 @@ jobs:
             git pull
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
-            yarn install
+            yarn workspaces focus -A --production
 
             echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}:3000" > app/.env
             
             cd server
             echo "AWS_REGION=${{ secrets.AWS_REGION }}" > .env
             echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}" >> .env
+            echo "CLI_API_URL=${{ secrets.CLI_API_URL }}" >> .env
             echo "NODE_ENV=prod" >> .env
 
             yarn restart
           EOF
 
+      - name: Check for CLI changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'cli/**'
+
       - name: Deploy CLI Changes to AWS Lambda
+        if: steps.changes.outputs.src == 'true'
         run: |
-          git diff --name-only HEAD~1 HEAD | grep '^cli/' || exit 0
           yarn config set nodeLinker node-modules
           yarn workspaces focus @package-rater/cli --production
-          zip -r lambda.zip node_modules cli/dist cli/package.json
+          zip -r lambda.zip node_modules cli/dist cli/package.json > /dev/null
           aws lambda update-function-code --function-name package-rater-cli --zip-file fileb://lambda.zip
