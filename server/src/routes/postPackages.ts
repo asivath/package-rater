@@ -3,7 +3,6 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { readFile } from "fs/promises";
-
 import path from "path";
 
 const logger = getLogger("server");
@@ -30,16 +29,12 @@ export const postPackages = async (
   }
 
   if (isNaN(offset) || offset < 0) {
-    reply.code(400).send({
-      error: "Invalid offset value"
-    });
+    reply.code(400).send({ error: "Invalid offset value" });
     return;
   }
 
   if (!Array.isArray(packageRequests) || packageRequests.length === 0) {
-    reply.code(400).send({
-      error: "Missing or invalid array of package objects"
-    });
+    reply.code(400).send({ error: "Missing or invalid array of package objects" });
     return;
   }
 
@@ -73,9 +68,7 @@ export const postPackages = async (
     // Process each package request
     for (const { Name, Version } of packageRequests) {
       if (!Name || !Version) {
-        reply.code(400).send({
-          error: "Missing Name or Version in one of the package objects"
-        });
+        reply.code(400).send({error: "Missing Name or Version in one of the package objects"});
         return;
       }
 
