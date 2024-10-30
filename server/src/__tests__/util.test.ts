@@ -94,6 +94,7 @@ describe("savePackage", () => {
   });
 
   it("should save a package from URL and upload to S3 in prod", async () => {
+    vi.stubEnv("CLI_API_URL", "https://test-api.com");
     const url = "https://www.npmjs.com/package/test-package2";
     (global.fetch as Mock)
       .mockResolvedValueOnce({

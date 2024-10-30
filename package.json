@@ -1,20 +1,20 @@
 {
   "name": "package-rater-monorepo",
-  "description": "ECE 461 Project Phase 2",
   "version": "1.0.0",
-  "author": "Aditya Sivathanu, Kevin Chang, Ellis Selznick",
-  "bugs": "https://github.com/asivath/package-rater/issues",
-  "devDependencies": {
-    "concurrently": "^9.0.0",
-    "eslint": "^9.11.1",
-    "prettier": "^3.3.3",
-    "typescript": "5.5.4"
-  },
-  "homepage": "https://github.com/asivath/package-rater#readme",
-  "license": "MIT",
-  "packageManager": "yarn@4.5.1",
   "private": true,
+  "description": "ECE 461 Project Phase 2",
+  "homepage": "https://github.com/asivath/package-rater#readme",
+  "bugs": "https://github.com/asivath/package-rater/issues",
   "repository": "asivath/package-rater.git",
+  "license": "MIT",
+  "author": "Aditya Sivathanu, Kevin Chang, Ellis Selznick",
+  "type": "module",
+  "workspaces": [
+    "app",
+    "cli",
+    "server",
+    "shared"
+  ],
   "scripts": {
     "build": "yarn workspace @package-rater/shared run build && yarn workspaces foreach -A --parallel --exclude @package-rater/shared run build",
     "clean": "yarn workspaces foreach -A run clean && rm -rf coverage node_modules",
@@ -27,11 +27,11 @@
     "test:coverage": "yarn workspaces foreach -A --parallel run test:coverage",
     "test:coverage-ci": "yarn workspaces foreach -A --parallel run test:coverage-ci"
   },
-  "type": "module",
-  "workspaces": [
-    "app",
-    "cli",
-    "server",
-    "shared"
-  ]
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "eslint": "^9.11.1",
+    "prettier": "^3.3.3",
+    "typescript": "5.5.4"
+  },
+  "packageManager": "yarn@4.5.1"
 }

@@ -1,6 +1,23 @@
 {
   "name": "@package-rater/server",
   "version": "1.0.0",
+  "keywords": [],
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf tsconfig.tsbuildinfo coverage node_modules packages",
+    "dev": "concurrently \"tsc -b -w\" \"nodemon --watch dist dist/index.js\"",
+    "lint": "eslint '**/*.{ts,mjs,json}' --fix",
+    "restart": "pm2 restart dist/index.js",
+    "start": "pm2 start dist/index.js",
+    "stop": "pm2 stop dist/index.js",
+    "test": "vitest run",
+    "test:ci": "vitest run --no-color",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage-ci": "vitest run --coverage --no-color",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.678.0",
     "@fastify/cors": "^10.0.1",
@@ -31,22 +48,5 @@
     "typescript": "5.5.4",
     "typescript-eslint": "^8.8.0",
     "vitest": "2.1.2"
-  },
-  "keywords": [],
-  "license": "ISC",
-  "scripts": {
-    "build": "tsc -b",
-    "dev": "concurrently \"tsc -b -w\" \"nodemon --watch dist dist/index.js\"",
-    "lint": "eslint '**/*.{ts,mjs,json}' --fix",
-    "test": "vitest run",
-    "test:ci": "vitest run --no-color",
-    "test:coverage": "vitest run --coverage",
-    "test:coverage-ci": "vitest run --coverage --no-color",
-    "test:watch": "vitest",
-    "start": "pm2 start dist/index.js",
-    "stop": "pm2 stop dist/index.js",
-    "restart": "pm2 restart dist/index.js",
-    "clean": "rm -rf tsconfig.tsbuildinfo coverage node_modules packages"
-  },
-  "type": "module"
+  }
 }
