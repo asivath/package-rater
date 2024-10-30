@@ -1,3 +1,4 @@
+import { APIGatewayProxyHandler } from "aws-lambda";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import path, { dirname } from "path";
@@ -6,6 +7,8 @@ import calculateMetrics from "./metrics/Netscore.js";
 import { fileURLToPath } from "url";
 import "dotenv/config";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const logger = getLogger("cli");
 
 async function runTests(): Promise<void> {
@@ -37,8 +40,6 @@ async function runTests(): Promise<void> {
     const totalTests = results.numTotalTests;
     const totalPassed = results.numPassedTests;
 
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
     const coverageFilePath = path.resolve(__dirname, "..", "coverage", "coverage-summary.json");
     const coverageSummaryFile = await fs.readFile(coverageFilePath, "utf-8");
     const coverage = JSON.parse(coverageSummaryFile);
@@ -78,37 +79,70 @@ async function processURLFile(file: string): Promise<void> {
   }
 }
 
-const args = process.argv.slice(2);
+if (process.argv[1] === __filename) {
+  const args = process.argv.slice(2);
 
-if (args.length === 0) {
-  console.log("Usage:");
-  console.log("  test               Run tests");
-  console.log("  <file>             Process a URL file");
-  console.log("  --url <url>        Process a single URL");
-  process.exit(1);
+  if (args.length === 0) {
+    console.log("Usage:");
+    console.log("  test               Run tests");
+    console.log("  <file>             Process a URL file");
+    console.log("  --url <url>        Process a single URL");
+    process.exit(1);
+  }
+
+  if (args[0] === "test") {
+    try {
+      await runTests();
+    } catch (error) {
+      console.error("Error running tests:", error);
+      process.exit(1);
+    }
+  } else if (args[0] === "--url") {
+    if (args.length !== 2) {
+      console.error("Usage: --url <url>");
+      process.exit(1);
+    }
+    const url = args[1];
+    try {
+      const result = JSON.stringify(await calculateMetrics(url));
+      console.log(result);
+    } catch (error) {
+      console.error(`Error processing URL ${url}:`, error);
+    }
+  } else {
+    processURLFile(args[0]);
+  }
 }
 
-if (args[0] === "test") {
+export const handler: APIGatewayProxyHandler = async (event) => {
   try {
-    await runTests();
-  } catch (error) {
-    console.error("Error running tests:", error);
-    process.exit(1);
-  }
-} else if (args[0] === "--url") {
-  if (args.length !== 2) {
-    console.error("Usage: --url <url>");
-    process.exit(1);
-  }
-  const url = args[1];
-  try {
-    logger.info(`Processing URL: ${url}`);
-    const result = JSON.stringify(await calculateMetrics(url));
-    console.log(result);
+    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const url = body?.url;
+    if (!url) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          message: "Missing URL. Please provide a valid URL to process."
+        })
+      };
+    }
+
+    const result = await calculateMetrics(url);
     logger.info("Result:", result);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: "URL processed successfully",
+        result
+      })
+    };
   } catch (error) {
-    console.error(`Error processing URL ${url}:`, error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: `Error processing URL: ${(error as Error).message}`
+      })
+    };
   }
-} else {
-  processURLFile(args[0]);
-}
+};

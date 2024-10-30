@@ -95,13 +95,17 @@ describe("savePackage", () => {
 
   it("should save a package from URL and upload to S3 in prod", async () => {
     const url = "https://www.npmjs.com/package/test-package2";
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true,
-      body: new ReadableStream()
-    });
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, result: { NetScore: 0.8 } })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
 
     const result = await savePackage("test-package2", "1.0.0", "new-package-id", undefined, url);
-
     expect(result.success).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
       "Uploaded package test-package2 to S3: test-package2/new-package-id/test-package2.tgz"
@@ -110,12 +114,9 @@ describe("savePackage", () => {
   });
 
   it("should return an error if package score is too low", async () => {
-    vi.mocked(util.promisify).mockReturnValueOnce(async () => {
-      return Promise.resolve({
-        stdout: JSON.stringify({ NetScore: 0.4 }),
-        stderr: null
-      });
-    });
+    vi.stubEnv("NODE_ENV", "dev");
+    const mockExec = vi.fn().mockResolvedValue({ stdout: JSON.stringify({ NetScore: 0.4 }), stderr: null });
+    vi.spyOn(util, "promisify").mockReturnValueOnce(mockExec);
 
     const result = await savePackage(
       "test-package",

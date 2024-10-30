@@ -34,7 +34,7 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b -w",
-    "clean": "rm -rf coverage node_modules dist tsconfig.tsbuildinfo",
+    "clean": "rm -rf coverage node_modules tsconfig.tsbuildinfo",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
     "quality": "yarn format && yarn lint",
     "start": "yarn build && node dist/index.js",

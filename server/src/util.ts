@@ -68,14 +68,26 @@ export const savePackage = async (
         await rm(packageBasePath, { recursive: true });
       }
     } else {
-      const execAsync = promisify(exec);
-      const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
-        cwd: path.join(__dirname, "..", "..", "cli")
-      });
-      if (stderr) {
-        return { success: false, reason: stderr };
+      if (process.env.NODE_ENV === "prod") {
+        if (!process.env.CLI_API_URL) {
+          return { success: false, reason: "CLI API URL not provided" };
+        }
+        const response = await fetch(process.env.CLI_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+        ndjson = (await response.json()).result;
+      } else {
+        const execAsync = promisify(exec);
+        const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
+          cwd: path.join(__dirname, "..", "..", "cli")
+        });
+        if (stderr) {
+          return { success: false, reason: stderr };
+        }
+        ndjson = JSON.parse(stdout);
       }
-      ndjson = JSON.parse(stdout);
       const score = parseFloat(ndjson.NetScore);
       if (isNaN(score) || score < 0.5) {
         return { success: false, reason: "Package score is too low" };

@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main
+      - ec2-to-lambda
 
 jobs:
   build-and-deploy:
@@ -17,6 +17,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install dependencies and build
         run: |
@@ -71,3 +78,11 @@ jobs:
 
             yarn restart
           EOF
+
+      - name: Deploy CLI Changes to AWS Lambda
+        run: |
+          git diff --name-only HEAD~1 HEAD | grep '^cli/' || exit 0
+          yarn config set nodeLinker node-modules
+          yarn workspaces focus @package-rater/cli --production
+          zip -r lambda.zip node_modules cli/dist cli/package.json
+          aws lambda update-function-code --function-name package-rater-cli --zip-file fileb://lambda.zip
