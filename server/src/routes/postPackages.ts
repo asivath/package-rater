@@ -68,7 +68,7 @@ export const postPackages = async (
     // Process each package request
     for (const { Name, Version } of packageRequests) {
       if (!Name || !Version) {
-        reply.code(400).send({ error: "Missing Name or Version in one of the package objects" });
+        reply.code(400).send({error: "Missing Name or Version in one of the package objects"});
         return;
       }
 
