@@ -74,7 +74,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     const result = await calculateMetrics(url);
-    logger.info("Result:", result);
+    logger.info(`Result: ${JSON.stringify(result)}`);
 
     return {
       statusCode: 200,
