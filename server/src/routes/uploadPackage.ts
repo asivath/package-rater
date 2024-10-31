@@ -18,6 +18,7 @@ export const uploadPackage = async (
   request: FastifyRequest<{ Body: { Content: string; URL: string; debloat: boolean } }>,
   reply: FastifyReply
 ) => {
+  console.log("Node Env: ", process.env.NODE_ENV);
   const { Content, URL, debloat } = request.body;
   if ((!Content && !URL) || (Content && URL)) {
     reply.code(400).send({

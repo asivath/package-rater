@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { readFile, mkdir, writeFile, rm, cp, readdir, stat, access } from "fs/promises";
+import { readFile, mkdir, writeFile, rm, cp, access, readdir, stat } from "fs/promises";
 import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import { exec } from "child_process";
@@ -94,12 +94,12 @@ export const savePackage = async (
       await create({ gzip: true, file: tarGzFilePath, cwd: packageIdPath }, ["."]);
       await rm(targetUploadFilePath, { recursive: true });
 
-      if (process.env.NODE_ENV === "prod") {
+      if (process.env.NODE_ENV === "production") {
         await uploadToS3(packageName, id, tarGzFilePath);
         await rm(packageNamePath, { recursive: true });
       }
     } else {
-      if (process.env.NODE_ENV === "prod") {
+      if (process.env.NODE_ENV === "production") {
         if (!process.env.CLI_API_URL) {
           return { success: false, reason: "CLI API URL not provided" };
         }
@@ -152,7 +152,7 @@ export const savePackage = async (
 
       await rm(extractPath, { recursive: true });
 
-      if (process.env.NODE_ENV === "prod") {
+      if (process.env.NODE_ENV === "production") {
         await uploadToS3(packageName, id, tarballPath);
         await rm(packageNamePath, { recursive: true });
       }

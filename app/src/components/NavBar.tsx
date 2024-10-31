@@ -1,4 +1,5 @@
 import { AppBar, Toolbar, Typography, Box, Avatar } from "@mui/material";
+import { ResetButton } from "./ResetButton";
 import logo from "../assets/logo.webp";
 
 export const NavBar = () => {
@@ -18,9 +19,10 @@ export const NavBar = () => {
               loading="lazy"
             />
           </Avatar>
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             package-rater
           </Typography>
+          <ResetButton />
         </Box>
       </Toolbar>
     </AppBar>

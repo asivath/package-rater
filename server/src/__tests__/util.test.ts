@@ -250,7 +250,7 @@ describe("savePackage", () => {
   const testPackageId = calculatePackageId("test-package", "1.0.0");
   const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
   it("should save a package from file path and upload to S3 in prod", async () => {
-    vi.stubEnv("NODE_ENV", "prod");
+    vi.stubEnv("NODE_ENV", "production");
     const packageFilePath = "/path/to/package-file";
 
     const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
