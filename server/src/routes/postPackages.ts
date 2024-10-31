@@ -92,7 +92,7 @@ export const postPackages = async (
       }
     }
   } catch (error) {
-    logger.error(`Error fetching packages: `, error);
+    logger.error(`Error fetching packages:  ${error}`);
     reply.code(500).send({ error: "Server error occurred while fetching packages" });
     return;
   }

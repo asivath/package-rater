@@ -10,7 +10,6 @@ const logger = getLogger("cli");
  * @returns True if pinned to a major.minor version, false otherwise.
  */
 export function isPinnedToMajorMinor(versionConstraint: string): boolean {
-  logger.info("Version Constraint: ", versionConstraint);
   // Reject versions with caret (^)
   if (versionConstraint.startsWith("^")) {
     return false;
