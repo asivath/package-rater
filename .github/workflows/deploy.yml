@@ -28,15 +28,14 @@ jobs:
       - name: Install dependencies and build
         run: |
           yarn install
-          echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}:3000" > app/.env
+          echo "VITE_CLOUDFRONT_ORIGIN=${{ secrets.CLOUDFRONT_ORIGIN }}" > app/.env
           yarn build
 
       - name: Archive build files
         run: |
-          tar -czf app-dist.tar.gz ./app/dist
-          tar -czf server-dist.tar.gz ./server/dist
-          tar -czf shared-dist.tar.gz ./shared/dist
-          tar -czf cli-dist.tar.gz ./cli/dist
+          cd app/dist && tar -czf ../../app-dist.tar.gz . && cd -
+          cd server/dist && tar -czf ../../server-dist.tar.gz . && cd -
+          cd shared/dist && tar -czf ../../shared-dist.tar.gz . && cd -
 
       - name: Write SSH key to file
         run: |
@@ -48,21 +47,17 @@ jobs:
           scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem app-dist.tar.gz ubuntu@${{ secrets.AWS_EC2_HOST }}:/home/ubuntu/app-dist.tar.gz
           scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem server-dist.tar.gz ubuntu@${{ secrets.AWS_EC2_HOST }}:/home/ubuntu/server-dist.tar.gz
           scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem shared-dist.tar.gz ubuntu@${{ secrets.AWS_EC2_HOST }}:/home/ubuntu/shared-dist.tar.gz
-          scp -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem cli-dist.tar.gz ubuntu@${{ secrets.AWS_EC2_HOST }}:/home/ubuntu/cli-dist.tar.gz
 
       - name: Deploy to EC2
         run: |
           ssh -i /tmp/ec2_key.pem ubuntu@${{ secrets.AWS_EC2_HOST }} << 'EOF'
-            mkdir -p package-rater/app/dist
-            mkdir -p package-rater/server/dist
-            mkdir -p package-rater/shared/dist
-            mkdir -p package-rater/cli/dist
-
+            rm -rf package-rater/app/dist/*
+            rm -rf package-rater/server/dist/*
+            rm -rf package-rater/shared/dist/*
             tar -xzf app-dist.tar.gz -C package-rater/app/dist
             tar -xzf server-dist.tar.gz -C package-rater/server/dist
             tar -xzf shared-dist.tar.gz -C package-rater/shared/dist
-            tar -xzf cli-dist.tar.gz -C package-rater/cli/dist
-            rm app-dist.tar.gz server-dist.tar.gz shared-dist.tar.gz cli-dist.tar.gz
+            rm app-dist.tar.gz server-dist.tar.gz shared-dist.tar.gz
 
             cd package-rater
             git pull
