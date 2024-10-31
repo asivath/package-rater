@@ -22,6 +22,14 @@ const initializeLogger = () => {
 
   const logDir = process.env.LOG_FILE || "../package-rater.log";
 
+  const transports = [];
+
+  if (process.env.NODE_ENV == "lambda") {
+    transports.push(new winston.transports.Console());
+  } else {
+    transports.push(new winston.transports.File({ filename: logDir }));
+  }
+
   bareLogger = winston.createLogger({
     level: "info",
     format: fileLogFormat,

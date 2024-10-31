@@ -18,9 +18,17 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Install dependencies and build
         run: |
           yarn install
+          echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}:3000" > app/.env
           yarn build
 
       - name: Archive build files
@@ -60,14 +68,30 @@ jobs:
             git pull
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
-            yarn install
-
-            echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}:3000" > app/.env
+            yarn workspaces focus -A --production
             
             cd server
             echo "AWS_REGION=${{ secrets.AWS_REGION }}" > .env
             echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}" >> .env
+            echo "CLI_API_URL=${{ secrets.CLI_API_URL }}" >> .env
+            echo "CLOUDFRONT_ORIGIN=${{ secrets.CLOUDFRONT_ORIGIN }}" >> .env
             echo "NODE_ENV=prod" >> .env
 
             yarn restart
           EOF
+
+      - name: Check for CLI changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'cli/**'
+
+      - name: Deploy CLI Changes to AWS Lambda
+        if: steps.changes.outputs.src == 'true'
+        run: |
+          yarn config set nodeLinker node-modules
+          yarn workspaces focus @package-rater/cli --production
+          zip -r lambda.zip node_modules cli/dist cli/package.json > /dev/null
+          aws lambda update-function-code --function-name package-rater-cli --zip-file fileb://lambda.zip

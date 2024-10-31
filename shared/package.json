@@ -1,9 +1,25 @@
 {
   "name": "@package-rater/shared",
   "version": "1.0.0",
+  "keywords": [],
+  "license": "ISC",
   "author": "",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf coverage node_modules tsconfig.tsbuildinfo",
+    "dev": "tsc -b -w",
+    "lint": "eslint '**/*.{ts,mjs,json}' --fix",
+    "quality": "yarn format && yarn lint",
+    "start": "yarn build && node dist/index.js",
+    "test": "vitest run",
+    "test:ci": "vitest run --no-color",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage-ci": "vitest run --coverage --no-color",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "dotenv": "^16.4.5",
     "fastify": "^5.0.0",
@@ -28,21 +44,5 @@
     "typescript": "5.5.4",
     "typescript-eslint": "^8.8.0",
     "vitest": "2.1.2"
-  },
-  "keywords": [],
-  "license": "ISC",
-  "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b -w",
-    "clean": "rm -rf coverage node_modules dist tsconfig.tsbuildinfo",
-    "lint": "eslint '**/*.{ts,mjs,json}' --fix",
-    "quality": "yarn format && yarn lint",
-    "start": "yarn build && node dist/index.js",
-    "test": "vitest run",
-    "test:ci": "vitest run --no-color",
-    "test:coverage": "vitest run --coverage",
-    "test:coverage-ci": "vitest run --coverage --no-color",
-    "test:watch": "vitest"
-  },
-  "type": "module"
+  }
 }
