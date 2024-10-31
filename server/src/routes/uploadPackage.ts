@@ -68,7 +68,7 @@ export const uploadPackage = async (
         }
       }
       const uploadedTempDirPath = path.join(tempPath, files.files[0].path);
-      const result = await savePackage(packageName, version, id, uploadedTempDirPath);
+      const result = await savePackage(packageName, version, id, debloat, uploadedTempDirPath);
       if (result.success === false) {
         logger.error(`Error saving the package ${packageName}: ${result.reason}`);
         reply.code(500).send({ error: "Error saving the package" });
@@ -115,7 +115,7 @@ export const uploadPackage = async (
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
-      const result = await savePackage(packageName, version, id, undefined, URL);
+      const result = await savePackage(packageName, version, id, debloat, undefined, URL);
       if (result.success === false) {
         if (result.reason === "Package score is too low") {
           logger.error(`Package ${packageName} is not uploaded due to the disqualified rating.`);
@@ -126,9 +126,6 @@ export const uploadPackage = async (
         }
         return;
       }
-    }
-    if (debloat) {
-      logger.info("Debloating not implemented yet");
     }
   } catch (error) {
     logger.error(`Error uploading the package ${packageName}:`, error);
@@ -179,7 +176,7 @@ const getGithubDetails = async (url: string) => {
           logger.error("Invalid npm package name or package not found in npm registry.");
         }
       } catch (error) {
-        logger.error("Error fetching package details from npm registry:", error);
+        logger.error(`Error fetching package details from npm registry: ${(error as Error).message}`);
       }
     } else {
       logger.error("Invalid GitHub URL format.");
@@ -212,7 +209,7 @@ async function getNpmPackageDetails(packageName: string): Promise<{ packageName:
       version: data["dist-tags"].latest
     };
   } catch (error) {
-    logger.error(`Error fetching npm package details for ${packageName}:`, error);
+    logger.error(`Error fetching npm package details for ${packageName}: ${(error as Error).message}`);
     return null;
   }
 }

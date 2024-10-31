@@ -51,7 +51,7 @@ async function getRepoOwner(url: string): Promise<[string, string, string] | nul
       }
     }
   } catch (error) {
-    logger.info(`Error fetching package info for ${url}:`, error);
+    logger.info(`Error fetching package info for ${url}: ${(error as Error).message}`);
   }
   return null;
 }

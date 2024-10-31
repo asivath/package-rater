@@ -129,7 +129,7 @@ export async function calculateBusFactor(owner: string, name: string): Promise<n
     logger.info(`Bus factor for ${owner}/${name}: ${busfactor}`);
     return busfactor;
   } catch (error) {
-    logger.error("Error fetching data from GitHub API:", error);
+    logger.error(`Error fetching data from GitHub API: ${(error as Error).message}`);
   }
 
   return 0;
