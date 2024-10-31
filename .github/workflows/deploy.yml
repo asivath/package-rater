@@ -28,6 +28,7 @@ jobs:
       - name: Install dependencies and build
         run: |
           yarn install
+          echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}:3000" > app/.env
           yarn build
 
       - name: Archive build files
@@ -68,13 +69,12 @@ jobs:
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
             yarn workspaces focus -A --production
-
-            echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}:3000" > app/.env
             
             cd server
             echo "AWS_REGION=${{ secrets.AWS_REGION }}" > .env
             echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}" >> .env
             echo "CLI_API_URL=${{ secrets.CLI_API_URL }}" >> .env
+            echo "CLOUDFRONT_ORIGIN=${{ secrets.CLOUDFRONT_ORIGIN }}" >> .env
             echo "NODE_ENV=prod" >> .env
 
             yarn restart
