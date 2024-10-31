@@ -112,7 +112,29 @@ export const savePackage = async (
 
     const metadata = await readFile(metadataPath, "utf-8");
     const metadataJson = JSON.parse(metadata);
-    metadataJson[id] = { packageName, version, ndjson };
+
+    if (!metadataJson.byId[id]) {
+      metadataJson.byId[id] = {};
+    }
+
+    // Initialize `byName[packageName]` if it doesn’t exist as an object
+    if (!metadataJson.byName[packageName]) {
+      metadataJson.byName[packageName] = {};
+    }
+
+    // Add the package metadata to byId and byName
+    metadataJson.byId[id] = {
+      packageName,
+      version,
+      ndjson
+    };
+
+    // Ensure `byName[packageName]` allows multiple versions by using `version` as a key
+    metadataJson.byName[packageName][version] = {
+      id,
+      ndjson
+    };
+
     await writeFile(metadataPath, JSON.stringify(metadataJson, null, 2));
     logger.info(`Saved package ${packageName} v${version} with ID ${id}`);
     return { success: true, id };
@@ -126,13 +148,15 @@ export const savePackage = async (
  * @param id The package ID
  * @returns The package metadata or null if it doesn't exist
  */
-export const getPackageMetadata = async (id: string) => {
+export const getPackageMetadata = async (packageName: string) => {
   const metadata = await readFile(metadataPath, "utf-8");
   const metadataJson = JSON.parse(metadata);
-  const packageMetadata = metadataJson[id];
-  if (!packageMetadata) {
+  if (!metadataJson.byName[packageName]) {
     return null;
   }
+
+  const packageMetadata = metadataJson.byName[packageName];
+
   return packageMetadata;
 };
 
@@ -142,8 +166,9 @@ export const getPackageMetadata = async (id: string) => {
  * @returns Whether the package exists
  */
 export const checkIfPackageExists = async (id: string) => {
-  const packageMetadata = await getPackageMetadata(id);
-  return packageMetadata !== null;
+  const metadata = await readFile(metadataPath, "utf-8");
+  const metadataJson = JSON.parse(metadata);
+  return metadataJson.byId[id] ? true : false;
 };
 
 /**

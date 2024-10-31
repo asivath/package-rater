@@ -119,7 +119,7 @@ export const uploadPackage = async (
       if (result.success === false) {
         if (result.reason === "Package score is too low") {
           logger.error(`Package ${packageName} is not uploaded due to the disqualified rating.`);
-          reply.code(421).send({ error: "Package is not uploaded due to the disqualified rating." });
+          reply.code(424).send({ error: "Package is not uploaded due to the disqualified rating." });
         } else {
           logger.error(`Error saving the package ${packageName}: ${result.reason}`);
           reply.code(500).send({ error: "Error saving the package" });

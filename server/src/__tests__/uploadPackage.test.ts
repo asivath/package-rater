@@ -271,7 +271,7 @@ describe("uploadPackage", () => {
     expect(logger.info).toHaveBeenCalledWith("Package test-package with version 1.0.0 uploaded successfully");
   });
 
-  it("should return 421 if the package score is too low for npm package", async () => {
+  it("should return 424 if the package score is too low for npm package", async () => {
     const body = { Content: "", URL: "https://www.npmjs.com/package/test-package/v/1.0.0", debloat: false };
 
     vi.mocked(util.savePackage).mockResolvedValueOnce({ success: false, reason: "Package score is too low" });
@@ -282,7 +282,7 @@ describe("uploadPackage", () => {
       body: body
     });
 
-    expect(reply.statusCode).toBe(421);
+    expect(reply.statusCode).toBe(424);
     expect(reply.json()).toEqual({ error: "Package is not uploaded due to the disqualified rating." });
     expect(logger.error).toHaveBeenCalledWith("Package test-package is not uploaded due to the disqualified rating.");
   });
