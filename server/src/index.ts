@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
 import { postPackages } from "./routes/postPackages.js";
+import { deletePackage } from "./routes/deletePackage.js";
 import { promises as fs } from "fs";
 import { dirname } from "path";
 import path from "path";
@@ -16,7 +17,7 @@ const fastify = Fastify({
 
 fastify.register(cors, {
   origin: ["http://127.0.0.1:3000", "http://localhost:5173", process.env.CLOUDFRONT_ORIGIN].filter(Boolean),
-  methods: ["GET", "POST", "PUT", "OPTIONS"]
+  methods: ["GET", "POST", "PUT", "OPTIONS", "DELETE"]
 });
 
 fastify.register(fastifyStatic, {
@@ -36,6 +37,7 @@ try {
 
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", postPackages);
+fastify.delete("/package/:id", deletePackage);
 
 const start = async () => {
   try {
