@@ -86,7 +86,7 @@ describe("calculateRampup", () => {
 
     expect(result).toBe(0.5);
 
-    expect(logger.info).toHaveBeenCalledWith("No pull requests found for ${owner}/${name}");
+    expect(logger.info).toHaveBeenCalledWith("No pull requests found for test-owner/test-repo");
   });
 
   it("should handle pagination and calculate ramp-up score across multiple pages", async () => {
@@ -159,6 +159,6 @@ describe("calculateRampup", () => {
 
     await expect(calculateRampup("test-owner", "test-repo")).rejects.toThrow("GitHub API failed");
 
-    expect(logger.error).toHaveBeenCalledWith("Error fetching pull requests:", mockError);
+    expect(logger.error).toHaveBeenCalledWith("Error fetching pull requests: GitHub API failed");
   });
 });
