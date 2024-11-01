@@ -4,8 +4,8 @@
  * @returns
  */
 export async function fetcher(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
-  if (import.meta.env.VITE_API_URL) {
-    args[0] = `${import.meta.env.VITE_API_URL}${args[0]}`;
+  if (import.meta.env.VITE_CLOUDFRONT_ORIGIN) {
+    args[0] = `${import.meta.env.VITE_CLOUDFRONT_ORIGIN}${args[0]}`;
   } else {
     args[0] = `http://localhost:3000${args[0]}`;
   }
