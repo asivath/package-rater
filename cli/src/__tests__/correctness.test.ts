@@ -73,7 +73,7 @@ describe("calculateCorrectness", () => {
     const correctness = await calculateCorrectness("owner", "repo");
 
     expect(correctness).toBeCloseTo(0.7 * (7 / 10) + 0.3 * (1 - 3 / 5)); // Adjusted for the mock data
-    expect(logger.info).toHaveBeenCalledWith(`Correctness for owner/repo:`, expect.any(Number));
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("Correctness for owner/repo"));
   });
 
   it("should handle the case with no lines of code", async () => {
@@ -104,7 +104,7 @@ describe("calculateCorrectness", () => {
     const correctness = await calculateCorrectness("owner", "repo");
 
     expect(correctness).toBe(0);
-    expect(logger.info).toHaveBeenCalledWith(`No LOC found for owner/repo`);
+    expect(logger.info).toHaveBeenCalledWith("No LOC found for owner/repo");
   });
 
   it("should return 0 for errors in fetching issues", async () => {
@@ -114,7 +114,7 @@ describe("calculateCorrectness", () => {
     const correctness = await calculateCorrectness("owner", "repo");
 
     expect(correctness).toBe(0);
-    expect(logger.error).toHaveBeenCalledWith(`Error fetching issues for owner/repo:`, expect.any(Error));
+    expect(logger.error).toHaveBeenCalledWith("Error fetching issues for owner/repo: Network Error");
   });
 
   it("should return 0 for errors in calculating LOC", async () => {
@@ -134,6 +134,6 @@ describe("calculateCorrectness", () => {
     const correctness = await calculateCorrectness("owner", "repo");
 
     expect(correctness).toBe(0); // Since there was an error calculating LOC
-    expect(logger.error).toHaveBeenCalledWith(`Error calculating LOC for owner/repo:`, expect.any(Error));
+    expect(logger.error).toHaveBeenCalledWith("Error calculating LOC for owner/repo: Network Error");
   });
 });

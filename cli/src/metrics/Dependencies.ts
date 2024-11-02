@@ -37,7 +37,7 @@ export async function findPackageJsonFiles(dir: string): Promise<string[]> {
         }
       }
     } catch (error) {
-      logger.error(`Error reading directory ${currentDir}:`, error);
+      logger.error(`Error reading directory ${currentDir}: ${(error as Error).message}`);
     }
   };
 
@@ -69,7 +69,7 @@ export async function calculatePinnedDependencyFraction(
     packageJsonFiles = await findPackageJsonFiles(repoDir);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      logger.error(`Error reading package.json for ${owner}/${repo}:`, error);
+      logger.error(`Error reading package.json for ${owner}/${repo}: ${(error as Error).message}`);
     }
   }
 
@@ -89,7 +89,7 @@ export async function calculatePinnedDependencyFraction(
         }
       }
     } catch (error) {
-      logger.error(`Failed to read or parse package.json at ${packageJsonPath}:`, error);
+      logger.error(`Failed to read or parse package.json at ${packageJsonPath}: ${(error as Error).message}`);
     }
   }
 

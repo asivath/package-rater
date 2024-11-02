@@ -38,10 +38,10 @@ async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
       `;
 
     const result = await getGitHubData(repo, owner, query);
-    logger.info(`Fetched issues for ${owner}/${repo}:`, result);
+    logger.info(`Fetched issues for ${owner}/${repo}: ${JSON.stringify(result)}`);
     return result as IssuesData;
   } catch (error) {
-    logger.error(`Error fetching issues for ${owner}/${repo}:`, error);
+    logger.error(`Error fetching issues for ${owner}/${repo}: ${(error as Error).message}`);
     return {
       data: { repository: { issues: { totalCount: 0 }, closedIssues: { totalCount: 0 }, bugIssues: { totalCount: 0 } } }
     };
@@ -121,10 +121,10 @@ async function calculateLOC(owner: string, repo: string): Promise<number> {
       logger.error("No entries found in the repository object.");
     }
 
-    logger.info(`Calculated LOC for ${owner}/${repo}:`, totalLines);
+    logger.info(`Calculated LOC for ${owner}/${repo}: ${totalLines}`);
     return totalLines;
   } catch (error) {
-    logger.error(`Error calculating LOC for ${owner}/${repo}:`, error);
+    logger.error(`Error calculating LOC for ${owner}/${repo}: ${(error as Error).message}`);
     return 0;
   }
 }
@@ -146,6 +146,6 @@ export async function calculateCorrectness(owner: string, repo: string) {
 
   // Adjust weights as needed
   const correctness = 0.7 * resolvedIssuesRatio + 0.3 * (1 - normalizedBugRatio);
-  logger.info(`Correctness for ${owner}/${repo}:`, correctness);
+  logger.info(`Correctness for ${owner}/${repo}: ${correctness}`);
   return correctness;
 }
