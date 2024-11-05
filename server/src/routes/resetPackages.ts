@@ -14,42 +14,38 @@ const metadataPath = join(packagesDirPath, "metadata.json");
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
 
-export const resetPackages = async (
-    _: FastifyRequest<{}>,
-    reply: FastifyReply
-) => {
-    try {
-        if (process.env.NODE_ENV === "prod") {
-            let isTruncated = true;
-            while (isTruncated) {
+export const resetPackages = async (_: FastifyRequest, reply: FastifyReply) => {
+  try {
+    if (process.env.NODE_ENV === "prod") {
+      let isTruncated = true;
+      while (isTruncated) {
+        const listObjectsCommand = new ListObjectsV2Command({ Bucket: bucketName });
+        const objectsList = await s3Client.send(listObjectsCommand);
 
-                const listObjectsCommand = new ListObjectsV2Command({ Bucket: bucketName });
-                const objectsList = await s3Client.send(listObjectsCommand);
-
-                if (objectsList.Contents && objectsList.Contents.length > 0) {
-                    const deleteParams = {
-                        Bucket: bucketName,
-                        Delete: { Objects: objectsList.Contents.map((obj) => ({ Key: obj.Key })) }
-                    };
-                    const deleteObjectsCommand = new DeleteObjectsCommand(deleteParams);
-                    await s3Client.send(deleteObjectsCommand);
-                }
-
-                isTruncated = objectsList.IsTruncated ?? false;
-            }
-            logger.info("S3 bucket cleared successfully");
+        if (objectsList.Contents && objectsList.Contents.length > 0) {
+          const deleteParams = {
+            Bucket: bucketName,
+            Delete: { Objects: objectsList.Contents.map((obj) => ({ Key: obj.Key })) }
+          };
+          const deleteObjectsCommand = new DeleteObjectsCommand(deleteParams);
+          await s3Client.send(deleteObjectsCommand);
         }
 
-        const files = await readdir(packagesDirPath);
-        for (const file of files) {
-            await rm(join(packagesDirPath, file), { recursive: true, force: true });
-        }
-        await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {} }, null, 2));
-        logger.info("Local packages cleared successfully");
-
-        reply.code(200).send({ message: "Packages reset successfully" });
-    } catch (error) {
-        logger.error("Failed to reset packages", error);
-        reply.code(500).send({ message: "Failed to reset packages" });
+        isTruncated = objectsList.IsTruncated ?? false;
+      }
+      logger.info("S3 bucket cleared successfully");
     }
+
+    const files = await readdir(packagesDirPath);
+    for (const file of files) {
+      await rm(join(packagesDirPath, file), { recursive: true, force: true });
+    }
+    await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {} }, null, 2));
+    logger.info("Local packages cleared successfully");
+
+    reply.code(200).send({ message: "Packages reset successfully" });
+  } catch (error) {
+    logger.error("Failed to reset packages", error);
+    reply.code(500).send({ message: "Failed to reset packages" });
+  }
 };

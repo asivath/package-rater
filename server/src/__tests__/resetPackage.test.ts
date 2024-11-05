@@ -1,10 +1,9 @@
 import { describe, it, vi, Mock, expect, beforeEach } from "vitest";
 import * as shared from "@package-rater/shared";
-import { FastifyReply, FastifyRequest } from "fastify";
 import Fastify from "fastify";
 import { resetPackages } from "../routes/resetPackages"; // Adjust the path as needed
-import { readFile, writeFile, readdir, rm } from "fs/promises";
-import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { writeFile } from "fs/promises";
+import { S3Client } from "@aws-sdk/client-s3";
 import { getLogger } from "@package-rater/shared";
 
 // Mock the logger
@@ -15,18 +14,18 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),
       info: vi.fn(),
-      warn: vi.fn(),
-    }),
+      warn: vi.fn()
+    })
   };
 });
 
 // Mock AWS SDK client and commands
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn().mockImplementation(() => ({
-    send: vi.fn(() => Promise.resolve({ Contents: []})),
+    send: vi.fn(() => Promise.resolve({ Contents: [] }))
   })),
   DeleteObjectsCommand: vi.fn(),
-  ListObjectsV2Command: vi.fn(() => Promise.resolve({ Contents: ["something"], IsTruncated: false })),
+  ListObjectsV2Command: vi.fn(() => Promise.resolve({ Contents: ["something"], IsTruncated: false }))
 }));
 
 // Mock fs/promises methods
@@ -34,7 +33,7 @@ vi.mock("fs/promises", () => ({
   readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
   writeFile: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
-  readdir: vi.fn(() => Promise.resolve([])), // Mock an empty directory after deletion
+  readdir: vi.fn(() => Promise.resolve([])) // Mock an empty directory after deletion
 }));
 
 const mockMetadataJson = {
@@ -42,17 +41,17 @@ const mockMetadataJson = {
     id1: {
       packageName: "express",
       version: "1.0.0",
-      ndjson: "ndjson",
-    },
+      ndjson: "ndjson"
+    }
   },
   byName: {
     express: {
       "1.0.0": {
         id: "id1",
-        ndjson: "ndjson",
-      },
-    },
-  },
+        ndjson: "ndjson"
+      }
+    }
+  }
 };
 
 describe("resetPackages", () => {
@@ -74,13 +73,10 @@ describe("resetPackages", () => {
 
     const reply = await fastify.inject({
       method: "DELETE",
-      url: "/reset",
+      url: "/reset"
     });
 
-    expect(writeFile).toHaveBeenCalledWith(
-        expect.any(String),
-        JSON.stringify({ byId: {}, byName: {} }, null, 2)
-    );
+    expect(writeFile).toHaveBeenCalledWith(expect.any(String), JSON.stringify({ byId: {}, byName: {} }, null, 2));
 
     expect(logger.info).toHaveBeenCalledWith("Local packages cleared successfully");
     expect(reply.statusCode).toBe(200);
@@ -88,12 +84,12 @@ describe("resetPackages", () => {
 
   it("should reset S3 and local packages successfully when in prod", async () => {
     (mockS3Client.send as Mock).mockResolvedValueOnce({
-      Contents: [{ Key: "package1.ndjson" }, { Key: "package2.ndjson" }],
+      Contents: [{ Key: "package1.ndjson" }, { Key: "package2.ndjson" }]
     });
 
     const reply = await fastify.inject({
       method: "DELETE",
-      url: "/reset",
+      url: "/reset"
     });
 
     expect(logger.info).toHaveBeenCalledWith("S3 bucket cleared successfully");
@@ -107,7 +103,7 @@ describe("resetPackages", () => {
 
     const reply = await fastify.inject({
       method: "DELETE",
-      url: "/reset",
+      url: "/reset"
     });
 
     // Verify the logger captured the error

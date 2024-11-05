@@ -22,7 +22,7 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
     reply.code(400).send({ error: "There is missing field(s) in the PackageID or invalid" });
     return;
   }
-  
+
   const id = request.params.id;
 
   try {
@@ -48,7 +48,6 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
       const deleteObjectsCommand = new DeleteObjectsCommand(deleteParams);
       await s3Client.send(deleteObjectsCommand);
       logger.info(`Deleted ${name} from S3.`);
-
     } else {
       // Delete the package from the local filesystem
       const packagePath = path.join(packagesDirPath, name, id);
@@ -67,7 +66,7 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
     delete metadataJson.byId[id];
     delete metadataJson.byName[name][version];
 
-    if (Object.keys(metadataJson.byName[name]).length === 0 ){
+    if (Object.keys(metadataJson.byName[name]).length === 0) {
       delete metadataJson.byName[name];
     }
 

@@ -18,7 +18,7 @@ export const ResetButton: React.FC = () => {
     try {
       await fetcher("/reset", { method: "DELETE" });
       setOpen(false); // Close the dialog after a successful reset
-    } catch (error) {
+    } catch {
       setOpen(false); // Close the dialog if an error occurs
     }
   };
