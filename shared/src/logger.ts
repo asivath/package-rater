@@ -33,7 +33,7 @@ const initializeLogger = () => {
   bareLogger = winston.createLogger({
     level: "info",
     format: fileLogFormat,
-    transports: [new winston.transports.File({ filename: logDir })]
+    transports: [...transports]
   });
 };
 

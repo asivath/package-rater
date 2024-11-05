@@ -4,9 +4,10 @@ import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { getLogger } from "@package-rater/shared";
+import { assertIsNdjson, getLogger, Ndjson } from "@package-rater/shared";
 import { create, extract } from "tar";
 import { pipeline } from "stream/promises";
+import { assertIsMetadata, Metadata } from "./types.js";
 import esbuild from "esbuild";
 import path from "path";
 import "dotenv/config";
@@ -16,6 +17,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "packages");
 const metadataPath = path.join(packagesDirPath, "metadata.json");
+
+async function loadMetadata(): Promise<Metadata> {
+  const metadata = JSON.parse(await readFile(metadataPath, "utf-8"));
+  assertIsMetadata(metadata);
+  return metadata;
+}
+let metadata = await loadMetadata(); // Do not directly modify this variable
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
@@ -78,6 +86,7 @@ export const savePackage = async (
           body: JSON.stringify({ url })
         });
         ndjson = (await response.json()).result;
+        assertIsNdjson(ndjson);
       } else {
         const execAsync = promisify(exec);
         const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
@@ -87,8 +96,9 @@ export const savePackage = async (
           return { success: false, reason: stderr };
         }
         ndjson = JSON.parse(stdout);
+        assertIsNdjson(ndjson);
       }
-      const score = parseFloat(ndjson.NetScore);
+      const score = ndjson.NetScore;
       if (isNaN(score) || score < 0.5) {
         return { success: false, reason: "Package score is too low" };
       }
@@ -120,33 +130,8 @@ export const savePackage = async (
       }
     }
 
-    const metadata = await readFile(metadataPath, "utf-8");
-    const metadataJson = JSON.parse(metadata);
+    await addPackageMetadata(id, packageName, version, ndjson);
 
-    if (!metadataJson.byId[id]) {
-      metadataJson.byId[id] = {};
-    }
-
-    // Initialize `byName[packageName]` if it doesn’t exist as an object
-    if (!metadataJson.byName[packageName]) {
-      metadataJson.byName[packageName] = {};
-    }
-
-    // Add the package metadata to byId and byName
-    metadataJson.byId[id] = {
-      packageName,
-      version,
-      ndjson
-    };
-
-    // Ensure `byName[packageName]` allows multiple versions by using `version` as a key
-    metadataJson.byName[packageName][version] = {
-      id,
-      ndjson
-    };
-
-    await writeFile(metadataPath, JSON.stringify(metadataJson, null, 2));
-    logger.info(`Saved package ${packageName} v${version} with ID ${id}`);
     return { success: true };
   } catch (error) {
     return { success: false, reason: (error as Error).message };
@@ -154,20 +139,28 @@ export const savePackage = async (
 };
 
 /**
- * Gets the metadata of a package
+ * Adds package metadata to the metadata file
  * @param id The package ID
- * @returns The package metadata or null if it doesn't exist
+ * @param packageName The package name
+ * @param version The package version
+ * @param ndjson The ndjson of the package
  */
-export const getPackageMetadata = async (packageName: string) => {
-  const metadata = await readFile(metadataPath, "utf-8");
-  const metadataJson = JSON.parse(metadata);
-  if (!metadataJson.byName[packageName]) {
-    return null;
+export const addPackageMetadata = async (id: string, packageName: string, version: string, ndjson: Ndjson | null) => {
+  metadata.byId[id] = { packageName, version, ndjson };
+  if (!metadata.byName[packageName]) {
+    metadata.byName[packageName] = {};
   }
+  metadata.byName[packageName][version] = { id, ndjson };
+  await writeMetadata(metadata);
+};
 
-  const packageMetadata = metadataJson.byName[packageName];
-
-  return packageMetadata;
+/**
+ * Writes the metadata to the metadata file
+ * @param newMetadata The new metadata to write
+ */
+export const writeMetadata = async (newMetadata: Metadata) => {
+  await writeFile(metadataPath, JSON.stringify(newMetadata, null, 2));
+  metadata = newMetadata;
 };
 
 /**
@@ -176,9 +169,7 @@ export const getPackageMetadata = async (packageName: string) => {
  * @returns Whether the package exists
  */
 export const checkIfPackageExists = async (id: string) => {
-  const metadata = await readFile(metadataPath, "utf-8");
-  const metadataJson = JSON.parse(metadata);
-  return metadataJson.byId[id] ? true : false;
+  return metadata.byId[id] ? true : false;
 };
 
 /**

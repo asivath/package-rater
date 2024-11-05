@@ -49,9 +49,12 @@ export const uploadPackage = async (
         reply.code(400).send({ error: "Invalid package.json found in the package" });
         return;
       }
-      id = createHash("sha256")
+      const hash = createHash("sha256")
         .update(packageName + version)
         .digest("hex");
+      id = BigInt("0x" + hash)
+        .toString()
+        .slice(0, 16);
       if (await checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
@@ -107,9 +110,12 @@ export const uploadPackage = async (
         packageName = details.packageName;
         version = details.version;
       }
-      id = createHash("sha256")
+      const hash = createHash("sha256")
         .update(packageName + version)
         .digest("hex");
+      id = BigInt("0x" + hash)
+        .toString()
+        .slice(0, 16);
       if (await checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });

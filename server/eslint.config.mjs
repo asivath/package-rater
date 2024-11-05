@@ -34,6 +34,6 @@ export default [
     }
   },
   {
-    ignores: ["repos"]
+    ignores: ["dist", "src/types.ts"]
   }
 ];
