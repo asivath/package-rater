@@ -87,6 +87,8 @@ export const UploadPackageForm: React.FC = () => {
         return;
       }
       setSuccess(true);
+      setPackageUrl("");
+      setFile(null);
     } catch (error) {
       setError((error as Error).message);
     } finally {

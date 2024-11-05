@@ -26,6 +26,7 @@
     "dotenv": "^16.4.5",
     "esbuild": "^0.24.0",
     "fastify": "^5.0.0",
+    "get-folder-size": "^5.0.0",
     "pm2": "^5.4.2",
     "tar": "^7.4.3",
     "unzipper": "^0.12.3",

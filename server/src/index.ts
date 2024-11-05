@@ -3,12 +3,8 @@ import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
 import { postPackages } from "./routes/postPackages.js";
-import { promises as fs } from "fs";
-import { dirname } from "path";
-import path from "path";
-import { fileURLToPath } from "url";
-import "dotenv/config";
 import { getLogger } from "@package-rater/shared";
+import "dotenv/config";
 
 const logger = getLogger("server");
 
@@ -26,16 +22,6 @@ fastify.register(fastifyStatic, {
   root: process.cwd() + "/../app/dist",
   prefix: "/"
 });
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const metadataPath = path.join(__dirname, "..", "packages", "metadata.json");
-try {
-  await fs.access(metadataPath);
-} catch {
-  await fs.mkdir(dirname(metadataPath), { recursive: true });
-  await fs.writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {} }));
-}
 
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", postPackages);

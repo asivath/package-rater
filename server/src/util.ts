@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { readFile, mkdir, writeFile, rm, cp, readdir, stat } from "fs/promises";
+import { readFile, mkdir, writeFile, rm, cp, readdir, stat, access } from "fs/promises";
 import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import { exec } from "child_process";
@@ -8,6 +8,8 @@ import { assertIsNdjson, getLogger, Ndjson } from "@package-rater/shared";
 import { create, extract } from "tar";
 import { pipeline } from "stream/promises";
 import { assertIsMetadata, Metadata } from "./types.js";
+import { createHash } from "crypto";
+import getFolderSize from "get-folder-size";
 import esbuild from "esbuild";
 import path from "path";
 import "dotenv/config";
@@ -16,14 +18,20 @@ const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "packages");
-const metadataPath = path.join(packagesDirPath, "metadata.json");
+export const metadataPath = path.join(packagesDirPath, "metadata.json");
+try {
+  await access(metadataPath);
+} catch {
+  await mkdir(path.dirname(metadataPath), { recursive: true });
+  await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }, null, 2));
+}
 
 async function loadMetadata(): Promise<Metadata> {
   const metadata = JSON.parse(await readFile(metadataPath, "utf-8"));
   assertIsMetadata(metadata);
   return metadata;
 }
-let metadata = await loadMetadata(); // Do not directly modify this variable
+const metadata = await loadMetadata(); // Do not directly modify this variable outside of this file
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
@@ -52,28 +60,39 @@ export const savePackage = async (
   if (packageFilePath && url) {
     return { success: false, reason: "Provide either package file path or URL, not both" };
   }
+  // Path where packages of the same name are stored e.g. packages/react
+  const packageNamePath = path.join(packagesDirPath, packageName);
+  // Inside the package name directory, each package (different version of the same package) has its own directory with the ID as the name e.g. packages/react/1234567890abcdef
+  const packageIdPath = path.join(packageNamePath, id);
   try {
-    const packageBasePath = path.join(packagesDirPath, packageName);
-    const packagePath = path.join(packageBasePath, id);
-    let ndjson = null;
-    if (packageFilePath) {
-      await mkdir(packagePath, { recursive: true });
+    await mkdir(packageIdPath, { recursive: true });
 
-      const newPackageFilePath = path.join(packagePath, path.basename(packageFilePath));
-      await cp(packageFilePath, newPackageFilePath, { recursive: true });
+    let ndjson = null;
+    let dependencies: { [dependency: string]: string } = {};
+    let standaloneCost: number = 0;
+    if (packageFilePath) {
+      // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
+      // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
+      const targetUploadFilePath = path.join(packageIdPath, packageName);
+      await cp(packageFilePath, targetUploadFilePath, { recursive: true });
 
       if (debloat) {
-        await minifyProject(packagePath);
+        await minifyProject(packageIdPath);
         logger.info(`Finished debloating package ${packageName} v${version}`);
       }
 
-      const tarGzFilePath = path.join(packagePath, `${packageName}.tgz`);
-      await create({ gzip: true, file: tarGzFilePath, cwd: packagePath }, ["."]);
-      await rm(newPackageFilePath, { recursive: true });
+      const packageJsonPath = path.join(targetUploadFilePath, "package.json");
+      const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
+      dependencies = packageJson.dependencies || {};
+      standaloneCost = await getFolderSize.loose(targetUploadFilePath) / 1024 / 1024;
+
+      const tarGzFilePath = path.join(packageIdPath, `${packageName}.tgz`);
+      await create({ gzip: true, file: tarGzFilePath, cwd: packageIdPath }, ["."]);
+      await rm(targetUploadFilePath, { recursive: true });
 
       if (process.env.NODE_ENV === "prod") {
         await uploadToS3(packageName, id, tarGzFilePath);
-        await rm(packageBasePath, { recursive: true });
+        await rm(packageNamePath, { recursive: true });
       }
     } else {
       if (process.env.NODE_ENV === "prod") {
@@ -104,36 +123,42 @@ export const savePackage = async (
       }
 
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${version}.tgz`;
-      const response = await fetch(npmTarURL);
-      if (!response.ok || !response.body) {
+      const tarResponse = await fetch(npmTarURL);
+      if (!tarResponse.ok || !tarResponse.body) {
         return { success: false, reason: "Failed to fetch package" };
       }
 
-      await mkdir(packagePath, { recursive: true });
-      const tarballPath = path.join(packagePath, `${packageName}.tgz`);
+      const tarballPath = path.join(packageIdPath, `${packageName}.tgz`);
       const tarballStream = createWriteStream(tarballPath);
-      await pipeline(response.body, tarballStream);
+      await pipeline(tarResponse.body, tarballStream);
+
+      await extract({ file: tarballPath, cwd: packageIdPath });
+      const extractPath = path.join(packageIdPath, "package");
 
       if (debloat) {
-        const extractPath = path.join(packagePath, "extract");
-        await mkdir(extractPath, { recursive: true });
-        await extract({ file: tarballPath, cwd: extractPath });
         await minifyProject(extractPath);
-        await create({ gzip: true, file: tarballPath, cwd: extractPath }, ["."]);
-        await rm(extractPath, { recursive: true });
         logger.info(`Finished debloating package ${packageName} v${version}`);
+        await create({ gzip: true, file: tarballPath, cwd: extractPath }, ["."]);
       }
+
+      const packageJsonPath = path.join(extractPath, "package.json");
+      const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
+      dependencies = packageJson.dependencies || {};
+      standaloneCost = await getFolderSize.loose(extractPath) / 1024 / 1024;
+
+      await rm(extractPath, { recursive: true });
 
       if (process.env.NODE_ENV === "prod") {
         await uploadToS3(packageName, id, tarballPath);
-        await rm(packageBasePath, { recursive: true });
+        await rm(packageNamePath, { recursive: true });
       }
     }
 
-    await addPackageMetadata(id, packageName, version, ndjson);
-
+    await updatePackageMetadata(id, packageName, version, ndjson, dependencies, standaloneCost, 0, "pending");
+    logger.info(`Saved package ${packageName} v${version} with ID ${id} and standalone cost ${standaloneCost.toFixed(2)} MB`);
     return { success: true };
   } catch (error) {
+    await rm(packageIdPath, { recursive: true });
     return { success: false, reason: (error as Error).message };
   }
 };
@@ -145,22 +170,22 @@ export const savePackage = async (
  * @param version The package version
  * @param ndjson The ndjson of the package
  */
-export const addPackageMetadata = async (id: string, packageName: string, version: string, ndjson: Ndjson | null) => {
-  metadata.byId[id] = { packageName, version, ndjson };
+export const updatePackageMetadata = async (
+  id: string,
+  packageName: string,
+  version: string,
+  ndjson: Ndjson | null,
+  dependencies: { [dependency: string]: string },
+  standaloneCost: number,
+  totalCost: number,
+  costStatus: "pending" | "completed" | "failed"
+) => {
+  metadata.byId[id] = { packageName, version, ndjson, dependencies, standaloneCost, totalCost, costStatus };
   if (!metadata.byName[packageName]) {
     metadata.byName[packageName] = {};
   }
-  metadata.byName[packageName][version] = { id, ndjson };
-  await writeMetadata(metadata);
-};
-
-/**
- * Writes the metadata to the metadata file
- * @param newMetadata The new metadata to write
- */
-export const writeMetadata = async (newMetadata: Metadata) => {
-  await writeFile(metadataPath, JSON.stringify(newMetadata, null, 2));
-  metadata = newMetadata;
+  metadata.byName[packageName][version] = { id, ndjson, dependencies, standaloneCost, totalCost, costStatus };
+  await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
 };
 
 /**
@@ -168,8 +193,12 @@ export const writeMetadata = async (newMetadata: Metadata) => {
  * @param id The package ID
  * @returns Whether the package exists
  */
-export const checkIfPackageExists = async (id: string) => {
+export const checkIfPackageExists = (id: string) => {
   return metadata.byId[id] ? true : false;
+};
+
+export const getPackageMetadata = (id: string) => {
+  return metadata.byId[id];
 };
 
 /**
@@ -222,7 +251,7 @@ const minifyProject = async (directory: string) => {
             logLevel: "silent"
           });
         } catch (error) {
-          console.error(`Error minifying ${filePath}: ${(error as Error).message}`);
+          logger.error(`Error minifying ${filePath}: ${(error as Error).message}`);
         }
       }
     }
@@ -231,3 +260,51 @@ const minifyProject = async (directory: string) => {
     throw error;
   }
 };
+
+/**
+ * Calculates the ID of a package
+ * @param packageName The name of the package
+ * @param version The version of the package
+ * @returns The package ID
+ */
+export function calculatePackageId(packageName: string, version: string): string {
+  const hash = createHash("sha256")
+    .update(packageName + version)
+    .digest("hex");
+  return BigInt("0x" + hash)
+    .toString()
+    .slice(0, 16);
+}
+
+// export async function calculateTotalPackageCost(id: string): Promise<number> {
+//   const packageData = getPackageMetadata(id);
+//   if (!packageData) {
+//     return 0;
+//   }
+//   let totalCost = packageData.standaloneCost;
+
+//   async function calculateCost(packageName: string, version: string): Promise<number | undefined> {
+//     const id = calculatePackageId(packageName, version);
+//     if (metadata.costCache[id]) {
+//       return metadata.costCache[id].cost;
+//     }
+
+//     const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${version}.tgz`;
+//     const tarResponse = await fetch(npmTarURL);
+//     if (!tarResponse.ok || !tarResponse.body) {
+//       logger.error(`Failed to fetch package ${packageName} v${version}`);
+//       return;
+//     }
+
+//     const tarballPath = path.join(packagesDirPath, packageName, id, `${packageName}.tgz`);
+//     const tarballStream = createWriteStream(tarballPath);
+//     await pipeline(tarResponse.body, tarballStream);
+//   }
+
+//   for (const dependency in packageData.dependencies) {
+//     const version = packageData.dependencies[dependency];
+//     const dependencyId = calculatePackageId(dependency, version);
+//     totalCost += await calculateCost(dependencyId);
+//   }
+//   return totalCost;
+// }
