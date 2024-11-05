@@ -4,6 +4,7 @@ import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
 import { postPackages } from "./routes/postPackages.js";
 import { deletePackage } from "./routes/deletePackage.js";
+import { resetPackages } from "./routes/resetPackages.js";
 import { promises as fs } from "fs";
 import { dirname } from "path";
 import path from "path";
@@ -38,6 +39,7 @@ try {
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", postPackages);
 fastify.delete("/package/:id", deletePackage);
+fastify.delete("/reset", resetPackages);
 
 const start = async () => {
   try {
