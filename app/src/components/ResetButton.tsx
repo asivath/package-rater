@@ -4,7 +4,7 @@ import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography }
 
 export const ResetButton: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const isProd = process.env.NODE_ENV === "prod"; // Check if the environment is production
+  const isProd = import.meta.env.VITE_ENVIRONMENT === "production";
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -17,9 +17,9 @@ export const ResetButton: React.FC = () => {
   const reset = async () => {
     try {
       await fetcher("/reset", { method: "DELETE" });
-      setOpen(false); // Close the dialog after a successful reset
+      setOpen(false);
     } catch {
-      setOpen(false); // Close the dialog if an error occurs
+      setOpen(false);
     }
   };
 

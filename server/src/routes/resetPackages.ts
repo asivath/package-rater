@@ -16,7 +16,7 @@ const bucketName = process.env.AWS_BUCKET_NAME;
 
 export const resetPackages = async (_: FastifyRequest, reply: FastifyReply) => {
   try {
-    if (process.env.NODE_ENV === "prod") {
+    if (process.env.NODE_ENV === "production") {
       let isTruncated = true;
       while (isTruncated) {
         const listObjectsCommand = new ListObjectsV2Command({ Bucket: bucketName });

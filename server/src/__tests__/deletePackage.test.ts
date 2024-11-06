@@ -22,7 +22,7 @@ vi.mock("fs/promises", () => ({
   readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
   writeFile: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
-  readdir: vi.fn(() => Promise.resolve([])) // Mock an empty directory after deletion
+  readdir: vi.fn(() => Promise.resolve([]))
 }));
 
 vi.mock("@aws-sdk/client-s3", () => ({
@@ -50,7 +50,6 @@ const mockMetadataJson = {
   }
 };
 
-// Test Suite
 describe("deletePackage", () => {
   const fastify = Fastify();
   fastify.delete("/package/:id", deletePackage);
@@ -61,7 +60,7 @@ describe("deletePackage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NODE_ENV = "prod"; // Set to 'prod' for testing S3 deletion
+    process.env.NODE_ENV = "production";
     mockS3Client = new S3Client();
   });
 

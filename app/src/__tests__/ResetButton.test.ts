@@ -13,7 +13,7 @@ test.describe("ResetButton", () => {
   test("should display appropriate message based on environment", async ({ page }) => {
     await page.click('role=button[name="Reset"]');
     const expectedText =
-      process.env.NODE_ENV === "prod"
+      process.env.NODE_ENV === "production"
         ? "Are you sure you want to reset the local packages? This cannot be undone."
         : "Are you sure you want to reset the S3 bucket? This cannot be undone.";
     await expect(page.locator("text=" + expectedText)).toBeVisible();

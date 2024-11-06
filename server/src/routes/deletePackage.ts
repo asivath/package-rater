@@ -26,7 +26,6 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
   const id = request.params.id;
 
   try {
-    // Read metadata to get the package information
     const metaDataContent = await readFile(metadataPath, "utf-8");
     const metadataJson = JSON.parse(metaDataContent);
 
@@ -38,8 +37,7 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
 
     const { packageName: name, version } = metadataJson.byId[id];
 
-    if (process.env.NODE_ENV === "prod") {
-      // Delete the package from S3
+    if (process.env.NODE_ENV === "production") {
       const deleteParams = {
         Bucket: bucketName,
         Delete: { Objects: [{ Key: `${name}/${id}/${name}.tgz` }] }
@@ -49,16 +47,13 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
       await s3Client.send(deleteObjectsCommand);
       logger.info(`Deleted ${name} from S3.`);
     } else {
-      // Delete the package from the local filesystem
       const packagePath = path.join(packagesDirPath, name, id);
       await rm(packagePath, { recursive: true, force: true });
 
-      // Check if the parent directory is empty after deleting the package
       const parentDir = path.join(packagesDirPath, name);
       const filesInParentDir = await readdir(parentDir);
 
       if (filesInParentDir.length === 0) {
-        // Remove the parent directory if it is empty
         await rm(parentDir, { recursive: true, force: true });
         logger.info(`Deleted empty package folder: ${parentDir}`);
       }

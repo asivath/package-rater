@@ -63,12 +63,12 @@ export const savePackage = async (
       );
       await rm(newPackageFilePath, { recursive: true });
 
-      if (process.env.NODE_ENV === "prod") {
+      if (process.env.NODE_ENV === "production") {
         await uploadToS3(packageName, id, tarGzFilePath);
         await rm(packageBasePath, { recursive: true });
       }
     } else {
-      if (process.env.NODE_ENV === "prod") {
+      if (process.env.NODE_ENV === "production") {
         if (!process.env.CLI_API_URL) {
           return { success: false, reason: "CLI API URL not provided" };
         }
@@ -104,7 +104,7 @@ export const savePackage = async (
       const tarballStream = createWriteStream(tarballPath);
       await pipeline(response.body, tarballStream);
 
-      if (process.env.NODE_ENV === "prod") {
+      if (process.env.NODE_ENV === "production") {
         await uploadToS3(packageName, id, tarballPath);
         await rm(packageBasePath, { recursive: true });
       }

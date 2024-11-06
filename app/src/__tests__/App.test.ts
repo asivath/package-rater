@@ -32,7 +32,6 @@ test.describe("Main Page Tests", () => {
     const searchBar = page.locator('input[placeholder="Type package name..."]');
     await searchBar.fill("as;dlkfajs;ldkfja;s");
 
-    // Use a more specific locator to identify the "Search" button
     const searchButton = page.getByRole("button", { name: "Search" });
     await searchButton.click();
 
@@ -49,14 +48,11 @@ test.describe("Main Page Tests", () => {
   test("should load the main page and display the reset button and click it", async ({ page }) => {
     await page.goto("http://localhost:5173");
 
-    // Locate the "Reset" button and verify visibility
     const resetButton = page.getByRole("button", { name: "Reset" });
     await expect(resetButton).toBeVisible();
 
-    // Click the "Reset" button
     await resetButton.click();
 
-    // Optionally, check the expected outcome of clicking the "Reset" button (e.g., clearing an input field)
     const searchBar = page.locator('input[placeholder="Type package name..."]');
     const searchBarValue = await searchBar.inputValue();
     expect(searchBarValue).toBe("");
