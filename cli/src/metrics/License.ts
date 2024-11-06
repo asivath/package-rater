@@ -104,7 +104,7 @@ export async function calculateLicense(owner: string, repo: string, repoDir: str
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      logger.error(`Error reading package.json for ${owner}/${repo}:`, error);
+      logger.error(`Error reading package.json for ${owner}/${repo}: ${(error as Error).message}`);
     }
   }
 
@@ -119,7 +119,7 @@ export async function calculateLicense(owner: string, repo: string, repoDir: str
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      logger.error(`Error reading package.json for ${owner}/${repo}:`, error);
+      logger.error(`Error reading package.json for ${owner}/${repo}: ${(error as Error).message}`);
     }
   }
 
@@ -134,7 +134,7 @@ export async function calculateLicense(owner: string, repo: string, repoDir: str
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      logger.error(`Error reading package.json for ${owner}/${repo}:`, error);
+      logger.error(`Error reading package.json for ${owner}/${repo}: ${(error as Error).message}`);
     }
   }
 

@@ -4,13 +4,16 @@ import * as shared from "@package-rater/shared";
 import * as s3Client from "@aws-sdk/client-s3";
 import * as tar from "tar";
 import * as util from "util";
+import * as esbuild from "esbuild";
 
 vi.mock("fs/promises", () => ({
   readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
   writeFile: vi.fn().mockResolvedValue(undefined),
   mkdir: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
-  cp: vi.fn().mockResolvedValue(undefined)
+  cp: vi.fn().mockResolvedValue(undefined),
+  readdir: vi.fn().mockResolvedValue(["file.js"]),
+  stat: vi.fn().mockResolvedValue({ isDirectory: () => false })
 }));
 vi.mock("fs", () => ({
   createWriteStream: vi.fn()
@@ -25,7 +28,8 @@ vi.mock("tar", async (importOriginal) => {
   const original = await importOriginal<typeof tar>();
   return {
     ...original,
-    create: vi.fn()
+    create: vi.fn(),
+    extract: vi.fn()
   };
 });
 vi.mock("@aws-sdk/client-s3", async (importOriginal) => {
@@ -58,6 +62,16 @@ vi.mock("util", () => ({
     });
   })
 }));
+vi.mock("esbuild", async (importOriginal) => {
+  const original = await importOriginal<typeof esbuild>();
+  return {
+    ...original,
+    default: {
+      ...original,
+      build: vi.fn().mockResolvedValue(undefined)
+    }
+  };
+});
 
 const mockMetadataJson = {
   byId: {
@@ -90,7 +104,7 @@ describe("savePackage", () => {
     vi.stubEnv("NODE_ENV", "production");
     const packageFilePath = "/path/to/package-file";
 
-    const result = await savePackage("test-package", "1.0.0", "new-package-id", packageFilePath, undefined);
+    const result = await savePackage("test-package", "1.0.0", "new-package-id", false, packageFilePath, undefined);
 
     expect(result.success).toBe(true);
     expect(tarSpy).toHaveBeenCalledWith(
@@ -120,7 +134,8 @@ describe("savePackage", () => {
         body: new ReadableStream()
       });
 
-    const result = await savePackage("test-package2", "1.0.0", "new-package-id", undefined, url);
+    const result = await savePackage("test-package2", "1.0.0", "new-package-id", false, undefined, url);
+
     expect(result.success).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
       "Uploaded package test-package2 to S3: test-package2/new-package-id/test-package2.tgz"
@@ -137,6 +152,7 @@ describe("savePackage", () => {
       "test-package",
       "1.0.0",
       "new-package-id",
+      false,
       undefined,
       "https://www.npmjs.com/package/test-package"
     );
@@ -150,6 +166,7 @@ describe("savePackage", () => {
       "test-package",
       "1.0.0",
       "new-package-id",
+      false,
       "/path/to/package-file",
       "https://www.npmjs.com/package/test-package"
     );
@@ -159,10 +176,40 @@ describe("savePackage", () => {
   });
 
   it("should return an error if neither file path nor URL is provided", async () => {
-    const result = await savePackage("test-package", "1.0.0", "new-package-id");
+    const result = await savePackage("test-package", "1.0.0", "new-package-id", false);
 
     expect(result.success).toBe(false);
     expect(result.reason).toBe("No package file path or URL provided");
+  });
+
+  it("should debloat the package if debloat is true", async () => {
+    const esbuildSpy = (esbuild as unknown as { default: { build: Mock } }).default.build;
+    await savePackage("test-package", "1.0.0", "new-package-id", true, "/path/to/package-file", undefined);
+
+    expect(esbuildSpy).toHaveBeenCalledOnce();
+    expect(logger.info).toHaveBeenCalledWith("Finished debloating package test-package v1.0.0");
+  });
+
+  it("should debload the package if debloat is true and URL is provided", async () => {
+    const mockExec = vi.fn().mockResolvedValue({ stdout: JSON.stringify({ NetScore: 0.8 }), stderr: null });
+    vi.spyOn(util, "promisify").mockReturnValueOnce(mockExec);
+    const esbuildSpy = (esbuild as unknown as { default: { build: Mock } }).default.build;
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true,
+      body: new ReadableStream()
+    });
+
+    await savePackage(
+      "test-package",
+      "1.0.0",
+      "new-package-id",
+      true,
+      undefined,
+      "https://www.npmjs.com/package/test-package"
+    );
+
+    expect(esbuildSpy).toHaveBeenCalledOnce();
+    expect(logger.info).toHaveBeenCalledWith("Finished debloating package test-package v1.0.0");
   });
 });
 

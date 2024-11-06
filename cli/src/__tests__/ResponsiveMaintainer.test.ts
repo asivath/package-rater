@@ -104,6 +104,6 @@ describe("calculateResponsiveMaintainer", () => {
 
     await expect(calculateResponsiveMaintainer("test-owner", "test-repo")).rejects.toThrow("GitHub API failed");
 
-    expect(logger.error).toHaveBeenCalledWith("Error fetching data from GitHub API:", mockError);
+    expect(logger.error).toHaveBeenCalledWith("Error fetching data from GitHub API: GitHub API failed");
   });
 });

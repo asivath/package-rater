@@ -10,6 +10,9 @@ import { dirname } from "path";
 import path from "path";
 import { fileURLToPath } from "url";
 import "dotenv/config";
+import { getLogger } from "@package-rater/shared";
+
+const logger = getLogger("server");
 
 const fastify = Fastify({
   logger: false,
@@ -45,7 +48,7 @@ const start = async () => {
   try {
     await fastify.listen({ port: 3000, host: "0.0.0.0" });
   } catch (err) {
-    fastify.log.error(err);
+    logger.error(err);
     process.exit(1);
   }
 };
