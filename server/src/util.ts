@@ -115,7 +115,7 @@ export const savePackage = async (
         logger.info(`Finished debloating package ${packageName} v${version}`);
       }
 
-      if (process.env.NODE_ENV === "prod") {
+      if (process.env.NODE_ENV === "production") {
         await uploadToS3(packageName, id, tarballPath);
         await rm(packageBasePath, { recursive: true });
       }
