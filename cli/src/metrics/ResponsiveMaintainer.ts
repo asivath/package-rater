@@ -120,7 +120,7 @@ export async function calculateResponsiveMaintainer(owner: string, name: string)
     logger.info(`Responsiveness for ${owner}/${name}: ${Responsiveness}`);
     return Responsiveness;
   } catch (error) {
-    logger.error("Error fetching data from GitHub API:", error);
+    logger.error(`Error fetching data from GitHub API: ${(error as Error).message}`);
     throw error;
   }
 }

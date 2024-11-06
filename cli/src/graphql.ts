@@ -36,12 +36,12 @@ export async function getGitHubData(
 
     // Check for errors in the GraphQL response
     if (responseData.errors) {
-      logger.error("GraphQL errors:", responseData.errors);
+      logger.error(`GraphQL errors: ${JSON.stringify(responseData.errors)}`);
       throw new Error("Error in GraphQL response");
     }
     return responseData;
   } catch (error) {
-    logger.error("Error fetching package info:", error);
+    logger.error(`Error fetching package info: ${error}`);
     throw error;
   }
 }

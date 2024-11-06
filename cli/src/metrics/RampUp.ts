@@ -86,7 +86,7 @@ export async function calculateRampup(owner: string, name: string): Promise<numb
 
     const firstPRDates = Object.values(firstPRTimes);
     if (firstPRDates.length === 0) {
-      logger.info("No pull requests found for ${owner}/${name}");
+      logger.info(`No pull requests found for ${owner}/${name}`);
       return 0.5;
     }
     const least = Math.min(...firstPRDates);
@@ -96,7 +96,7 @@ export async function calculateRampup(owner: string, name: string): Promise<numb
     logger.info(`Ramp-up score for ${owner}/${name}: ${averageFirstPRTime}`);
     return averageFirstPRTime;
   } catch (error) {
-    logger.error("Error fetching pull requests:", error);
+    logger.error(`Error fetching pull requests: ${(error as Error).message}`);
     throw error;
   }
 }
