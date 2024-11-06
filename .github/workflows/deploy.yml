@@ -29,8 +29,7 @@ jobs:
         run: |
           yarn install
           echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}:3000" > app/.env
-          echo "VITE_ENVIRONMENT=production" >> app/.env
-          yarn build
+          yarn build --mode production
 
       - name: Archive build files
         run: |

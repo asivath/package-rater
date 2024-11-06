@@ -4,7 +4,7 @@ import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography }
 
 export const ResetButton: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const isProd = import.meta.env.VITE_ENVIRONMENT === "production";
+  const isProd = import.meta.env.PROD;
 
   const handleClickOpen = () => {
     setOpen(true);
