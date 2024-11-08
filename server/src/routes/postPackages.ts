@@ -1,17 +1,9 @@
-import { getLogger } from "@package-rater/shared";
+import { getLogger, PackageDisplay } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-import { readFile } from "fs/promises";
-import path from "path";
-
+import { getPackageMetadata } from "../util.js";
 const logger = getLogger("server");
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const packagesDirPath = path.join(__dirname, "..", "..", "packages");
-const metadataPath = path.join(packagesDirPath, "metadata.json");
 
-export const postPackages = async (
+export const retrievePackageInfo = async (
   request: FastifyRequest<{ Body: Array<{ Name: string; Version: string }> }>,
   reply: FastifyReply
 ) => {
@@ -19,6 +11,7 @@ export const postPackages = async (
   const limit = 15;
 
   const offsetHeader = request.headers["offset"] || "0";
+  const allFlagHeader = request.headers["allflag"] || false;
   let offset = 0;
 
   //Have to check if offset is an array or typescript has a meltdown (:D)
@@ -38,33 +31,41 @@ export const postPackages = async (
     return;
   }
 
-  const packages: Array<{ Version: string; Name: string; ID: string }> = [];
+  const packages: PackageDisplay[] = [];
   try {
-    const metaDataContent = await readFile(metadataPath, "utf-8");
-
-    const metadataJson = JSON.parse(metaDataContent);
-
+    const metadataJson = getPackageMetadata();
     // Check if "*" is passed as the Name
-    const allPackagesRequested = packageRequests.some((pkg) => pkg.Name === "*");
-    if (allPackagesRequested) {
+    if (packageRequests.some((pkg) => pkg.Name === "*")) {
       // Fetch all packages from metadata
-      for (const [name, versions] of Object.entries(metadataJson.byName)) {
-        for (const [version, details] of Object.entries(versions as { [key: string]: { id: string } })) {
-          packages.push({
-            Version: version,
-            Name: name,
-            ID: details.id
-          });
+      const allPackages = Object.entries(metadataJson.byName);
+
+      for (let offsetCount = offset; offsetCount < offset + limit && offsetCount < allPackages.length; offsetCount++) {
+        const [name, versions] = allPackages[offsetCount];
+        for (const [version, details] of Object.entries(versions)) {
+          if (allFlagHeader) {
+            packages.push({
+              Version: version,
+              Name: name,
+              ID: details.id,
+              StandaloneCost: details.standaloneCost,
+              TotalCost: details.totalCost,
+              NetScore: details.ndjson?.NetScore || "N/A",
+              CostStatus: details.costStatus
+            });
+          } else {
+            packages.push({
+              Version: version,
+              Name: name,
+              ID: details.id
+            });
+          }
         }
       }
-      // No need to continue processing further since we got all packages
-      // Apply pagination
-      const paginatedPackages = packages.slice(offset, offset + limit); // Skip `offset` number of packages
-      logger.info(`Fetched packages: ${JSON.stringify(paginatedPackages)}`);
-      reply.code(200).send(paginatedPackages);
+
+      logger.info(`Fetched packages: ${JSON.stringify(packages)}`);
+      reply.code(200).send(packages);
       return;
     }
-
     // Process each package request
     for (const { Name, Version } of packageRequests) {
       if (!Name || !Version) {
@@ -78,15 +79,26 @@ export const postPackages = async (
       }
 
       // Filter by version type and check for duplicates
-      for (const [version, details] of Object.entries(packageByName) as [string, { id: string }][]) {
+      for (const [version, details] of Object.entries(packageByName)) {
         if (isVersionMatch(version, Version)) {
           // Check for duplicates before adding
           if (!packages.some((pkg) => pkg.Name === Name && pkg.Version === version)) {
-            packages.push({
-              Version: version,
-              Name: Name,
-              ID: details.id
-            });
+            if (allFlagHeader) {
+              packages.push({
+                Version: version,
+                Name: Name,
+                ID: details.id,
+                StandaloneCost: details.standaloneCost,
+                TotalCost: details.totalCost,
+                NetScore: details.ndjson?.NetScore || "N/A"
+              });
+            } else {
+              packages.push({
+                Version: version,
+                Name: Name,
+                ID: details.id
+              });
+            }
           }
         }
       }
@@ -132,3 +144,20 @@ export const satisfiesTilde = (version: string, Version: string): boolean => {
 export const satisfiesRange = (version: string, minVersion: string, maxVersion: string): boolean => {
   return version >= minVersion && version <= maxVersion;
 };
+
+// [{
+//   Version: '17.0.1',
+//   Name: 'browserify',
+//   ID: '5209905695993030',
+//   StandaloneCost: 0.9316482543945312,
+//   TotalCost: 0,
+//   NetScore: 0.6
+// },
+// {
+//   Version: '16.3.0',
+//   Name: 'browserify',
+//   ID: '1039622501670058',
+//   StandaloneCost: 1.1853208541870117,
+//   TotalCost: 0,
+//   NetScore: 0.8
+// }]

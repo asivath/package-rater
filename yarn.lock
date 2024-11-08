@@ -1931,6 +1931,7 @@ __metadata:
     playwright: "npm:^1.48.0"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
+    react-virtuoso: "npm:^4.12.0"
     typescript: "npm:5.5.4"
     typescript-eslint: "npm:^8.8.0"
     vite: "npm:^5.4.8"
@@ -6976,6 +6977,16 @@ __metadata:
     react: ">=16.6.0"
     react-dom: ">=16.6.0"
   checksum: 10c0/2ba754ba748faefa15f87c96dfa700d5525054a0141de8c75763aae6734af0740e77e11261a1e8f4ffc08fd9ab78510122e05c21c2d79066c38bb6861a886c82
+  languageName: node
+  linkType: hard
+
+"react-virtuoso@npm:^4.12.0":
+  version: 4.12.0
+  resolution: "react-virtuoso@npm:4.12.0"
+  peerDependencies:
+    react: ">=16 || >=17 || >= 18"
+    react-dom: ">=16 || >=17 || >= 18"
+  checksum: 10c0/96af7b8e49e4a5b50a2b762c0133076dbec9df3207aa13889ab8586f54fea9e37e712295b96bfd68ecb68ab368a945f2c451e8a4a2ee21d74ea9f2ec346e21f5
   languageName: node
   linkType: hard
 
