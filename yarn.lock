@@ -1978,6 +1978,7 @@ __metadata:
     "@types/eslint__eslintrc": "npm:^2.1.2"
     "@types/eslint__js": "npm:^8.42.3"
     "@types/node": "npm:^22.7.5"
+    "@types/semver": "npm:^7"
     "@types/unzipper": "npm:^0"
     "@typescript-eslint/eslint-plugin": "npm:^8.3.0"
     "@typescript-eslint/parser": "npm:^8.3.0"
@@ -1990,9 +1991,12 @@ __metadata:
     fastify: "npm:^5.0.0"
     get-folder-size: "npm:^5.0.0"
     nodemon: "npm:^3.1.7"
+    p-queue: "npm:^8.0.1"
     pm2: "npm:^5.4.2"
     prettier: "npm:^3.3.3"
+    semver: "npm:^7.6.3"
     tar: "npm:^7.4.3"
+    trace-unhandled: "npm:^2.0.1"
     typescript: "npm:5.5.4"
     typescript-eslint: "npm:^8.8.0"
     unzipper: "npm:^0.12.3"
@@ -2993,6 +2997,13 @@ __metadata:
     "@types/prop-types": "npm:*"
     csstype: "npm:^3.0.2"
   checksum: 10c0/8bae8d9a41619804561574792e29112b413044eb0d53746dde2b9720c1f9a59f71c895bbd7987cd8ce9500b00786e53bc032dced38cddf42910458e145675290
+  languageName: node
+  linkType: hard
+
+"@types/semver@npm:^7":
+  version: 7.5.8
+  resolution: "@types/semver@npm:7.5.8"
+  checksum: 10c0/8663ff927234d1c5fcc04b33062cb2b9fcfbe0f5f351ed26c4d1e1581657deebd506b41ff7fdf89e787e3d33ce05854bc01686379b89e9c49b564c4cfa988efa
   languageName: node
   linkType: hard
 
@@ -4595,6 +4606,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eventemitter3@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "eventemitter3@npm:5.0.1"
+  checksum: 10c0/4ba5c00c506e6c786b4d6262cfbce90ddc14c10d4667e5c83ae993c9de88aa856033994dd2b35b83e8dc1170e224e66a319fa80adc4c32adcd2379bbc75da814
+  languageName: node
+  linkType: hard
+
 "events@npm:^3.3.0":
   version: 3.3.0
   resolution: "events@npm:3.3.0"
@@ -5176,6 +5194,16 @@ __metadata:
   dependencies:
     function-bind: "npm:^1.1.2"
   checksum: 10c0/3769d434703b8ac66b209a4cca0737519925bbdb61dd887f93a16372b14694c63ff4e797686d87c90f08168e81082248b9b028bad60d4da9e0d1148766f56eb9
+  languageName: node
+  linkType: hard
+
+"haxec@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "haxec@npm:2.0.1"
+  dependencies:
+    foreground-child: "npm:^2.0.0"
+    spawn-wrap: "npm:^2.0.0"
+  checksum: 10c0/1156cde267a30be1bb96020365095ca1aa88c70d41c2859c967fa27bfa24ceba5a94aef7c13d31f772bace7991a98000fcf695ab4621485a782096f5095f6695
   languageName: node
   linkType: hard
 
@@ -6381,6 +6409,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"p-queue@npm:^8.0.1":
+  version: 8.0.1
+  resolution: "p-queue@npm:8.0.1"
+  dependencies:
+    eventemitter3: "npm:^5.0.1"
+    p-timeout: "npm:^6.1.2"
+  checksum: 10c0/fe185bc8bbd32d17a5f6dba090077b1bb326b008b4ec9b0646c57a32a6984035aa8ece909a6d0de7f6c4640296dc288197f430e7394cdc76a26d862339494616
+  languageName: node
+  linkType: hard
+
+"p-timeout@npm:^6.1.2":
+  version: 6.1.3
+  resolution: "p-timeout@npm:6.1.3"
+  checksum: 10c0/6dcd1efc1a18afac08dd4f8e09797bbe635110e597d27026b478f884b867616871499427643a6b2e11f0404b2936d17db69da2b5e58d5fe99e1fac80a53f0250
+  languageName: node
+  linkType: hard
+
 "p-try@npm:^2.0.0":
   version: 2.2.0
   resolution: "p-try@npm:2.2.0"
@@ -7319,7 +7364,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.2, semver@npm:^7.3.5, semver@npm:^7.5.3, semver@npm:^7.5.4, semver@npm:^7.6.0":
+"semver@npm:^7.2, semver@npm:^7.3.5, semver@npm:^7.5.3, semver@npm:^7.5.4, semver@npm:^7.6.0, semver@npm:^7.6.3":
   version: 7.6.3
   resolution: "semver@npm:7.6.3"
   bin:
@@ -7860,6 +7905,17 @@ __metadata:
   bin:
     nodetouch: bin/nodetouch.js
   checksum: 10c0/d2e4d269a42c846a22a29065b9af0b263de58effc85a1764bb7a2e8fc4b47700e9e2fcbd7eb1f5bffbb7c73d860f93600cef282b93ddac8f0b62321cb498b36e
+  languageName: node
+  linkType: hard
+
+"trace-unhandled@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "trace-unhandled@npm:2.0.1"
+  dependencies:
+    haxec: "npm:^2.0.1"
+  bin:
+    trace-unhandled: bin.js
+  checksum: 10c0/d27570eaa35ad43a7b83ec1f9efbbd64c4aca7d3e74b2c471c740d70f30aa8312de81e44e96251dab443b048916e40a37608a84306caf94567442ebc507f29cc
   languageName: node
   linkType: hard
 

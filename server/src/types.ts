@@ -11,7 +11,7 @@ export type Metadata = {
       };
       standaloneCost: number;
       totalCost: number;
-      costStatus: "pending" | "completed" | "failed";
+      costStatus: "pending" | "initiated" | "completed" | "failed";
     };
   };
   byName: {
@@ -24,7 +24,7 @@ export type Metadata = {
         };
         standaloneCost: number;
         totalCost: number;
-        costStatus: "pending" | "completed" | "failed";
+        costStatus: "pending" | "initiated" | "completed" | "failed";
       };
     };
   };
@@ -32,7 +32,7 @@ export type Metadata = {
   costCache: {
     [id: string]: {
       cost: number;
-      costStatus: "pending" | "completed" | "failed";
+      costStatus: "initiated" | "completed" | "failed";
     };
   };
 };
@@ -75,8 +75,13 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
     if (typeof v.totalCost !== "number") {
       throw new Error("Metadata.byId values.totalCost must be a number");
     }
-    if (v.costStatus !== "pending" && v.costStatus !== "completed" && v.costStatus !== "failed") {
-      throw new Error("Metadata.byId values.costStatus must be 'pending', 'completed', or 'failed'");
+    if (
+      v.costStatus !== "pending" &&
+      v.costStatus !== "initiated" &&
+      v.costStatus !== "completed" &&
+      v.costStatus !== "failed"
+    ) {
+      throw new Error("Metadata.byId values.costStatus must be 'pending', 'initiated', 'completed', or 'failed'");
     }
   }
   for (const packageName in o.byName) {
@@ -109,8 +114,15 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
       if (typeof vv.totalCost !== "number") {
         throw new Error("Metadata.byName values values.totalCost must be a number");
       }
-      if (vv.costStatus !== "pending" && vv.costStatus !== "completed" && vv.costStatus !== "failed") {
-        throw new Error("Metadata.byName values values.costStatus must be 'pending', 'completed', or 'failed'");
+      if (
+        vv.costStatus !== "pending" &&
+        vv.costStatus !== "initiated" &&
+        vv.costStatus !== "completed" &&
+        vv.costStatus !== "failed"
+      ) {
+        throw new Error(
+          "Metadata.byName values values.costStatus must be 'pending', 'initiated', 'completed', or 'failed'"
+        );
       }
     }
   }
@@ -125,8 +137,8 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
     if (typeof v.cost !== "number") {
       throw new Error("Metadata.costCache values.cost must be a number");
     }
-    if (v.costStatus !== "pending" && v.costStatus !== "completed" && v.costStatus !== "failed") {
-      throw new Error("Metadata.costCache values.costStatus must be 'pending', 'completed', or 'failed'");
+    if (v.costStatus !== "initiated" && v.costStatus !== "completed" && v.costStatus !== "failed") {
+      throw new Error("Metadata.costCache values.costStatus must be 'initiated', 'completed', or 'failed'");
     }
   }
 }
