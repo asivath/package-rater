@@ -10,15 +10,12 @@ import { pipeline } from "stream/promises";
 import { assertIsMetadata, Metadata } from "./types.js";
 import { createHash } from "crypto";
 import { tmpdir } from "os";
-import { register } from "trace-unhandled";
 import { minVersion, inc, satisfies, parse } from "semver";
 import getFolderSize from "get-folder-size";
 import esbuild from "esbuild";
 import path from "path";
-import PQueue from "p-queue";
+import TaskQueue from "./taskQueue.js";
 import "dotenv/config";
-
-register();
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
@@ -41,48 +38,6 @@ const metadata = await loadMetadata(); // Do not directly modify this variable o
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
-
-export class TaskQueue {
-  private queue: PQueue;
-  private taskPromises: Map<string, Promise<number>>;
-
-  constructor() {
-    this.queue = new PQueue();
-    this.taskPromises = new Map();
-  }
-
-  async addTask(id: string, taskFn: () => Promise<number>): Promise<number> {
-    if (this.taskPromises.has(id)) {
-      return this.awaitTask(id);
-    }
-
-    const taskPromise = this.queue.add(async () => {
-      const result = await taskFn();
-      return result;
-    }) as Promise<number>;
-
-    this.taskPromises.set(id, taskPromise);
-
-    try {
-      const result = await taskPromise;
-      return result;
-    } finally {
-      this.taskPromises.delete(id);
-    }
-  }
-
-  hasTask(id: string): boolean {
-    return this.taskPromises.has(id);
-  }
-
-  async awaitTask(id: string): Promise<number> {
-    const taskPromise = this.taskPromises.get(id);
-    if (!taskPromise) {
-      throw new Error(`Task with id ${id} not found`);
-    }
-    return taskPromise;
-  }
-}
 
 const taskQueue = new TaskQueue();
 
@@ -250,34 +205,52 @@ export const savePackage = async (
   }
 };
 
-async function getExactAvailableVersion(packageName: string, versionRange: string): Promise<string | null> {
+/**
+ * Fetches the exact minimum available version of a package
+ * @param packageName The name of the package
+ * @param versionRange The version range of the package
+ * @returns
+ */
+export async function getExactAvailableVersion(packageName: string, versionRange: string): Promise<string | null> {
   const minResolvedVersion = minVersion(versionRange);
   if (!minResolvedVersion) return null;
 
-  let currentVersion = minResolvedVersion;
-  while (satisfies(currentVersion, versionRange)) {
-    const npmUrl = `https://registry.npmjs.org/${packageName}/${currentVersion}`;
-    const response = await fetch(npmUrl);
-    if (response.ok) {
-      return currentVersion.version;
+  try {
+    let currentVersion = minResolvedVersion;
+    while (satisfies(currentVersion, versionRange)) {
+      const npmUrl = `https://registry.npmjs.org/${packageName}/${currentVersion}`;
+      const response = await fetch(npmUrl);
+      if (response.ok) {
+        return currentVersion.version;
+      }
+      const nextVersionStr = inc(currentVersion, "patch");
+      if (!nextVersionStr) break;
+      const nextVersion = parse(nextVersionStr);
+      if (!nextVersion) break;
+      currentVersion = nextVersion;
     }
-    const nextVersionStr = inc(currentVersion, "patch");
-    if (!nextVersionStr) break;
-    const nextVersion = parse(nextVersionStr);
-    if (!nextVersion) break;
-    currentVersion = nextVersion;
+  } catch (error) {
+    logger.error(
+      `Failed to fetch exact available version of ${packageName} with version range ${versionRange}: ${(error as Error).message}`
+    );
   }
 
   return null;
 }
 
+/**
+ * Calculates the total cost of a package
+ * @param id The ID of the package
+ * @returns The total cost of the package
+ */
 export async function calculateTotalPackageCost(id: string): Promise<number> {
   const packageDataById = metadata.byId[id];
-  const packageDataByName = metadata.byName[packageDataById.packageName];
 
   if (!packageDataById) {
     throw new Error(`Package ${id} does not exist`);
   }
+
+  const packageDataByName = metadata.byName[packageDataById.packageName];
 
   if (packageDataById.costStatus === "completed") {
     return packageDataById.totalCost;
@@ -289,12 +262,15 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
 
   async function calculateCost(packageName: string, version: string): Promise<number> {
     const id = calculatePackageId(packageName, version);
-    const packageCache = metadata.costCache[id];
-    const exactVersion = await getExactAvailableVersion(packageName, version);
-    if (!exactVersion) {
-      throw new Error(`Invalid version ${version}`);
+    const packateMetadata = metadata.byId[id];
+    if (packateMetadata) {
+      if (packateMetadata.costStatus === "completed") {
+        return packateMetadata.totalCost;
+      } else if (packateMetadata.costStatus === "initiated") {
+        return await taskQueue.awaitTask(id);
+      }
     }
-
+    const packageCache = metadata.costCache[id];
     if (packageCache) {
       if (packageCache.costStatus === "completed") {
         return packageCache.cost;
@@ -302,8 +278,12 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
         return await taskQueue.awaitTask(id);
       }
     }
-
     metadata.costCache[id] = { cost: 0, costStatus: "initiated" };
+
+    const exactVersion = await getExactAvailableVersion(packageName, version);
+    if (!exactVersion) {
+      throw new Error(`Invalid version ${version}`);
+    }
 
     const taskFn = async () => {
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${exactVersion}.tgz`;
@@ -342,16 +322,16 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
       return result;
     } catch (error) {
       metadata.costCache[id].costStatus = "failed";
-      throw error;
+      logger.error(
+        `Failed to calculate cost of package ${packageName} with version ${version}: ${(error as Error).message}`
+      );
+      return 0;
     }
   }
-
   return taskQueue
     .addTask(id, async () => {
       let totalCost = packageDataById.standaloneCost;
-      packageDataById.totalCost = 0;
       packageDataById.costStatus = "initiated";
-      packageDataByName[packageDataById.version].totalCost = 0;
       packageDataByName[packageDataById.version].costStatus = "initiated";
 
       for (const dependency in packageDataById.dependencies) {
@@ -389,8 +369,12 @@ export const checkIfPackageExists = (id: string) => {
   return metadata.byId[id] ? true : false;
 };
 
-export const getPackageMetadata = (id: string) => {
-  return metadata.byId[id];
+/**
+ * Gets the metadata object
+ * @returns The metadata object
+ */
+export const getMetadata = () => {
+  return metadata;
 };
 
 /**

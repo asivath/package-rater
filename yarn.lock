@@ -1996,11 +1996,11 @@ __metadata:
     prettier: "npm:^3.3.3"
     semver: "npm:^7.6.3"
     tar: "npm:^7.4.3"
-    trace-unhandled: "npm:^2.0.1"
     typescript: "npm:5.5.4"
     typescript-eslint: "npm:^8.8.0"
     unzipper: "npm:^0.12.3"
     vitest: "npm:2.1.2"
+    vitest-fetch-mock: "npm:^0.4.2"
     winston: "npm:^3.15.0"
   languageName: unknown
   linkType: soft
@@ -5197,16 +5197,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"haxec@npm:^2.0.1":
-  version: 2.0.1
-  resolution: "haxec@npm:2.0.1"
-  dependencies:
-    foreground-child: "npm:^2.0.0"
-    spawn-wrap: "npm:^2.0.0"
-  checksum: 10c0/1156cde267a30be1bb96020365095ca1aa88c70d41c2859c967fa27bfa24ceba5a94aef7c13d31f772bace7991a98000fcf695ab4621485a782096f5095f6695
-  languageName: node
-  linkType: hard
-
 "hoist-non-react-statics@npm:^3.3.1":
   version: 3.3.2
   resolution: "hoist-non-react-statics@npm:3.3.2"
@@ -7908,17 +7898,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"trace-unhandled@npm:^2.0.1":
-  version: 2.0.1
-  resolution: "trace-unhandled@npm:2.0.1"
-  dependencies:
-    haxec: "npm:^2.0.1"
-  bin:
-    trace-unhandled: bin.js
-  checksum: 10c0/d27570eaa35ad43a7b83ec1f9efbbd64c4aca7d3e74b2c471c740d70f30aa8312de81e44e96251dab443b048916e40a37608a84306caf94567442ebc507f29cc
-  languageName: node
-  linkType: hard
-
 "tree-kill@npm:^1.2.2":
   version: 1.2.2
   resolution: "tree-kill@npm:1.2.2"
@@ -8203,6 +8182,15 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 10c0/4ef4807d2fd166a920de244dbcec791ba8a903b017a7d8e9f9b4ac40d23f8152c1100610583d08f542b47ca617a0505cfc5f8407377d610599d58296996691ed
+  languageName: node
+  linkType: hard
+
+"vitest-fetch-mock@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "vitest-fetch-mock@npm:0.4.2"
+  peerDependencies:
+    vitest: ">=2.0.0"
+  checksum: 10c0/d583056cf40e25177a71e9208ee48017e30add0e84aaa6c2582ab71234d616942cff7839fb3b46c01d5a56eeceba9521dd6cc1a938cfe252404c1aab815d584d
   languageName: node
   linkType: hard
 
