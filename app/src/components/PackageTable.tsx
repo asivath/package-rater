@@ -68,25 +68,7 @@ function Row(props: { row: PackageDisplay[] }) {
                         fontWeight: "bold",
                         fontSize: "1rem",
                         borderBottom: "1px solid rgba(224, 224, 224, 1)"
-                      }}>
-                      Standalone Cost
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        borderBottom: "1px solid rgba(224, 224, 224, 1)"
-                      }}>
-                      Total Cost
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        borderBottom: "1px solid rgba(224, 224, 224, 1)"
-                      }}>
+                      }}>                        
                       Net Score
                     </TableCell>
                   </TableRow>
@@ -96,14 +78,6 @@ function Row(props: { row: PackageDisplay[] }) {
                     <TableRow key={version.ID} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
                       <TableCell align="center">{version.Version}</TableCell>
                       <TableCell align="center">{version.ID}</TableCell>
-                      <TableCell align="center">{version.StandaloneCost?.toFixed(2)}</TableCell>
-                      <TableCell align="center">
-                        {version.CostStatus === "completed"
-                          ? version.TotalCost?.toFixed(2)
-                          : version.CostStatus === "Pending"
-                            ? "pending"
-                            : "Failed"}
-                      </TableCell>
                       <TableCell align="center">{version.NetScore}</TableCell>
                     </TableRow>
                   ))}
