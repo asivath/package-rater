@@ -240,7 +240,7 @@ describe("uploadPackage", () => {
       body: body
     });
 
-    // expect(reply.statusCode).toBe(201);
+    expect(reply.statusCode).toBe(201);
     expect(reply.json()).toEqual({
       metadata: { Name: "test-package", Version: "1.0.0", ID: "mocked-hash-id" },
       data: body

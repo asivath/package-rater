@@ -16,6 +16,34 @@ export type Ndjson = {
   Dependencies_Latency: number;
 };
 
+export type PackageCostResponse = {
+  [id: string]: {
+    standaloneCost: number;
+    totalCost: number;
+  };
+};
+
+export function assertIsPackageCostResponse(o: any): asserts o is PackageCostResponse {
+  if (!o || typeof o !== "object") {
+    throw new Error("PackageCostResponse is not an object");
+  }
+  for (const key in o) {
+    if (typeof key !== "string") {
+      throw new Error("PackageCostResponse key is not a string");
+    }
+    const value = o[key];
+    if (!value || typeof value !== "object") {
+      throw new Error("PackageCostResponse value is not an object");
+    }
+    if (typeof value.standaloneCost !== "number") {
+      throw new Error("PackageCostResponse.standaloneCost is not a number");
+    }
+    if (typeof value.totalCost !== "number") {
+      throw new Error("PackageCostResponse.totalCost is not a number");
+    }
+  }
+}
+
 export function assertIsNdjson(o: any): asserts o is Ndjson {
   if (!o || typeof o !== "object") {
     throw new Error("Ndjson is not an object");

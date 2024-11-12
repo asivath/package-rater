@@ -6,12 +6,13 @@ import {
   calculateTotalPackageCost,
   getMetadata
 } from "../util";
-import TaskQueue from "../taskQueue";
 import * as shared from "@package-rater/shared";
 import * as s3Client from "@aws-sdk/client-s3";
 import * as tar from "tar";
 import * as util from "util";
 import * as esbuild from "esbuild";
+import * as getFolderSize from "get-folder-size";
+import * as fsPromises from "fs/promises";
 
 vi.mock("fs/promises", () => ({
   readFile: vi.fn().mockResolvedValue(
@@ -50,8 +51,21 @@ vi.mock("fs/promises", () => ({
           packageName: "failing-package",
           version: "1.0.0",
           ndjson: null,
-          dependencies: {},
+          dependencies: {
+            "incompleted-dep": "1.0.0"
+          },
           standaloneCost: 0.5,
+          totalCost: 0,
+          costStatus: "pending"
+        },
+        "parent-ID": {
+          packageName: "parent-package",
+          version: "1.0.0",
+          ndjson: null,
+          dependencies: {
+            "child-package": "1.0.0"
+          },
+          standaloneCost: 0.75,
           totalCost: 0,
           costStatus: "pending"
         }
@@ -93,8 +107,22 @@ vi.mock("fs/promises", () => ({
           "1.0.0": {
             id: "failing-ID",
             ndjson: null,
-            dependencies: {},
+            dependencies: {
+              "incompleted-dep": "1.0.0"
+            },
             standaloneCost: 0.5,
+            totalCost: 0,
+            costStatus: "pending"
+          }
+        },
+        "parent-package": {
+          "1.0.0": {
+            id: "parent-ID",
+            ndjson: null,
+            dependencies: {
+              "child-package": "1.0.0"
+            },
+            standaloneCost: 0.75,
             totalCost: 0,
             costStatus: "pending"
           }
@@ -103,7 +131,9 @@ vi.mock("fs/promises", () => ({
       costCache: {
         "2985548229775954": {
           // completed-dep-1.0.0
-          cost: 0.5,
+          totalCost: 0.5,
+          standaloneCost: 0.5,
+          dependencies: [],
           costStatus: "completed"
         }
       }
@@ -174,15 +204,16 @@ vi.mock("esbuild", async (importOriginal) => {
     }
   };
 });
-vi.mock("../taskQueue", async () => {
+vi.mock("get-folder-size", async (importOriginal) => {
+  const original = await importOriginal<typeof getFolderSize>();
   return {
-    default: vi.fn().mockReturnValue({
-      addTask: vi.fn().mockResolvedValue(1.0),
-      awaitTask: vi.fn().mockResolvedValue(1.0),
-      hasTask: vi.fn().mockReturnValue(false)
-    })
+    default: {
+      ...original,
+      loose: vi.fn().mockResolvedValue(524288) // 0.5 MB
+    }
   };
 });
+
 const mockNdJson: shared.Ndjson = {
   URL: "https://www.npmjs.com/package/express",
   NetScore: 0.8,
@@ -229,7 +260,7 @@ describe("savePackage", () => {
       "Uploaded package test-package to S3: test-package/new-package-id/test-package.tgz"
     );
     expect(logger.info).toHaveBeenCalledWith(
-      "Saved package test-package v1.0.0 with ID new-package-id and standalone cost 0.00 MB"
+      "Saved package test-package v1.0.0 with ID new-package-id and standalone cost 0.50 MB"
     );
   });
 
@@ -256,7 +287,7 @@ describe("savePackage", () => {
       "Uploaded package test-package2 to S3: test-package2/new-package-id/test-package2.tgz"
     );
     expect(logger.info).toHaveBeenCalledWith(
-      "Saved package test-package2 v1.0.0 with ID new-package-id and standalone cost 0.00 MB"
+      "Saved package test-package2 v1.0.0 with ID new-package-id and standalone cost 0.50 MB"
     );
   });
 
@@ -301,6 +332,22 @@ describe("savePackage", () => {
 
     expect(result.success).toBe(false);
     expect(result.reason).toBe("No package file path or URL provided");
+  });
+
+  it("should return an error if minifyProject fails", async () => {
+    vi.mocked(fsPromises.readdir).mockRejectedValueOnce(new Error("Failed to read directory"));
+
+    const result = await savePackage(
+      "test-package",
+      "1.0.0",
+      "new-package-id",
+      true,
+      "/path/to/package-file",
+      undefined
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe("Failed to read directory");
   });
 
   it("should debloat the package if debloat is true", async () => {
@@ -392,7 +439,7 @@ describe("getExactAvailableVersion", () => {
   });
 
   it("should handle errors gracefully and return null", async () => {
-    (global.fetch as Mock).mockRejectedValue(new Error("Network error"));
+    (global.fetch as Mock).mockRejectedValueOnce(new Error("Network error"));
 
     const result = await getExactAvailableVersion("test-package", "^1.0.0");
     expect(result).toBe(null);
@@ -400,12 +447,9 @@ describe("getExactAvailableVersion", () => {
 });
 
 describe("calculateTotalPackageCost", () => {
-  let taskQueue: TaskQueue;
-  let taskPromises: Map<string, Promise<number>>;
+  global.fetch = vi.fn();
 
   beforeEach(() => {
-    taskQueue = new TaskQueue();
-    taskPromises = new Map();
     vi.clearAllMocks();
   });
 
@@ -414,20 +458,7 @@ describe("calculateTotalPackageCost", () => {
     expect(result).toBe(0.5);
   });
 
-  it("should wait for task completion if costStatus is 'initiated'", async () => {
-    taskPromises.set("initiated-ID", Promise.resolve(10.0));
-    vi.spyOn(taskQueue, "awaitTask").mockImplementation((id) => taskPromises.get(id)!);
-
-    const result = await calculateTotalPackageCost("initiated-ID");
-
-    expect(result).toBe(10.0);
-    expect(taskQueue.awaitTask).toHaveBeenCalledWith("initiated-ID");
-  });
-
   it("should calculate and update total cost if costStatus is neither 'completed' nor 'initiated'", async () => {
-    vi.spyOn(taskQueue, "addTask").mockImplementationOnce(async (id, taskFn) => {
-      return await taskFn();
-    });
     (global.fetch as Mock).mockResolvedValueOnce({
       ok: true
     });
@@ -436,7 +467,6 @@ describe("calculateTotalPackageCost", () => {
     const result = await calculateTotalPackageCost("pending-ID");
 
     expect(result).toBe(1.25);
-    expect(taskQueue.addTask).toHaveBeenCalledWith("pending-ID", expect.any(Function));
     expect(metadata.byId["pending-ID"].totalCost).toBe(1.25);
     expect(metadata.byId["pending-ID"].costStatus).toBe("completed");
   });
@@ -447,12 +477,79 @@ describe("calculateTotalPackageCost", () => {
     );
   });
 
-  it("should update cost status to 'failed' if cost calculation fails", async () => {
-    vi.spyOn(taskQueue, "addTask").mockRejectedValueOnce(new Error("Calculation failed"));
+  it("should calculate total costs recursively for all dependencies", async () => {
+    vi.mocked(fsPromises.readFile)
+      .mockResolvedValueOnce(JSON.stringify({ dependencies: { "grandchild-package": "1.0.0" } }))
+      .mockResolvedValueOnce(JSON.stringify({ dependencies: {} }));
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
+    const metadata = getMetadata();
+    expect(metadata.costCache).toStrictEqual({
+      "2985548229775954": {
+        // in original mock
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: [],
+        costStatus: "completed"
+      }
+    });
+
+    const result = await calculateTotalPackageCost("parent-ID");
+
+    expect(result).toBe(1.75);
+    expect(metadata.byId["parent-ID"].costStatus).toBe("completed");
+    expect(metadata.byId["parent-ID"].totalCost).toBe(1.75);
+    expect(metadata.costCache).toStrictEqual({
+      "2985548229775954": {
+        // in original mock
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: [],
+        costStatus: "completed"
+      },
+      "2239244831680780": {
+        // child-package-1.0.0 w dependency grandchild-package-1.0.0
+        totalCost: 1,
+        standaloneCost: 0.5,
+        dependencies: ["6704071252909611"],
+        costStatus: "completed"
+      },
+      "6704071252909611": {
+        // grandchild-package-1.0.0
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: [],
+        costStatus: "completed"
+      }
+    });
+  });
+
+  it("should update cost status to 'failed' if dependency calculation fails but not throw error", async () => {
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: false
+    });
     const metadata = getMetadata();
 
-    await expect(calculateTotalPackageCost("failing-ID")).rejects.toThrow("Calculation failed");
+    const result = await calculateTotalPackageCost("failing-ID");
 
-    expect(metadata.byId["failing-ID"].costStatus).toBe("failed");
+    expect(metadata.byId["failing-ID"].costStatus).toBe("completed");
+    expect(metadata.byId["failing-ID"].totalCost).toBe(0.5);
+    expect(metadata.costCache["8574795012473724"].costStatus).toBe("failed");
+    expect(result).toBe(0.5);
   });
 });

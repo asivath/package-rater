@@ -31,7 +31,9 @@ export type Metadata = {
   // Cache for all packages and dependencies (which may or may not be in the byId or byName maps)
   costCache: {
     [id: string]: {
-      cost: number;
+      standaloneCost: number;
+      totalCost: number;
+      dependencies: string[];
       costStatus: "initiated" | "completed" | "failed";
     };
   };
@@ -134,8 +136,19 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
     if (typeof v !== "object") {
       throw new Error("Metadata.costCache values must be objects");
     }
-    if (typeof v.cost !== "number") {
-      throw new Error("Metadata.costCache values.cost must be a number");
+    if (typeof v.standaloneCost !== "number") {
+      throw new Error("Metadata.costCache values.standaloneCost must be a number");
+    }
+    if (typeof v.totalCost !== "number") {
+      throw new Error("Metadata.costCache values.totalCost must be a number");
+    }
+    if (typeof v.dependencies !== "object") {
+      throw new Error("Metadata.costCache values.dependencies must be an object");
+    }
+    for (const dependency in v.dependencies) {
+      if (typeof v.dependencies[dependency] !== "string") {
+        throw new Error("Metadata.costCache values.dependencies values must be strings");
+      }
     }
     if (v.costStatus !== "initiated" && v.costStatus !== "completed" && v.costStatus !== "failed") {
       throw new Error("Metadata.costCache values.costStatus must be 'initiated', 'completed', or 'failed'");

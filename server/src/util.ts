@@ -14,7 +14,6 @@ import { minVersion, inc, satisfies, parse } from "semver";
 import getFolderSize from "get-folder-size";
 import esbuild from "esbuild";
 import path from "path";
-import TaskQueue from "./taskQueue.js";
 import "dotenv/config";
 
 const logger = getLogger("server");
@@ -39,6 +38,48 @@ const metadata = await loadMetadata(); // Do not directly modify this variable o
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
 
+import PQueue from "p-queue";
+
+/**
+ * A queue for running tasks with access to the task's promise
+ */
+class TaskQueue {
+  private queue: PQueue;
+  private taskPromises: Map<string, Promise<number>>;
+
+  constructor() {
+    this.queue = new PQueue();
+    this.taskPromises = new Map();
+  }
+
+  async addTask(id: string, taskFn: () => Promise<number>): Promise<number> {
+    if (this.taskPromises.has(id)) {
+      return this.awaitTask(id);
+    }
+
+    const taskPromise = this.queue.add(async () => {
+      const result = await taskFn();
+      return result;
+    }) as Promise<number>;
+
+    this.taskPromises.set(id, taskPromise);
+
+    try {
+      const result = await taskPromise;
+      return result;
+    } finally {
+      this.taskPromises.delete(id);
+    }
+  }
+
+  async awaitTask(id: string): Promise<number> {
+    const taskPromise = this.taskPromises.get(id);
+    if (!taskPromise) {
+      throw new Error(`Task with id ${id} not found`);
+    }
+    return taskPromise;
+  }
+}
 const taskQueue = new TaskQueue();
 
 /**
@@ -242,8 +283,12 @@ export async function getExactAvailableVersion(packageName: string, versionRange
  * Calculates the total cost of a package
  * @param id The ID of the package
  * @returns The total cost of the package
+ * @throws Error if the package does not exist
+ * @throws Error if initial task addition fails
  */
 export async function calculateTotalPackageCost(id: string): Promise<number> {
+  const startTime = Date.now();
+  logger.info(`Calculating total cost of package ${id}`);
   const packageDataById = metadata.byId[id];
 
   if (!packageDataById) {
@@ -273,12 +318,12 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
     const packageCache = metadata.costCache[id];
     if (packageCache) {
       if (packageCache.costStatus === "completed") {
-        return packageCache.cost;
+        return packageCache.totalCost;
       } else if (packageCache.costStatus === "initiated") {
         return await taskQueue.awaitTask(id);
       }
     }
-    metadata.costCache[id] = { cost: 0, costStatus: "initiated" };
+    metadata.costCache[id] = { totalCost: 0, standaloneCost: 0, dependencies: [], costStatus: "initiated" };
 
     const exactVersion = await getExactAvailableVersion(packageName, version);
     if (!exactVersion) {
@@ -304,8 +349,12 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
       const packageJsonPath = path.join(extractPath, "package.json");
       const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
       const dependencies = packageJson.dependencies || {};
+      metadata.costCache[id].dependencies = Object.keys(dependencies).map((dep) =>
+        calculatePackageId(dep, dependencies[dep])
+      );
 
       let cost = (await getFolderSize.loose(extractPath)) / 1024 / 1024;
+      metadata.costCache[id].standaloneCost = cost;
       await rm(tmpDir, { recursive: true });
 
       for (const dependency in dependencies) {
@@ -317,7 +366,11 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
     };
     try {
       const result = await taskQueue.addTask(id, taskFn);
-      metadata.costCache[id].cost = result;
+      if (!result) {
+        metadata.costCache[id].costStatus = "failed";
+        return 0;
+      }
+      metadata.costCache[id].totalCost = result;
       metadata.costCache[id].costStatus = "completed";
       return result;
     } catch (error) {
@@ -357,6 +410,8 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
       await writeFile(metadataPath, JSON.stringify(metadata, null, 2)).catch((error) => {
         logger.error(`Failed to save metadata: ${(error as Error).message}`);
       });
+      const endTime = Date.now();
+      logger.info(`Finished calculating total cost of package ${id} in ${(endTime - startTime) / 1000} seconds`);
     });
 }
 

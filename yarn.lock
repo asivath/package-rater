@@ -2000,7 +2000,6 @@ __metadata:
     typescript-eslint: "npm:^8.8.0"
     unzipper: "npm:^0.12.3"
     vitest: "npm:2.1.2"
-    vitest-fetch-mock: "npm:^0.4.2"
     winston: "npm:^3.15.0"
   languageName: unknown
   linkType: soft
@@ -8182,15 +8181,6 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 10c0/4ef4807d2fd166a920de244dbcec791ba8a903b017a7d8e9f9b4ac40d23f8152c1100610583d08f542b47ca617a0505cfc5f8407377d610599d58296996691ed
-  languageName: node
-  linkType: hard
-
-"vitest-fetch-mock@npm:^0.4.2":
-  version: 0.4.2
-  resolution: "vitest-fetch-mock@npm:0.4.2"
-  peerDependencies:
-    vitest: ">=2.0.0"
-  checksum: 10c0/d583056cf40e25177a71e9208ee48017e30add0e84aaa6c2582ab71234d616942cff7839fb3b46c01d5a56eeceba9521dd6cc1a938cfe252404c1aab815d584d
   languageName: node
   linkType: hard
 

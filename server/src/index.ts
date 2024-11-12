@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
 import { postPackages } from "./routes/postPackages.js";
+import { getPackageCost } from "./routes/getPackageCost.js";
 import { getLogger } from "@package-rater/shared";
 import "dotenv/config";
 
@@ -25,6 +26,7 @@ fastify.register(fastifyStatic, {
 
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", postPackages);
+fastify.get("/package/:id/cost", getPackageCost);
 
 const start = async () => {
   try {
