@@ -44,6 +44,16 @@ export function assertIsPackageCostResponse(o: any): asserts o is PackageCostRes
   }
 }
 
+export type PackageDisplay = {
+  Name: string;
+  Version: string;
+  ID: string;
+  NetScore?: number | "N/A";
+  StandaloneCost?: number;
+  TotalCost?: number;
+  CostStatus?: string;
+};
+
 export function assertIsNdjson(o: any): asserts o is Ndjson {
   if (!o || typeof o !== "object") {
     throw new Error("Ndjson is not an object");

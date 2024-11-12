@@ -68,7 +68,7 @@ function Row(props: { row: PackageDisplay[] }) {
                         fontWeight: "bold",
                         fontSize: "1rem",
                         borderBottom: "1px solid rgba(224, 224, 224, 1)"
-                      }}>                        
+                      }}>
                       Net Score
                     </TableCell>
                   </TableRow>

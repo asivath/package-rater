@@ -563,7 +563,7 @@ export const checkIfPackageExists = (id: string) => {
  * Gets the metadata object
  * @returns The metadata object
  */
-export const getMetadata = () => {
+export const getPackageMetadata = () => {
   return metadata;
 };
 
