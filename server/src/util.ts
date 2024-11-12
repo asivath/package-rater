@@ -35,52 +35,10 @@ async function loadMetadata(): Promise<Metadata> {
 }
 const metadata = await loadMetadata(); // Do not directly modify this variable outside of this file
 
+const packageCostPromisesMap = new Map<string, Promise<number>>();
+
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
-
-import PQueue from "p-queue";
-
-/**
- * A queue for running tasks with access to the task's promise
- */
-class TaskQueue {
-  private queue: PQueue;
-  private taskPromises: Map<string, Promise<number>>;
-
-  constructor() {
-    this.queue = new PQueue();
-    this.taskPromises = new Map();
-  }
-
-  async addTask(id: string, taskFn: () => Promise<number>): Promise<number> {
-    if (this.taskPromises.has(id)) {
-      return this.awaitTask(id);
-    }
-
-    const taskPromise = this.queue.add(async () => {
-      const result = await taskFn();
-      return result;
-    }) as Promise<number>;
-
-    this.taskPromises.set(id, taskPromise);
-
-    try {
-      const result = await taskPromise;
-      return result;
-    } finally {
-      this.taskPromises.delete(id);
-    }
-  }
-
-  async awaitTask(id: string): Promise<number> {
-    const taskPromise = this.taskPromises.get(id);
-    if (!taskPromise) {
-      throw new Error(`Task with id ${id} not found`);
-    }
-    return taskPromise;
-  }
-}
-const taskQueue = new TaskQueue();
 
 /**
  * Moves a package to the packages directory and saves its metadata
@@ -230,6 +188,7 @@ export const savePackage = async (
       .then((cost) => {
         if (cost === 0) {
           logger.error(`Failed to calculate total cost of package ${packageName} v${version}`);
+          metadata.byId[id].costStatus = "failed";
           return;
         }
         logger.info(`Calculated total cost of package ${packageName} v${version}: ${cost.toFixed(2)} MB`);
@@ -238,6 +197,7 @@ export const savePackage = async (
         logger.error(
           `Failed to calculate total cost of package ${packageName} v${version}: ${(error as Error).message}`
         );
+        metadata.byId[id].costStatus = "failed";
       });
     return { success: true };
   } catch (error) {
@@ -279,63 +239,91 @@ export async function getExactAvailableVersion(packageName: string, versionRange
   return null;
 }
 
+type PackageNode = {
+  id: string;
+  packageName: string;
+  version: string;
+  standaloneCost: number;
+  totalCost: number;
+  dependencies: string[]; // List of package IDs
+};
 /**
- * Calculates the total cost of a package
- * @param id The ID of the package
- * @returns The total cost of the package
- * @throws Error if the package does not exist
- * @throws Error if initial task addition fails
+ * Builds a dependency graph for a package
+ * @param packageName
+ * @param version
+ * @returns The dependency graph
  */
-export async function calculateTotalPackageCost(id: string): Promise<number> {
-  const startTime = Date.now();
-  logger.info(`Calculating total cost of package ${id}`);
-  const packageDataById = metadata.byId[id];
+async function buildDependencyGraph(packageName: string, version: string): Promise<Map<string, PackageNode>> {
+  const graph = new Map<string, PackageNode>();
+  const stack = [{ packageName, version }];
 
-  if (!packageDataById) {
-    throw new Error(`Package ${id} does not exist`);
-  }
-
-  const packageDataByName = metadata.byName[packageDataById.packageName];
-
-  if (packageDataById.costStatus === "completed") {
-    return packageDataById.totalCost;
-  }
-
-  if (packageDataById.costStatus === "initiated") {
-    return await taskQueue.awaitTask(id);
-  }
-
-  async function calculateCost(packageName: string, version: string): Promise<number> {
+  while (stack.length > 0) {
+    const { packageName, version } = stack.pop()!;
     const id = calculatePackageId(packageName, version);
-    const packateMetadata = metadata.byId[id];
-    if (packateMetadata) {
-      if (packateMetadata.costStatus === "completed") {
-        return packateMetadata.totalCost;
-      } else if (packateMetadata.costStatus === "initiated") {
-        return await taskQueue.awaitTask(id);
-      }
-    }
-    const packageCache = metadata.costCache[id];
-    if (packageCache) {
-      if (packageCache.costStatus === "completed") {
-        return packageCache.totalCost;
-      } else if (packageCache.costStatus === "initiated") {
-        return await taskQueue.awaitTask(id);
-      }
-    }
-    metadata.costCache[id] = { totalCost: 0, standaloneCost: 0, dependencies: [], costStatus: "initiated" };
+    if (graph.has(id)) continue;
 
+    if (metadata.costCache[id]) {
+      const node: PackageNode = {
+        id,
+        packageName,
+        version,
+        standaloneCost: metadata.costCache[id].standaloneCost,
+        totalCost: metadata.costCache[id].totalCost,
+        dependencies: metadata.costCache[id].dependencies
+      };
+      graph.set(id, node);
+      continue;
+    }
+    if (metadata.byId[id]) {
+      const node: PackageNode = {
+        id,
+        packageName,
+        version,
+        standaloneCost: metadata.byId[id].standaloneCost,
+        totalCost: metadata.byId[id].totalCost,
+        dependencies: Object.values(metadata.byId[id].dependencies)
+      };
+      graph.set(id, node);
+      metadata.costCache[id] = {
+        standaloneCost: node.standaloneCost,
+        totalCost: node.totalCost,
+        dependencies: node.dependencies
+      };
+      continue;
+    }
+
+    const failedNode: PackageNode = {
+      id,
+      packageName,
+      version,
+      standaloneCost: 0,
+      totalCost: 0,
+      dependencies: []
+    };
+    const failedCache = {
+      standaloneCost: 0,
+      totalCost: 0,
+      dependencies: []
+    };
     const exactVersion = await getExactAvailableVersion(packageName, version);
     if (!exactVersion) {
-      throw new Error(`Invalid version ${version}`);
+      logger.error(`Invalid version ${version}`);
+      graph.set(id, failedNode);
+      metadata.costCache[id] = failedCache;
+      continue;
     }
-
-    const taskFn = async () => {
+    try {
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${exactVersion}.tgz`;
       const tarResponse = await fetch(npmTarURL);
       if (!tarResponse.ok || !tarResponse.body) {
         logger.error(`Failed to fetch package ${packageName} with version ${exactVersion}`);
-        return 0;
+        graph.set(id, failedNode);
+        metadata.costCache[id] = {
+          standaloneCost: 0,
+          totalCost: 0,
+          dependencies: []
+        };
+        continue;
       }
 
       const tmpDir = path.join(tmpdir(), `${packageName}-${exactVersion}`);
@@ -348,71 +336,220 @@ export async function calculateTotalPackageCost(id: string): Promise<number> {
       const extractPath = path.join(tmpDir, "package");
       const packageJsonPath = path.join(extractPath, "package.json");
       const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
-      const dependencies = packageJson.dependencies || {};
-      metadata.costCache[id].dependencies = Object.keys(dependencies).map((dep) =>
-        calculatePackageId(dep, dependencies[dep])
-      );
+      const dependencies = Object.entries(packageJson.dependencies || {}).map(([depName, depVersion]) => {
+        const depId = calculatePackageId(depName, depVersion as string);
+        if (!graph.has(depId)) {
+          stack.push({ packageName: depName, version: depVersion as string });
+        }
+        return depId;
+      });
 
-      let cost = (await getFolderSize.loose(extractPath)) / 1024 / 1024;
-      metadata.costCache[id].standaloneCost = cost;
+      const node: PackageNode = {
+        id,
+        packageName,
+        version,
+        standaloneCost: (await getFolderSize.loose(extractPath)) / 1024 / 1024,
+        totalCost: 0,
+        dependencies
+      };
+      graph.set(id, node);
+      metadata.costCache[id] = {
+        standaloneCost: node.standaloneCost,
+        totalCost: 0,
+        dependencies
+      };
+
       await rm(tmpDir, { recursive: true });
-
-      for (const dependency in dependencies) {
-        const depVersion = dependencies[dependency];
-        cost += await calculateCost(dependency, depVersion);
-      }
-
-      return cost;
-    };
-    try {
-      const result = await taskQueue.addTask(id, taskFn);
-      if (!result) {
-        metadata.costCache[id].costStatus = "failed";
-        return 0;
-      }
-      metadata.costCache[id].totalCost = result;
-      metadata.costCache[id].costStatus = "completed";
-      return result;
     } catch (error) {
-      metadata.costCache[id].costStatus = "failed";
-      logger.error(
-        `Failed to calculate cost of package ${packageName} with version ${version}: ${(error as Error).message}`
-      );
-      return 0;
+      logger.error(`Failed to fetch package ${packageName} with version ${exactVersion}: ${(error as Error).message}`);
+      graph.set(id, failedNode);
+      metadata.costCache[id] = failedCache;
+      continue;
     }
   }
-  return taskQueue
-    .addTask(id, async () => {
-      let totalCost = packageDataById.standaloneCost;
-      packageDataById.costStatus = "initiated";
-      packageDataByName[packageDataById.version].costStatus = "initiated";
 
-      for (const dependency in packageDataById.dependencies) {
-        const version = packageDataById.dependencies[dependency];
-        totalCost += await calculateCost(dependency, version);
+  return graph;
+}
+
+/**
+ * Detects cycles in a directed graph using Tarjan's strongly connected components algorithm
+ * @param graph The dependency graph
+ * @returns An array of strongly connected components (sets of node IDs)
+ */
+function detectCycles(graph: Map<string, PackageNode>): Set<string>[] {
+  const stack: string[] = [];
+  const onStack = new Set<string>();
+  const indices = new Map<string, number>();
+  const lowLinks = new Map<string, number>();
+  const sccs: Set<string>[] = [];
+  let index = 0;
+
+  function strongConnect(nodeId: string) {
+    indices.set(nodeId, index);
+    lowLinks.set(nodeId, index);
+    index++;
+    stack.push(nodeId);
+    onStack.add(nodeId);
+
+    const node = graph.get(nodeId)!;
+    for (const depId of node.dependencies) {
+      if (!indices.has(depId)) {
+        // Recursively visit unvisited dependency
+        strongConnect(depId);
+        // Update the low-link value of the current node
+        lowLinks.set(nodeId, Math.min(lowLinks.get(nodeId)!, lowLinks.get(depId)!));
+      } else if (onStack.has(depId)) {
+        // Update the low-link value of the current node for back edge
+        lowLinks.set(nodeId, Math.min(lowLinks.get(nodeId)!, indices.get(depId)!));
       }
+    }
 
-      packageDataById.totalCost = totalCost;
-      packageDataById.costStatus = "completed";
-      packageDataByName[packageDataById.version].totalCost = totalCost;
-      packageDataByName[packageDataById.version].costStatus = "completed";
-      return totalCost;
-    })
-    .catch((error) => {
-      packageDataById.costStatus = "failed";
-      packageDataByName[packageDataById.version].costStatus = "failed";
-      logger.error(
-        `Failed to calculate total cost of package ${packageDataById.packageName} with version ${packageDataById.version}: ${(error as Error).message}`
-      );
-      throw error;
-    })
-    .finally(async () => {
-      await writeFile(metadataPath, JSON.stringify(metadata, null, 2)).catch((error) => {
-        logger.error(`Failed to save metadata: ${(error as Error).message}`);
-      });
-      const endTime = Date.now();
-      logger.info(`Finished calculating total cost of package ${id} in ${(endTime - startTime) / 1000} seconds`);
-    });
+    // If nodeId is a root node, pop the stack to create an SCC
+    if (lowLinks.get(nodeId) === indices.get(nodeId)) {
+      const scc = new Set<string>();
+      let w: string;
+      do {
+        w = stack.pop()!;
+        onStack.delete(w);
+        scc.add(w);
+      } while (w !== nodeId);
+
+      // Only push the SCC if it forms a cycle (more than one node or self-loop)
+      if (scc.size > 1 || (scc.size === 1 && node.dependencies.includes(node.id))) {
+        sccs.push(scc);
+      }
+    }
+  }
+
+  for (const nodeId of graph.keys()) {
+    if (!indices.has(nodeId)) {
+      strongConnect(nodeId);
+    }
+  }
+
+  return sccs;
+}
+
+/**
+ * Recursively calculates the total cost of a package
+ * @param rootName
+ * @param rootVersion
+ * @param graph The dependency graph
+ * @returns The total cost of the package
+ */
+async function calculateTotalCost(
+  rootName: string,
+  rootVersion: string,
+  graph: Map<string, PackageNode>
+): Promise<number> {
+  const calculatedCosts = new Map<string, number>();
+
+  const cycles = detectCycles(graph);
+  if (cycles.length > 0) {
+    logger.warn(`Detected ${cycles.length} cycles in the dependency graph.`);
+    for (const cycle of cycles) {
+      for (const nodeId of cycle) {
+        calculatedCosts.set(nodeId, -1);
+      }
+      logger.warn(`Cycle: ${Array.from(cycle).join(" -> ")}`);
+    }
+  }
+
+  async function calculateNodeCost(nodeId: string): Promise<number> {
+    if (calculatedCosts.has(nodeId)) {
+      const cost = calculatedCosts.get(nodeId)!;
+      if (cost !== -1) return cost;
+    }
+
+    const node = graph.get(nodeId);
+    if (!node) {
+      throw new Error(`Node with ID ${nodeId} not found in the dependency graph.`);
+    }
+
+    if (node.totalCost > 0) {
+      calculatedCosts.set(nodeId, node.totalCost);
+      return node.totalCost;
+    }
+    let totalCost = node.standaloneCost;
+    for (const depId of node.dependencies) {
+      if (calculatedCosts.get(depId) === -1) {
+        continue;
+      }
+      totalCost += await calculateNodeCost(depId);
+    }
+    metadata.costCache[nodeId].totalCost = totalCost;
+
+    calculatedCosts.set(nodeId, totalCost);
+    return totalCost;
+  }
+
+  const rootId = calculatePackageId(rootName, rootVersion);
+  const baseTotalCost = await calculateNodeCost(rootId);
+
+  // Update cyclic nodes with an approximate cost based on non-cyclic dependencies
+  let cyclicTotalCost = 0;
+  for (const cycle of cycles) {
+    let cycleCost = 0;
+    for (const nodeId of cycle) {
+      const node = graph.get(nodeId);
+      if (node) {
+        cycleCost += calculatedCosts.get(nodeId) !== undefined ? calculatedCosts.get(nodeId)! : node.standaloneCost;
+      }
+    }
+    const averageCost = cycleCost / cycle.size;
+
+    // Assign average to cyclic nodes and add this cost to the cyclic total
+    for (const nodeId of cycle) {
+      calculatedCosts.set(nodeId, averageCost);
+      cyclicTotalCost += averageCost;
+      metadata.costCache[nodeId].totalCost = averageCost;
+    }
+  }
+
+  // Add cyclic node costs to the total cost
+  return baseTotalCost + cyclicTotalCost;
+}
+
+/**
+ * Calculates the total cost of a package
+ * @param id The ID of the package
+ * @returns The total cost of the package
+ * @throws Error if the package does not exist
+ * @throws Error if initial task addition fails
+ */
+export async function calculateTotalPackageCost(id: string): Promise<number> {
+  const packageDataById = metadata.byId[id];
+  if (!packageDataById) {
+    throw new Error(`Package ${id} does not exist`);
+  }
+  if (packageDataById.costStatus === "completed") {
+    return packageDataById.totalCost;
+  }
+  if (packageDataById.costStatus === "failed") {
+    throw new Error(`Failed to calculate cost of package ${id}`);
+  }
+  if (packageCostPromisesMap.has(id)) {
+    return packageCostPromisesMap.get(id)!;
+  }
+  const packageDataByName = metadata.byName[packageDataById.packageName][packageDataById.version];
+
+  const costPromise = (async () => {
+    const graph = await buildDependencyGraph(packageDataById.packageName, packageDataById.version);
+    const totalCost = await calculateTotalCost(packageDataById.packageName, packageDataById.version, graph);
+    packageDataById.totalCost = totalCost;
+    packageDataById.costStatus = "completed";
+    packageDataByName.totalCost = totalCost;
+    packageDataByName.costStatus = "completed";
+
+    await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+    return totalCost;
+  })();
+
+  packageCostPromisesMap.set(id, costPromise);
+  costPromise.finally(() => {
+    packageCostPromisesMap.delete(id);
+  })
+  return costPromise;
 }
 
 /**

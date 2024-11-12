@@ -27,16 +27,7 @@ vi.mock("fs/promises", () => ({
           totalCost: 0.5,
           costStatus: "completed"
         },
-        "initiated-ID": {
-          packageName: "initiated-package",
-          version: "1.0.0",
-          ndjson: null,
-          dependencies: {},
-          standaloneCost: 0.5,
-          totalCost: 0,
-          costStatus: "initiated"
-        },
-        "pending-ID": {
+        "6023484092574754": {
           packageName: "pending-package",
           version: "1.0.0",
           ndjson: null,
@@ -81,19 +72,9 @@ vi.mock("fs/promises", () => ({
             costStatus: "completed"
           }
         },
-        "initiated-package": {
-          "1.0.0": {
-            id: "initiated-ID",
-            ndjson: null,
-            dependencies: {},
-            standaloneCost: 0.5,
-            totalCost: 0,
-            costStatus: "initiated"
-          }
-        },
         "pending-package": {
           "1.0.0": {
-            id: "pending-ID",
+            id: "6023484092574754",
             ndjson: null,
             dependencies: {
               "completed-dep": "1.0.0"
@@ -458,9 +439,14 @@ describe("calculateTotalPackageCost", () => {
     expect(result).toBe(0.5);
   });
 
-  it("should calculate and update total cost if costStatus is neither 'completed' nor 'initiated'", async () => {
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true
+  it("should calculate and update total cost if costStatus is neither 'completed' nor 'failed'", async () => {
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+      ok: true,
+      body: new ReadableStream()
+    }).mockResolvedValueOnce({
+      ok: true,
+      body: new ReadableStream()
     });
     const metadata = getMetadata();
 

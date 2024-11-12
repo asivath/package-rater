@@ -2,6 +2,7 @@ import { vi, describe, it, expect } from "vitest";
 import Fastify from "fastify";
 import { getPackageCost } from "../routes/getPackageCost";
 import * as util from "../util.js";
+import * as shared from "@package-rater/shared";
 
 vi.mock("../util.js", async (importOriginal) => {
   const original = await importOriginal<typeof util>();
@@ -63,12 +64,16 @@ vi.mock("../util.js", async (importOriginal) => {
     calculateTotalPackageCost: vi.fn().mockResolvedValue("12345")
   };
 });
-vi.mock("@package-rater/shared", () => ({
-  assertIsPackageCostResponse: vi.fn(),
-  getLogger: () => ({
-    error: vi.fn()
-  })
-}));
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
+  return {
+    ...original,
+    assertIsPackageCostResponse: vi.fn(),
+    getLogger: () => ({
+      error: vi.fn()
+    })
+  };
+});
 
 describe("getPackageCost", () => {
   const fastify = Fastify();
