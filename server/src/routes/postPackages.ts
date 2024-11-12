@@ -136,28 +136,11 @@ export const satisfiesCarat = (version: string, Version: string): boolean => {
 };
 
 export const satisfiesTilde = (version: string, Version: string): boolean => {
-  const [major, minor] = version.split(".");
-  const [majorType, minorType] = Version.split(".");
-  return major === majorType && minor === minorType;
+  const [major, minor, patch] = version.split(".");
+  const [majorType, minorType, patchType] = Version.split(".");
+  return major === majorType && minor === minorType && patch >= patchType; //Might be backwards
 };
 
 export const satisfiesRange = (version: string, minVersion: string, maxVersion: string): boolean => {
   return version >= minVersion && version <= maxVersion;
 };
-
-// [{
-//   Version: '17.0.1',
-//   Name: 'browserify',
-//   ID: '5209905695993030',
-//   StandaloneCost: 0.9316482543945312,
-//   TotalCost: 0,
-//   NetScore: 0.6
-// },
-// {
-//   Version: '16.3.0',
-//   Name: 'browserify',
-//   ID: '1039622501670058',
-//   StandaloneCost: 1.1853208541870117,
-//   TotalCost: 0,
-//   NetScore: 0.8
-// }]
