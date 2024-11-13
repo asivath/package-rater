@@ -30,7 +30,7 @@ export const getPackageCost = async (
   try {
     if (packageMetadata.costStatus !== "completed") {
       try {
-        await calculateTotalPackageCost(id);
+        await calculateTotalPackageCost(packageMetadata.packageName, packageMetadata.version);
       } catch (error) {
         logger.error(`Failed to calculate cost: ${(error as Error).message}`);
         reply.code(500).send({ error: "Failed to calculate cost" });

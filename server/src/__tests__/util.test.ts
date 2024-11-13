@@ -4,7 +4,8 @@ import {
   checkIfPackageExists,
   getExactAvailableVersion,
   calculateTotalPackageCost,
-  getMetadata
+  getMetadata,
+  calculatePackageId
 } from "../util";
 import * as shared from "@package-rater/shared";
 import * as s3Client from "@aws-sdk/client-s3";
@@ -18,7 +19,7 @@ vi.mock("fs/promises", () => ({
   readFile: vi.fn().mockResolvedValue(
     JSON.stringify({
       byId: {
-        "completed-ID": {
+        "8949875233423535": {
           packageName: "completed-package",
           version: "1.0.0",
           ndjson: null,
@@ -35,10 +36,10 @@ vi.mock("fs/promises", () => ({
             "completed-dep": "1.0.0"
           },
           standaloneCost: 0.75,
-          totalCost: 1,
+          totalCost: 0,
           costStatus: "pending"
         },
-        "failing-ID": {
+        "1022435309464889": {
           packageName: "failing-package",
           version: "1.0.0",
           ndjson: null,
@@ -49,12 +50,24 @@ vi.mock("fs/promises", () => ({
           totalCost: 0,
           costStatus: "pending"
         },
-        "parent-ID": {
+        "5555118188997178": {
           packageName: "parent-package",
           version: "1.0.0",
           ndjson: null,
           dependencies: {
             "child-package": "1.0.0"
+          },
+          standaloneCost: 0.75,
+          totalCost: 0,
+          costStatus: "pending"
+        },
+        "5916553102338584": {
+          packageName: "recursion-package",
+          version: "1.0.0",
+          ndjson: null,
+          dependencies: {
+            "recursion-package-2": "1.0.0",
+            "completed-dep": "1.0.0"
           },
           standaloneCost: 0.75,
           totalCost: 0,
@@ -107,6 +120,19 @@ vi.mock("fs/promises", () => ({
             totalCost: 0,
             costStatus: "pending"
           }
+        },
+        "recursion-package": {
+          "1.0.0": {
+            id: "5555118188997178",
+            ndjson: null,
+            dependencies: {
+              "recursion-package-2": "1.0.0",
+              "completed-dep": "1.0.0"
+            },
+            standaloneCost: 0.75,
+            totalCost: 0,
+            costStatus: "pending"
+          }
         }
       },
       costCache: {
@@ -114,8 +140,7 @@ vi.mock("fs/promises", () => ({
           // completed-dep-1.0.0
           totalCost: 0.5,
           standaloneCost: 0.5,
-          dependencies: [],
-          costStatus: "completed"
+          dependencies: []
         }
       }
     })
@@ -222,11 +247,13 @@ describe("savePackage", () => {
     vi.clearAllMocks();
   });
 
+  const testPackageId = calculatePackageId("test-package", "1.0.0");
+  const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
   it("should save a package from file path and upload to S3 in prod", async () => {
     vi.stubEnv("NODE_ENV", "prod");
     const packageFilePath = "/path/to/package-file";
 
-    const result = await savePackage("test-package", "1.0.0", "new-package-id", false, packageFilePath, undefined);
+    const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
 
     expect(result.success).toBe(true);
     expect(tarSpy).toHaveBeenCalledWith(
@@ -238,10 +265,10 @@ describe("savePackage", () => {
       ["."]
     );
     expect(logger.info).toHaveBeenCalledWith(
-      "Uploaded package test-package to S3: test-package/new-package-id/test-package.tgz"
+      `Uploaded package test-package to S3: test-package/${testPackageId}/test-package.tgz`
     );
     expect(logger.info).toHaveBeenCalledWith(
-      "Saved package test-package v1.0.0 with ID new-package-id and standalone cost 0.50 MB"
+      `Saved package test-package v1.0.0 with ID ${testPackageId} and standalone cost 0.50 MB`
     );
   });
 
@@ -261,14 +288,14 @@ describe("savePackage", () => {
         body: new ReadableStream()
       });
 
-    const result = await savePackage("test-package2", "1.0.0", "new-package-id", false, undefined, url);
+    const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
 
     expect(result.success).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
-      "Uploaded package test-package2 to S3: test-package2/new-package-id/test-package2.tgz"
+      `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.tgz`
     );
     expect(logger.info).toHaveBeenCalledWith(
-      "Saved package test-package2 v1.0.0 with ID new-package-id and standalone cost 0.50 MB"
+      `Saved package test-package2 v1.0.0 with ID ${testPackageId2} and standalone cost 0.50 MB`
     );
   });
 
@@ -284,7 +311,7 @@ describe("savePackage", () => {
     const result = await savePackage(
       "test-package",
       "1.0.0",
-      "new-package-id",
+      testPackageId,
       false,
       undefined,
       "https://www.npmjs.com/package/test-package"
@@ -298,7 +325,7 @@ describe("savePackage", () => {
     const result = await savePackage(
       "test-package",
       "1.0.0",
-      "new-package-id",
+      testPackageId,
       false,
       "/path/to/package-file",
       "https://www.npmjs.com/package/test-package"
@@ -309,7 +336,7 @@ describe("savePackage", () => {
   });
 
   it("should return an error if neither file path nor URL is provided", async () => {
-    const result = await savePackage("test-package", "1.0.0", "new-package-id", false);
+    const result = await savePackage("test-package", "1.0.0", testPackageId, false);
 
     expect(result.success).toBe(false);
     expect(result.reason).toBe("No package file path or URL provided");
@@ -318,14 +345,7 @@ describe("savePackage", () => {
   it("should return an error if minifyProject fails", async () => {
     vi.mocked(fsPromises.readdir).mockRejectedValueOnce(new Error("Failed to read directory"));
 
-    const result = await savePackage(
-      "test-package",
-      "1.0.0",
-      "new-package-id",
-      true,
-      "/path/to/package-file",
-      undefined
-    );
+    const result = await savePackage("test-package", "1.0.0", testPackageId, true, "/path/to/package-file", undefined);
 
     expect(result.success).toBe(false);
     expect(result.reason).toBe("Failed to read directory");
@@ -333,14 +353,7 @@ describe("savePackage", () => {
 
   it("should debloat the package if debloat is true", async () => {
     const esbuildSpy = (esbuild as unknown as { default: { build: Mock } }).default.build;
-    const result = await savePackage(
-      "test-package",
-      "1.0.0",
-      "new-package-id",
-      true,
-      "/path/to/package-file",
-      undefined
-    );
+    const result = await savePackage("test-package", "1.0.0", testPackageId, true, "/path/to/package-file", undefined);
 
     expect(result.success).toBe(true);
     expect(esbuildSpy).toHaveBeenCalledOnce();
@@ -357,7 +370,7 @@ describe("savePackage", () => {
     const result = await savePackage(
       "test-package",
       "1.0.0",
-      "new-package-id",
+      testPackageId,
       true,
       undefined,
       "https://www.npmjs.com/package/test-package"
@@ -371,7 +384,7 @@ describe("savePackage", () => {
 
 describe("checkIfPackageExists", () => {
   it("should return true if package exists", async () => {
-    const result = checkIfPackageExists("completed-ID");
+    const result = checkIfPackageExists("8949875233423535");
 
     expect(result).toBe(true);
   });
@@ -435,31 +448,33 @@ describe("calculateTotalPackageCost", () => {
   });
 
   it("should return total cost if costStatus is 'completed'", async () => {
-    const result = await calculateTotalPackageCost("completed-ID");
+    const result = await calculateTotalPackageCost("completed-package", "1.0.0");
     expect(result).toBe(0.5);
   });
 
   it("should calculate and update total cost if costStatus is neither 'completed' nor 'failed'", async () => {
     (global.fetch as Mock)
       .mockResolvedValueOnce({
-      ok: true,
-      body: new ReadableStream()
-    }).mockResolvedValueOnce({
-      ok: true,
-      body: new ReadableStream()
-    });
+        ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
     const metadata = getMetadata();
 
-    const result = await calculateTotalPackageCost("pending-ID");
+    const result = await calculateTotalPackageCost("pending-package", "1.0.0");
+    const packageId = calculatePackageId("pending-package", "1.0.0");
 
     expect(result).toBe(1.25);
-    expect(metadata.byId["pending-ID"].totalCost).toBe(1.25);
-    expect(metadata.byId["pending-ID"].costStatus).toBe("completed");
+    expect(metadata.byId[packageId].totalCost).toBe(1.25);
+    expect(metadata.byId[packageId].costStatus).toBe("completed");
   });
 
   it("should throw an error if package ID does not exist", async () => {
-    await expect(calculateTotalPackageCost("non-existing-ID")).rejects.toThrow(
-      "Package non-existing-ID does not exist"
+    await expect(calculateTotalPackageCost("non-existing-package", "1.0.0")).rejects.toThrow(
+      `Package ${calculatePackageId("non-existing-package", "1.0.0")} does not exist`
     );
   });
 
@@ -479,48 +494,55 @@ describe("calculateTotalPackageCost", () => {
       .mockResolvedValueOnce({
         ok: true,
         body: new ReadableStream()
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        body: new ReadableStream()
       });
     const metadata = getMetadata();
+    metadata.costCache = {
+      "2985548229775954": {
+        // completed-dep-1.0.0
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: []
+      }
+    };
     expect(metadata.costCache).toStrictEqual({
       "2985548229775954": {
         // in original mock
         totalCost: 0.5,
         standaloneCost: 0.5,
-        dependencies: [],
-        costStatus: "completed"
+        dependencies: []
       }
     });
 
-    const result = await calculateTotalPackageCost("parent-ID");
+    const result = await calculateTotalPackageCost("parent-package", "1.0.0");
+    const packageId = calculatePackageId("parent-package", "1.0.0");
 
     expect(result).toBe(1.75);
-    expect(metadata.byId["parent-ID"].costStatus).toBe("completed");
-    expect(metadata.byId["parent-ID"].totalCost).toBe(1.75);
+    expect(metadata.byId[packageId].costStatus).toBe("completed");
+    expect(metadata.byId[packageId].totalCost).toBe(1.75);
     expect(metadata.costCache).toStrictEqual({
       "2985548229775954": {
         // in original mock
         totalCost: 0.5,
         standaloneCost: 0.5,
-        dependencies: [],
-        costStatus: "completed"
+        dependencies: []
       },
       "2239244831680780": {
         // child-package-1.0.0 w dependency grandchild-package-1.0.0
         totalCost: 1,
         standaloneCost: 0.5,
-        dependencies: ["6704071252909611"],
-        costStatus: "completed"
+        dependencies: ["6704071252909611"]
       },
       "6704071252909611": {
         // grandchild-package-1.0.0
         totalCost: 0.5,
         standaloneCost: 0.5,
-        dependencies: [],
-        costStatus: "completed"
+        dependencies: []
+      },
+      "5555118188997178": {
+        // parent-package-1.0.0 w dependency child-package-1.0.0 and grandchild-package-1.0.0
+        dependencies: ["2239244831680780"],
+        standaloneCost: 0.75,
+        totalCost: 1.75
       }
     });
   });
@@ -531,11 +553,38 @@ describe("calculateTotalPackageCost", () => {
     });
     const metadata = getMetadata();
 
-    const result = await calculateTotalPackageCost("failing-ID");
+    const result = await calculateTotalPackageCost("failing-package", "1.0.0");
+    const packageId = calculatePackageId("failing-package", "1.0.0");
+    const incompletedDepId = calculatePackageId("incompleted-dep", "1.0.0");
 
-    expect(metadata.byId["failing-ID"].costStatus).toBe("completed");
-    expect(metadata.byId["failing-ID"].totalCost).toBe(0.5);
-    expect(metadata.costCache["8574795012473724"].costStatus).toBe("failed");
+    expect(metadata.byId[packageId].costStatus).toBe("completed");
+    expect(metadata.byId[packageId].totalCost).toBe(0.5);
+    expect(metadata.costCache[packageId].totalCost).toBe(0.5);
+    expect(metadata.costCache[incompletedDepId].totalCost).toBe(0);
     expect(result).toBe(0.5);
+  });
+
+  it("should handle circular dependencies gracefully", async () => {
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true
+    });
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true,
+      body: new ReadableStream()
+    });
+    vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
+      JSON.stringify({ dependencies: { "recursion-package": "1.0.0", "completed-dep": "1.0.0" } })
+    );
+    const metadata = getMetadata();
+
+    const result = await calculateTotalPackageCost("recursion-package", "1.0.0");
+    const packageId = calculatePackageId("recursion-package", "1.0.0");
+    const recursionPackage2Id = calculatePackageId("recursion-package-2", "1.0.0");
+
+    expect(result).toBe(1.75);
+    expect(metadata.byId[packageId].costStatus).toBe("completed");
+    expect(metadata.byId[packageId].totalCost).toBe(1.75);
+    expect(metadata.costCache[packageId].totalCost).toBe(0.625);
+    expect(metadata.costCache[recursionPackage2Id].totalCost).toBe(0.625);
   });
 });

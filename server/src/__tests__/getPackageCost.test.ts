@@ -96,7 +96,7 @@ describe("getPackageCost", () => {
       url: "/package/initiated-ID/cost"
     });
 
-    expect(calculateTotalPackageCostSpy).toHaveBeenCalledWith("initiated-ID");
+    expect(calculateTotalPackageCostSpy).toHaveBeenCalledWith("initiated-package", "1.0.0");
     expect(reply.statusCode).toEqual(200);
     expect(reply.json()).toEqual({ "initiated-ID": { totalCost: 1.5 } });
   });

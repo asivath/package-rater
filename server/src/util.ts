@@ -184,21 +184,8 @@ export const savePackage = async (
     );
 
     // Do not await this promise to allow calculation to happen in the background
-    calculateTotalPackageCost(id)
-      .then((cost) => {
-        if (cost === 0) {
-          logger.error(`Failed to calculate total cost of package ${packageName} v${version}`);
-          metadata.byId[id].costStatus = "failed";
-          return;
-        }
-        logger.info(`Calculated total cost of package ${packageName} v${version}: ${cost.toFixed(2)} MB`);
-      })
-      .catch((error) => {
-        logger.error(
-          `Failed to calculate total cost of package ${packageName} v${version}: ${(error as Error).message}`
-        );
-        metadata.byId[id].costStatus = "failed";
-      });
+    calculateTotalPackageCost(packageName, version);
+
     return { success: true };
   } catch (error) {
     await rm(packageIdPath, { recursive: true });
@@ -269,26 +256,32 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
         version,
         standaloneCost: metadata.costCache[id].standaloneCost,
         totalCost: metadata.costCache[id].totalCost,
-        dependencies: metadata.costCache[id].dependencies
+        dependencies: [] // Not filled in since totalCost is already calculated
       };
       graph.set(id, node);
       continue;
     }
     if (metadata.byId[id]) {
+      const dependencies = Object.entries(metadata.byId[id].dependencies).map(([depName, depVersion]) =>
+        calculatePackageId(depName, depVersion)
+      );
       const node: PackageNode = {
         id,
         packageName,
         version,
         standaloneCost: metadata.byId[id].standaloneCost,
         totalCost: metadata.byId[id].totalCost,
-        dependencies: Object.values(metadata.byId[id].dependencies)
+        dependencies: dependencies // Filled in because this could be the root package, so if we don't fill in we won't consider any dependencies, should be fine since dependencies will be cached
+      };
+      for (const dependency of Object.entries(metadata.byId[id].dependencies)) {
+        stack.push({ packageName: dependency[0], version: dependency[1] });
+      }
+      metadata.costCache[id] = {
+        standaloneCost: metadata.byId[id].standaloneCost,
+        totalCost: metadata.byId[id].totalCost,
+        dependencies: dependencies
       };
       graph.set(id, node);
-      metadata.costCache[id] = {
-        standaloneCost: node.standaloneCost,
-        totalCost: node.totalCost,
-        dependencies: node.dependencies
-      };
       continue;
     }
 
@@ -338,9 +331,7 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
       const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
       const dependencies = Object.entries(packageJson.dependencies || {}).map(([depName, depVersion]) => {
         const depId = calculatePackageId(depName, depVersion as string);
-        if (!graph.has(depId)) {
-          stack.push({ packageName: depName, version: depVersion as string });
-        }
+        stack.push({ packageName: depName, version: depVersion as string });
         return depId;
       });
 
@@ -437,28 +428,48 @@ function detectCycles(graph: Map<string, PackageNode>): Set<string>[] {
  * @param graph The dependency graph
  * @returns The total cost of the package
  */
-async function calculateTotalCost(
-  rootName: string,
-  rootVersion: string,
-  graph: Map<string, PackageNode>
-): Promise<number> {
+async function calculateTotalCost(graph: Map<string, PackageNode>): Promise<number> {
   const calculatedCosts = new Map<string, number>();
 
   const cycles = detectCycles(graph);
-  if (cycles.length > 0) {
-    logger.warn(`Detected ${cycles.length} cycles in the dependency graph.`);
-    for (const cycle of cycles) {
-      for (const nodeId of cycle) {
-        calculatedCosts.set(nodeId, -1);
+  let cyclicTotalCost = 0;
+  for (const cycle of cycles) {
+    let cycleCost = 0;
+
+    // Calculate the total standalone cost of nodes in the cycle
+    for (const nodeId of cycle) {
+      const node = graph.get(nodeId);
+      if (node) {
+        cycleCost += node.standaloneCost;
       }
-      logger.warn(`Cycle: ${Array.from(cycle).join(" -> ")}`);
+    }
+
+    // Calculate the average cost for the cycle
+    const averageCost = cycleCost / cycle.size;
+
+    // Cache each cyclic node with dependencies and calculated average cost
+    for (const nodeId of cycle) {
+      const node = graph.get(nodeId);
+      if (node) {
+        cyclicTotalCost += averageCost;
+        metadata.costCache[nodeId] = {
+          totalCost: averageCost,
+          standaloneCost: node.standaloneCost,
+          dependencies: node.dependencies
+        };
+        graph.delete(nodeId);
+        calculatedCosts.set(nodeId, averageCost);
+      }
     }
   }
 
-  async function calculateNodeCost(nodeId: string): Promise<number> {
+  async function dfsCalculateCost(nodeId: string, visited: Set<string> = new Set()): Promise<number> {
+    if (visited.has(nodeId)) {
+      return 0;
+    }
+    visited.add(nodeId);
     if (calculatedCosts.has(nodeId)) {
-      const cost = calculatedCosts.get(nodeId)!;
-      if (cost !== -1) return cost;
+      return calculatedCosts.get(nodeId)!;
     }
 
     const node = graph.get(nodeId);
@@ -466,90 +477,77 @@ async function calculateTotalCost(
       throw new Error(`Node with ID ${nodeId} not found in the dependency graph.`);
     }
 
-    if (node.totalCost > 0) {
-      calculatedCosts.set(nodeId, node.totalCost);
-      return node.totalCost;
-    }
     let totalCost = node.standaloneCost;
     for (const depId of node.dependencies) {
-      if (calculatedCosts.get(depId) === -1) {
-        continue;
-      }
-      totalCost += await calculateNodeCost(depId);
+      totalCost += await dfsCalculateCost(depId);
     }
-    metadata.costCache[nodeId].totalCost = totalCost;
 
     calculatedCosts.set(nodeId, totalCost);
+    metadata.costCache[nodeId] = {
+      totalCost: totalCost,
+      standaloneCost: node.standaloneCost,
+      dependencies: node.dependencies
+    };
+    graph.delete(nodeId);
+
     return totalCost;
   }
 
-  const rootId = calculatePackageId(rootName, rootVersion);
-  const baseTotalCost = await calculateNodeCost(rootId);
-
-  // Update cyclic nodes with an approximate cost based on non-cyclic dependencies
-  let cyclicTotalCost = 0;
-  for (const cycle of cycles) {
-    let cycleCost = 0;
-    for (const nodeId of cycle) {
-      const node = graph.get(nodeId);
-      if (node) {
-        cycleCost += calculatedCosts.get(nodeId) !== undefined ? calculatedCosts.get(nodeId)! : node.standaloneCost;
-      }
-    }
-    const averageCost = cycleCost / cycle.size;
-
-    // Assign average to cyclic nodes and add this cost to the cyclic total
-    for (const nodeId of cycle) {
-      calculatedCosts.set(nodeId, averageCost);
-      cyclicTotalCost += averageCost;
-      metadata.costCache[nodeId].totalCost = averageCost;
+  const startingNodes = Array.from(graph.keys());
+  let baseTotalCost = 0;
+  for (const nodeId of startingNodes) {
+    if (!calculatedCosts.has(nodeId)) {
+      baseTotalCost += await dfsCalculateCost(nodeId);
     }
   }
 
-  // Add cyclic node costs to the total cost
   return baseTotalCost + cyclicTotalCost;
 }
 
 /**
  * Calculates the total cost of a package
- * @param id The ID of the package
+ * @param packageName The name of the package
+ * @param version The version of the package
  * @returns The total cost of the package
  * @throws Error if the package does not exist
  * @throws Error if initial task addition fails
  */
-export async function calculateTotalPackageCost(id: string): Promise<number> {
+export async function calculateTotalPackageCost(packageName: string, version: string): Promise<number> {
+  const id = calculatePackageId(packageName, version);
   const packageDataById = metadata.byId[id];
-  if (!packageDataById) {
-    throw new Error(`Package ${id} does not exist`);
-  }
-  if (packageDataById.costStatus === "completed") {
-    return packageDataById.totalCost;
-  }
-  if (packageDataById.costStatus === "failed") {
-    throw new Error(`Failed to calculate cost of package ${id}`);
-  }
-  if (packageCostPromisesMap.has(id)) {
-    return packageCostPromisesMap.get(id)!;
-  }
-  const packageDataByName = metadata.byName[packageDataById.packageName][packageDataById.version];
+  if (!packageDataById) throw new Error(`Package ${id} does not exist`);
+  if (packageDataById.costStatus === "completed") return packageDataById.totalCost;
+  if (packageDataById.costStatus === "failed") throw new Error(`Failed to calculate cost of package ${id}`);
+  if (packageCostPromisesMap.has(id)) return packageCostPromisesMap.get(id)!;
 
-  const costPromise = (async () => {
-    const graph = await buildDependencyGraph(packageDataById.packageName, packageDataById.version);
-    const totalCost = await calculateTotalCost(packageDataById.packageName, packageDataById.version, graph);
+  const start = Date.now();
+  const calculateCost = async () => {
+    const graph = await buildDependencyGraph(packageName, version);
+    const totalCost = await calculateTotalCost(graph);
     packageDataById.totalCost = totalCost;
     packageDataById.costStatus = "completed";
-    packageDataByName.totalCost = totalCost;
-    packageDataByName.costStatus = "completed";
+    metadata.byName[packageName][version].totalCost = totalCost;
+    metadata.byName[packageName][version].costStatus = "completed";
 
-    await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
     return totalCost;
-  })();
+  };
 
+  const costPromise = calculateCost();
   packageCostPromisesMap.set(id, costPromise);
-  costPromise.finally(() => {
+  try {
+    const cost = await costPromise;
+    return cost;
+  } catch (error) {
+    logger.error(`Failed to calculate total cost of package ${id}: ${(error as Error).message}`);
+    packageDataById.costStatus = "failed";
+    metadata.byName[packageName][version].costStatus = "failed";
+    return 0;
+  } finally {
     packageCostPromisesMap.delete(id);
-  })
-  return costPromise;
+    await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+    const end = Date.now();
+    logger.info(`Calculated total cost of package ${id} in ${((end - start) / 1000).toFixed(2)} seconds`);
+  }
 }
 
 /**
