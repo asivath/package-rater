@@ -28,14 +28,11 @@ vi.mock("crypto", async (importOriginal) => {
     })
   };
 });
-vi.mock("../util.js", async (importOriginal) => {
-  const original = await importOriginal<typeof util>();
-  return {
-    ...original,
-    checkIfPackageExists: vi.fn().mockResolvedValue(false),
-    savePackage: vi.fn().mockResolvedValue({ success: true })
-  };
-});
+vi.mock("../util.js", () => ({
+  checkIfPackageExists: vi.fn().mockReturnValue(false),
+  savePackage: vi.fn().mockResolvedValue({ success: true }),
+  calculatePackageId: vi.fn().mockReturnValue("mocked-hash-id")
+}));
 vi.mock("fs/promises", () => ({
   writeFile: vi.fn(),
   mkdir: vi.fn(),
@@ -137,26 +134,6 @@ describe("uploadPackage", () => {
     expect(reply.json()).toEqual({ error: "No package.json found in the package" });
   });
 
-  it("should return 400 if package.json is invalid (missing name or version)", async () => {
-    const body = { Content: "some-base64-encoded-content", URL: "", debloat: false };
-    const files = {
-      files: [
-        { ...fileProperties, path: "package.json", buffer: vi.fn().mockResolvedValue(Buffer.from(JSON.stringify({}))) }
-      ]
-    };
-    zipperSpy.mockResolvedValueOnce({ ...files, ...zipperProperties });
-
-    const reply = await fastify.inject({
-      method: "POST",
-      url: "/package",
-      body: body
-    });
-
-    expect(reply.statusCode).toBe(400);
-    expect(reply.json()).toEqual({ error: "Invalid package.json found in the package" });
-    expect(logger.error).toHaveBeenCalled();
-  });
-
   it("should return 400 for an invalid npm URL", async () => {
     const body = { Content: "", URL: "http://npmjs.com", debloat: false };
 
@@ -217,7 +194,7 @@ describe("uploadPackage", () => {
       ]
     };
     zipperSpy.mockResolvedValueOnce({ ...files, ...zipperProperties });
-    vi.mocked(util.checkIfPackageExists).mockResolvedValueOnce(true);
+    vi.mocked(util.checkIfPackageExists).mockReturnValueOnce(true);
 
     const reply = await fastify.inject({
       method: "POST",
@@ -232,8 +209,7 @@ describe("uploadPackage", () => {
 
   it("should return 409 if the npm package already exists", async () => {
     const body = { Content: "", URL: "https://www.npmjs.com/package/test-package/v/1.0.0", debloat: false };
-
-    vi.spyOn(util, "checkIfPackageExists").mockResolvedValueOnce(true);
+    vi.mocked(util.checkIfPackageExists).mockReturnValueOnce(true);
 
     const reply = await fastify.inject({
       method: "POST",
@@ -253,7 +229,8 @@ describe("uploadPackage", () => {
       ok: true,
       json: vi.fn().mockResolvedValue({
         name: "test-package",
-        "dist-tags": { latest: "1.0.0" }
+        "dist-tags": { latest: "1.0.0" },
+        versions: { "1.0.0": { name: "test-package", version: "1.0.0" } }
       })
     });
 

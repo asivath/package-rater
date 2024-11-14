@@ -26,7 +26,10 @@
     "dotenv": "^16.4.5",
     "esbuild": "^0.24.0",
     "fastify": "^5.0.0",
+    "get-folder-size": "^5.0.0",
+    "p-queue": "^8.0.1",
     "pm2": "^5.4.2",
+    "semver": "^7.6.3",
     "tar": "^7.4.3",
     "unzipper": "^0.12.3",
     "winston": "^3.15.0"
@@ -37,6 +40,7 @@
     "@types/eslint__eslintrc": "^2.1.2",
     "@types/eslint__js": "^8.42.3",
     "@types/node": "^22.7.5",
+    "@types/semver": "^7",
     "@types/unzipper": "^0",
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
