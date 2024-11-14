@@ -25,6 +25,7 @@ export type Metadata = {
         standaloneCost: number;
         totalCost: number;
         costStatus: "pending" | "completed" | "failed";
+        readme?: string;
       };
     };
   };
@@ -102,6 +103,9 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
       for (const dependency in vv.dependencies) {
         if (typeof vv.dependencies[dependency] !== "string") {
           throw new Error("Metadata.byName values values.dependencies values must be strings");
+        }
+        if (vv.readme && typeof vv.readme !== "string") {
+          throw new Error("Metadata.byName values values.readme must be a string");
         }
       }
       if (typeof vv.standaloneCost !== "number") {

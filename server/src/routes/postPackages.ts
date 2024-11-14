@@ -114,6 +114,62 @@ export const retrievePackageInfo = async (
   reply.code(200).send(paginatedPackages);
 };
 
+export const retrievePackageByRegEx = async (
+  request: FastifyRequest<{ Body: { RegEx: string } }>,
+  reply: FastifyReply
+) => {
+  const { RegEx } = request.body;
+  const allFlagHeader = request.headers["allflag"] || false;
+
+  // There is missing field(s) in the PackageRegEx or it is formed improperly, or is invalid
+  if (!RegEx) {
+    reply
+      .code(400)
+      .send({ error: "There is missing field(s) in the PackageRegEx or it is formed improperly, or is invalid" });
+    return;
+  }
+
+  const packages: PackageDisplay[] = [];
+  try {
+    const metadataJson = getPackageMetadata();
+    const regex = new RegExp(RegEx);
+
+    for (const [name, versions] of Object.entries(metadataJson.byName)) {
+      for (const [version, details] of Object.entries(versions)) {
+        if (regex.test(name) || (details.readme && regex.test(details.readme))) {
+          if (allFlagHeader) {
+            packages.push({
+              Version: version,
+              Name: name,
+              ID: details.id,
+              StandaloneCost: details.standaloneCost,
+              TotalCost: details.totalCost,
+              NetScore: details.ndjson?.NetScore || "N/A",
+              CostStatus: details.costStatus
+            });
+          } else {
+            packages.push({
+              Version: version,
+              Name: name,
+              ID: details.id
+            });
+          }
+        }
+      }
+    }
+
+    if (packages.length === 0) {
+      reply.code(404).send({ error: "No package found under this regex." });
+      return;
+    }
+
+    reply.code(200).send(packages);
+  } catch (error) {
+    logger.error(`Error fetching packages by RegEx: ${error}`);
+    reply.code(500).send({ error: "Server error occurred while fetching packages by RegEx" });
+  }
+};
+
 export const isVersionMatch = (version: string, Version: string): boolean => {
   if (Version === version) return true; // Exact match
 

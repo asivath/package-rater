@@ -123,18 +123,50 @@ export function PackageTable() {
     }
   };
 
+  const fetchViaRegex = async () => {
+    try {
+      const response = await fetcher("/package/byRegEx", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          allflag: "true"
+        },
+        body: JSON.stringify({ RegEx: searchTerm })
+      });
+      const data: PackageDisplay[] = await response.json();
+
+      if (response.status === 404) {
+        console.warn("No packages found for the given regex.");
+        setRows({});
+        return;
+      }
+      const groupedData: Record<string, PackageDisplay[]> = {};
+      data.forEach((pkg) => {
+        if (!groupedData[pkg.Name]) {
+          groupedData[pkg.Name] = [];
+        }
+        groupedData[pkg.Name].push(pkg);
+      });
+      Object.keys(groupedData).forEach((packageName) => {
+        groupedData[packageName].sort((a, b) => parseFloat(b.Version) - parseFloat(a.Version));
+      });
+      setRows(groupedData);
+    } catch (error) {
+      console.error("Error fetching packages by regex:", error);
+    }
+  };
+
   const handleSearch = () => {
     if (searchTerm.trim() === "") {
       fetchAllPackages();
+    } else {
+      fetchViaRegex();
     }
-    //  else {
-    //   setRows([]); // If search term is present, don't fetch data (placeholder behavior)
-    // }
   };
 
-  // React.useEffect(() => {
-  //   fetchAllPackages();
-  // }, []);
+  React.useEffect(() => {
+    fetchAllPackages();
+  }, []);
 
   return (
     <Paper sx={{ padding: 2, width: "100%" }}>

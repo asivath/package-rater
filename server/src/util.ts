@@ -74,6 +74,18 @@ export const savePackage = async (
     let ndjson = null;
     let dependencies: { [dependency: string]: string } = {};
     let standaloneCost: number = 0;
+    let readmeString: string | undefined;
+    const readmeVariations = [
+      "README.md",
+      "readme.md",
+      "ReadMe.md",
+      "Readme.md",
+      "README.MD",
+      "readme.MD",
+      "ReadMe.MD",
+      "Readme.MD"
+    ];
+
     if (packageFilePath) {
       // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
       // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
@@ -89,6 +101,20 @@ export const savePackage = async (
       const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
       dependencies = packageJson.dependencies || {};
       standaloneCost = (await getFolderSize.loose(targetUploadFilePath)) / 1024 / 1024;
+
+      for (const variation of readmeVariations) {
+        const readmeFilePath = path.join(targetUploadFilePath, variation);
+        try {
+          readmeString = await readFile(readmeFilePath, "utf-8");
+          logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+          break;
+        } catch {
+          logger.warn(`No ${variation} found for package ${packageName} v${version}`);
+          if (variation === readmeVariations[readmeVariations.length - 1]) {
+            logger.warn(`No README found for package ${packageName} v${version}`);
+          }
+        }
+      }
 
       const tarGzFilePath = path.join(packageIdPath, `${packageName}.tgz`);
       await create({ gzip: true, file: tarGzFilePath, cwd: packageIdPath }, ["."]);
@@ -150,6 +176,20 @@ export const savePackage = async (
       dependencies = packageJson.dependencies || {};
       standaloneCost = (await getFolderSize.loose(extractPath)) / 1024 / 1024;
 
+      for (const variation of readmeVariations) {
+        const readmeFilePath = path.join(extractPath, variation);
+        try {
+          readmeString = await readFile(readmeFilePath, "utf-8");
+          logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+          break;
+        } catch {
+          logger.warn(`No ${variation} found for package ${packageName} v${version}`);
+          if (variation === readmeVariations[readmeVariations.length - 1]) {
+            logger.warn(`No README found for package ${packageName} v${version}`);
+          }
+        }
+      }
+
       await rm(extractPath, { recursive: true });
 
       if (process.env.NODE_ENV === "prod") {
@@ -176,7 +216,8 @@ export const savePackage = async (
       dependencies,
       standaloneCost,
       totalCost: 0,
-      costStatus: "pending"
+      costStatus: "pending",
+      readme: readmeString
     };
     await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
     logger.info(
@@ -184,8 +225,21 @@ export const savePackage = async (
     );
 
     // Do not await this promise to allow calculation to happen in the background
-    calculateTotalPackageCost(packageName, version);
-
+    calculateTotalPackageCost(packageName, version)
+      .then((cost) => {
+        if (cost === 0) {
+          logger.error(`Failed to calculate total cost of package ${packageName} v${version}`);
+          metadata.byId[id].costStatus = "failed";
+          return;
+        }
+        logger.info(`Calculated total cost of package ${packageName} v${version}: ${cost.toFixed(2)} MB`);
+      })
+      .catch((error) => {
+        logger.error(
+          `Failed to calculate total cost of package ${packageName} v${version}: ${(error as Error).message}`
+        );
+        metadata.byId[id].costStatus = "failed";
+      });
     return { success: true };
   } catch (error) {
     await rm(packageIdPath, { recursive: true });

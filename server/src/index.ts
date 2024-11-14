@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
-import { retrievePackageInfo } from "./routes/postPackages.js";
+import { retrievePackageInfo, retrievePackageByRegEx } from "./routes/postPackages.js";
 import { getPackageCost } from "./routes/getPackageCost.js";
 import { getLogger } from "@package-rater/shared";
 import "dotenv/config";
@@ -26,6 +26,7 @@ fastify.register(fastifyStatic, {
 
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", retrievePackageInfo);
+fastify.post("package/byRegEx", retrievePackageByRegEx);
 fastify.get("/package/:id/cost", getPackageCost);
 
 const start = async () => {
