@@ -3,6 +3,12 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { getPackageMetadata } from "../util.js";
 const logger = getLogger("server");
 
+/*
+ * Retrieve package information from the metadata
+ * @param request
+ * @param reply
+ * @returns
+ */
 export const retrievePackageInfo = async (
   request: FastifyRequest<{ Body: Array<{ Name: string; Version: string }> }>,
   reply: FastifyReply
@@ -114,6 +120,12 @@ export const retrievePackageInfo = async (
   reply.code(200).send(paginatedPackages);
 };
 
+/*
+ * Retrieve package information from the metadata by RegEx
+ * @param request
+ * @param reply
+ * @returns
+ */
 export const retrievePackageByRegEx = async (
   request: FastifyRequest<{ Body: { RegEx: string } }>,
   reply: FastifyReply
@@ -170,6 +182,12 @@ export const retrievePackageByRegEx = async (
   }
 };
 
+/*
+ * Check if the version matches the requested version
+ * @param version
+ * @param Version
+ * @returns
+ */
 export const isVersionMatch = (version: string, Version: string): boolean => {
   if (Version === version) return true; // Exact match
 
@@ -185,18 +203,37 @@ export const isVersionMatch = (version: string, Version: string): boolean => {
   return false;
 };
 
+/*
+ * Check if the version satisfies the carat (^) operator
+ * @param version
+ * @param Version
+ * @returns
+ */
 export const satisfiesCarat = (version: string, Version: string): boolean => {
   const [major] = version.split(".");
   const [majorType] = Version.split(".");
   return major === majorType;
 };
 
+/*
+ * Check if the version satisfies the tilde (~) operator
+ * @param version
+ * @param Version
+ * @returns
+ */
 export const satisfiesTilde = (version: string, Version: string): boolean => {
   const [major, minor, patch] = version.split(".");
   const [majorType, minorType, patchType] = Version.split(".");
   return major === majorType && minor === minorType && patch >= patchType; //Might be backwards
 };
 
+/*
+ * Check if the version satisfies the range operator
+ * @param version
+ * @param minVersion
+ * @param maxVersion
+ * @returns
+ */
 export const satisfiesRange = (version: string, minVersion: string, maxVersion: string): boolean => {
   return version >= minVersion && version <= maxVersion;
 };

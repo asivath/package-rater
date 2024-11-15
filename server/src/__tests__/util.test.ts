@@ -4,7 +4,8 @@ import {
   checkIfPackageExists,
   getExactAvailableVersion,
   calculateTotalPackageCost,
-  getPackageMetadata, calculatePackageId
+  getPackageMetadata,
+  calculatePackageId
 } from "../util";
 import * as shared from "@package-rater/shared";
 import * as s3Client from "@aws-sdk/client-s3";
@@ -555,37 +556,12 @@ describe("calculateTotalPackageCost", () => {
     const result = await calculateTotalPackageCost("failing-package", "1.0.0");
     const packageId = calculatePackageId("failing-package", "1.0.0");
     const incompletedDepId = calculatePackageId("incompleted-dep", "1.0.0");
-    
 
     expect(metadata.byId[packageId].costStatus).toBe("completed");
     expect(metadata.byId[packageId].totalCost).toBe(0.5);
     expect(metadata.costCache[packageId].totalCost).toBe(0.5);
     expect(metadata.costCache[incompletedDepId].totalCost).toBe(0);
     expect(result).toBe(0.5);
-  });
-
-  it("should handle circular dependencies gracefully", async () => {
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true
-    });
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true,
-      body: new ReadableStream()
-    });
-    vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
-      JSON.stringify({ dependencies: { "recursion-package": "1.0.0", "completed-dep": "1.0.0" } })
-    );
-    const metadata = getPackageMetadata();
-
-    const result = await calculateTotalPackageCost("recursion-package", "1.0.0");
-    const packageId = calculatePackageId("recursion-package", "1.0.0");
-    const recursionPackage2Id = calculatePackageId("recursion-package-2", "1.0.0");
-
-    expect(result).toBe(1.75);
-    expect(metadata.byId[packageId].costStatus).toBe("completed");
-    expect(metadata.byId[packageId].totalCost).toBe(1.75);
-    expect(metadata.costCache[packageId].totalCost).toBe(0.625);
-    expect(metadata.costCache[recursionPackage2Id].totalCost).toBe(0.625);
   });
 
   it("should handle circular dependencies gracefully", async () => {

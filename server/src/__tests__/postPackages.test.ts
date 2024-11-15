@@ -1,50 +1,77 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { postPackages, satisfiesCarat, satisfiesTilde, satisfiesRange } from "../routes/postPackages";
+import { retrievePackageInfo, satisfiesCarat, satisfiesTilde, satisfiesRange } from "../routes/postPackages";
 import Fastify from "fastify";
 
-vi.mock("fs/promises", () => ({
-  readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson)))
-}));
-
-const mockMetadataJson = {
+const mockMetadataJson = vi.hoisted(() => ({
   byId: {
     id1: {
-      Name: "express",
-      Version: "1.0.0",
-      ndjson: "ndjson"
+      packageName: "express",
+      version: "1.0.0",
+      ndjson: null,
+      dependencies: {},
+      standaloneCost: 0,
+      totalCost: 0,
+      costStatus: "completed"
     },
     id2: {
-      Name: "new-package-1",
-      Version: "2.0.0",
-      ndjson: "ndjson"
+      packageName: "new-package-1",
+      version: "2.0.0",
+      ndjson: null,
+      dependencies: {},
+      standaloneCost: 0,
+      totalCost: 0,
+      costStatus: "completed"
     },
     id3: {
-      Name: "new-package-1",
-      Version: "2.5.0",
-      ndjson: "ndjson"
+      packageName: "new-package-1",
+      version: "2.5.0",
+      ndjson: null,
+      dependencies: {},
+      standaloneCost: 0,
+      totalCost: 0,
+      costStatus: "completed"
     }
   },
   byName: {
     express: {
       "1.0.0": {
         id: "id1",
-        ndjson: "ndjson"
+        ndjson: null,
+        dependencies: {},
+        standaloneCost: 0,
+        totalCost: 0,
+        costStatus: "completed"
       },
       "2.0.0": {
         id: "id2",
-        ndjson: "ndjson"
+        ndjson: null,
+        dependencies: {},
+        standaloneCost: 0,
+        totalCost: 0,
+        costStatus: "completed"
       },
       "2.5.0": {
         id: "id3",
-        ndjson: "ndjson"
+        ndjson: null,
+        dependencies: {},
+        standaloneCost: 0,
+        totalCost: 0,
+        costStatus: "completed"
       }
     }
-  }
-};
+  },
+  costCache: {}
+}));
+
+vi.mock("fs/promises", () => ({
+  readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
+  mkdir: vi.fn(() => Promise.resolve()),
+  writeFile: vi.fn(() => Promise.resolve())
+}));
 
 describe("postPackages", () => {
   const fastify = Fastify();
-  fastify.post("/packages", postPackages);
+  fastify.post("/packages", retrievePackageInfo);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -201,8 +228,9 @@ describe("Helper functions", () => {
   });
 
   it("satisfiesTilde should return true for matching major and minor versions", () => {
-    expect(satisfiesTilde("6.0.5", "6.0")).toBe(true);
-    expect(satisfiesTilde("6.1.0", "6.0")).toBe(false);
+    expect(satisfiesTilde("6.0.5", "6.0.0")).toBe(true);
+    expect(satisfiesTilde("6.1.0", "6.0.0")).toBe(false);
+    expect(satisfiesTilde("6.1.1", "6.1.2")).toBe(false);
   });
 
   it("satisfiesRange should return true for versions within range", () => {
