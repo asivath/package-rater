@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import { PackageDisplay } from "@package-rater/shared";
+import { assertIsPackageDisplay, PackageDisplay } from "@package-rater/shared";
 import { fetcher } from "../util";
 import { Search } from "@mui/icons-material";
 
@@ -102,10 +102,12 @@ export function PackageTable() {
         headers: { offset: "0", allflag: "true", "content-type": "application/json" },
         body: JSON.stringify([{ Version: "1", Name: "*" }])
       });
-      // const data = await response.json();
-      const data: PackageDisplay[] = await response.json();
+      const data = await response.json();
+      // assertIsPackageDisplayArray(data);
       const groupedData: Record<string, PackageDisplay[]> = {};
-      data.forEach((pkg) => {
+
+      data.forEach((pkg: PackageDisplay) => {
+        assertIsPackageDisplay(pkg);
         if (!groupedData[pkg.Name]) {
           groupedData[pkg.Name] = [];
         }
@@ -133,15 +135,17 @@ export function PackageTable() {
         },
         body: JSON.stringify({ RegEx: searchTerm })
       });
-      const data: PackageDisplay[] = await response.json();
-
+      const data = await response.json();
+      // assertIsPackageDisplayArray(data);
       if (response.status === 404) {
+        //show shit on ui
         console.warn("No packages found for the given regex.");
         setRows({});
         return;
       }
       const groupedData: Record<string, PackageDisplay[]> = {};
-      data.forEach((pkg) => {
+      data.forEach((pkg: PackageDisplay) => {
+        assertIsPackageDisplay(pkg);
         if (!groupedData[pkg.Name]) {
           groupedData[pkg.Name] = [];
         }
@@ -163,10 +167,6 @@ export function PackageTable() {
       fetchViaRegex();
     }
   };
-
-  React.useEffect(() => {
-    fetchAllPackages();
-  }, []);
 
   return (
     <Paper sx={{ padding: 2, width: "100%" }}>

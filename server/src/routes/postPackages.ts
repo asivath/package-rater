@@ -17,7 +17,7 @@ export const retrievePackageInfo = async (
   const limit = 15;
 
   const offsetHeader = request.headers["offset"] || "0";
-  const allFlagHeader = request.headers["allflag"] || false;
+  const allFlagHeader = request.headers["allflag"] === "true";
   let offset = 0;
 
   //Have to check if offset is an array or typescript has a meltdown (:D)
@@ -131,7 +131,7 @@ export const retrievePackageByRegEx = async (
   reply: FastifyReply
 ) => {
   const { RegEx } = request.body;
-  const allFlagHeader = request.headers["allflag"] || false;
+  const allFlagHeader = request.headers["allflag"] === "true";
 
   // There is missing field(s) in the PackageRegEx or it is formed improperly, or is invalid
   if (!RegEx) {

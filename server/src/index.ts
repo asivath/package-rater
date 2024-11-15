@@ -26,7 +26,7 @@ fastify.register(fastifyStatic, {
 
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", retrievePackageInfo);
-fastify.post("package/byRegEx", retrievePackageByRegEx);
+fastify.post("/package/byRegEx", retrievePackageByRegEx);
 fastify.get("/package/:id/cost", getPackageCost);
 
 const start = async () => {
