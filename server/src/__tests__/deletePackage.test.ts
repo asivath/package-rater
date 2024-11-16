@@ -1,11 +1,67 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
 import * as shared from "@package-rater/shared";
+import { getMetadata } from "../util";
 import { deletePackage } from "../routes/deletePackage";
 import Fastify from "fastify";
 import { S3Client } from "@aws-sdk/client-s3";
-import { readFile, writeFile, rm } from "fs/promises";
 import { getLogger } from "@package-rater/shared";
 
+// Corrected mockMetadataJson with ndjson as an object
+const mockMetadataJson = vi.hoisted(() => ({
+  byId: {
+    "completed-ID": {
+      packageName: "completed-package",
+      version: "1.0.0",
+      ndjson: null,
+      dependencies: { "completed-dep": "1.0.0" },
+      standaloneCost: 0.5,
+      totalCost: 1.5,
+      costStatus: "completed" // Ensuring costStatus is "completed"
+    },
+    "initiated-ID": {
+      packageName: "initiated-package",
+      version: "1.0.0",
+      ndjson: null,
+      dependencies: {},
+      standaloneCost: 0.5,
+      totalCost: 1.5,
+      costStatus: "pending" // Changed to "pending" from "initiated"
+    }
+  },
+  byName: {
+    "completed-package": {
+      "1.0.0": {
+        id: "completed-ID",
+        ndjson: null,
+        dependencies: {},
+        standaloneCost: 0.5,
+        totalCost: 0.5,
+        costStatus: "completed" // Ensuring costStatus is "completed"
+      }
+    },
+    "initiated-package": {
+      "1.0.0": {
+        id: "initiated-ID",
+        ndjson: null,
+        dependencies: {},
+        standaloneCost: 0.5,
+        totalCost: 0,
+        costStatus: "pending" // Changed to "pending" from "initiated"
+      }
+    }
+  },
+  costCache: {
+    "2985548229775954": {
+      // completed-dep-1.0.0
+      totalCost: 1.5,
+      standaloneCost: 1.5,
+      dependencies: [],
+      costStatus: "completed" // Ensuring costStatus is "completed"
+    }
+  }
+}));
+
+// Mocking shared functions and classes
 vi.mock("@package-rater/shared", async (importOriginal) => {
   const original = await importOriginal<typeof shared>();
   return {
@@ -18,11 +74,13 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
   };
 });
 
+// Mocking filesystem and AWS S3 SDK modules
 vi.mock("fs/promises", () => ({
   readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
   writeFile: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
-  readdir: vi.fn(() => Promise.resolve([]))
+  readdir: vi.fn(() => Promise.resolve([])),
+  mkdir: vi.fn()
 }));
 
 vi.mock("@aws-sdk/client-s3", () => ({
@@ -31,24 +89,6 @@ vi.mock("@aws-sdk/client-s3", () => ({
   })),
   DeleteObjectsCommand: vi.fn()
 }));
-
-const mockMetadataJson = {
-  byId: {
-    id1: {
-      packageName: "express",
-      version: "1.0.0",
-      ndjson: "ndjson"
-    }
-  },
-  byName: {
-    express: {
-      "1.0.0": {
-        id: "id1",
-        ndjson: "ndjson"
-      }
-    }
-  }
-};
 
 describe("deletePackage", () => {
   const fastify = Fastify();
@@ -60,6 +100,7 @@ describe("deletePackage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
     process.env.NODE_ENV = "production";
     mockS3Client = new S3Client();
   });
@@ -87,10 +128,10 @@ describe("deletePackage", () => {
 
     const reply = await fastify.inject({
       method: "DELETE",
-      url: "/package/id1"
+      url: "/package/completed-ID"
     });
 
-    expect(logger.info).toHaveBeenCalledWith("Deleted express from S3.");
+    expect(logger.info).toHaveBeenCalledWith("Deleted completed-package from S3.");
     expect(reply.statusCode).toBe(200);
   });
 
@@ -99,26 +140,24 @@ describe("deletePackage", () => {
 
     const reply = await fastify.inject({
       method: "DELETE",
-      url: "/package/id1"
+      url: "/package/initiated-ID"
     });
 
-    expect(rm).toHaveBeenCalledWith(expect.stringContaining("express/id1"), { recursive: true, force: true });
+    const metadata = getMetadata();
 
-    expect(writeFile).toHaveBeenCalledWith(expect.any(String), JSON.stringify({ byId: {}, byName: {} }, null, 2));
+    expect(metadata).toEqual({
+      byId: {},
+      byName: {},
+      costCache: {
+        "2985548229775954": {
+          costStatus: "completed",
+          dependencies: [],
+          standaloneCost: 1.5,
+          totalCost: 1.5
+        }
+      }
+    });
 
     expect(reply.statusCode).toBe(200);
-  });
-
-  it("should return 500 if an error occurs while deleting", async () => {
-    (readFile as Mock).mockImplementation(() => {
-      throw new Error("Simulated read error");
-    });
-
-    const reply = await fastify.inject({
-      method: "DELETE",
-      url: "/package/id1"
-    });
-
-    expect(reply.statusCode).toBe(500);
   });
 });

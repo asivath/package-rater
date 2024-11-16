@@ -2,14 +2,14 @@ import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { writeFile, readdir, rm } from "fs/promises";
+import { readdir, rm } from "fs/promises";
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { clearMetadata } from "../util.js";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packagesDirPath = join(__dirname, "..", "..", "packages");
-const metadataPath = join(packagesDirPath, "metadata.json");
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
@@ -40,7 +40,7 @@ export const resetPackages = async (_: FastifyRequest, reply: FastifyReply) => {
     for (const file of files) {
       await rm(join(packagesDirPath, file), { recursive: true, force: true });
     }
-    await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {} }, null, 2));
+    await clearMetadata();
     logger.info("Local packages cleared successfully");
 
     reply.code(200).send({ message: "Packages reset successfully" });

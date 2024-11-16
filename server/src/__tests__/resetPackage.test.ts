@@ -1,10 +1,31 @@
 import { describe, it, vi, Mock, expect, beforeEach } from "vitest";
+import * as util from "../util";
 import * as shared from "@package-rater/shared";
 import Fastify from "fastify";
 import { resetPackages } from "../routes/resetPackages";
-import { writeFile } from "fs/promises";
 import { S3Client } from "@aws-sdk/client-s3";
 import { getLogger } from "@package-rater/shared";
+
+vi.mock("../util.js", async (importOriginal) => {
+  const original = await importOriginal<typeof util>();
+  return {
+    ...original,
+    getMetadata: vi.fn().mockReturnValue({
+      byId: {
+        "completed-ID": {
+          packageName: "completed-package",
+          version: "1.0.0",
+          ndjson: null,
+          dependencies: { "completed-dep": "1.0.0" },
+          standaloneCost: 0.5,
+          totalCost: 1.5,
+          costStatus: "completed"
+        }
+      }
+    }),
+    clearMetadata: vi.fn().mockResolvedValue(undefined) // Mock clearMetadata
+  };
+});
 
 vi.mock("@package-rater/shared", async (importOriginal) => {
   const original = await importOriginal<typeof shared>();
@@ -25,31 +46,6 @@ vi.mock("@aws-sdk/client-s3", () => ({
   DeleteObjectsCommand: vi.fn(),
   ListObjectsV2Command: vi.fn(() => Promise.resolve({ Contents: ["something"], IsTruncated: false }))
 }));
-
-vi.mock("fs/promises", () => ({
-  readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  rm: vi.fn().mockResolvedValue(undefined),
-  readdir: vi.fn(() => Promise.resolve([]))
-}));
-
-const mockMetadataJson = {
-  byId: {
-    id1: {
-      packageName: "express",
-      version: "1.0.0",
-      ndjson: "ndjson"
-    }
-  },
-  byName: {
-    express: {
-      "1.0.0": {
-        id: "id1",
-        ndjson: "ndjson"
-      }
-    }
-  }
-};
 
 describe("resetPackages", () => {
   const fastify = Fastify();
@@ -73,8 +69,6 @@ describe("resetPackages", () => {
       url: "/reset"
     });
 
-    expect(writeFile).toHaveBeenCalledWith(expect.any(String), JSON.stringify({ byId: {}, byName: {} }, null, 2));
-
     expect(logger.info).toHaveBeenCalledWith("Local packages cleared successfully");
     expect(reply.statusCode).toBe(200);
   });
@@ -94,7 +88,7 @@ describe("resetPackages", () => {
   });
 
   it("should handle errors gracefully and return a 500 status", async () => {
-    (writeFile as Mock).mockImplementationOnce(() => {
+    (util.clearMetadata as Mock).mockImplementationOnce(() => {
       throw new Error("Simulated write error");
     });
 

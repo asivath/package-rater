@@ -28,12 +28,13 @@ try {
   await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }, null, 2));
 }
 
-async function loadMetadata(): Promise<Metadata> {
-  const metadata = JSON.parse(await readFile(metadataPath, "utf-8"));
-  assertIsMetadata(metadata);
-  return metadata;
+let metadata: Metadata;
+async function loadMetadata(): Promise<void> {
+  const metadataFile = JSON.parse(await readFile(metadataPath, "utf-8"));
+  assertIsMetadata(metadataFile);
+  metadata = metadataFile;
 }
-const metadata = await loadMetadata(); // Do not directly modify this variable outside of this file
+await loadMetadata();
 
 const packageCostPromisesMap = new Map<string, Promise<number>>();
 
@@ -565,6 +566,27 @@ export const checkIfPackageExists = (id: string) => {
  */
 export const getMetadata = () => {
   return metadata;
+};
+
+/**
+ * Writes the metadata object to the metadata file
+ * @returns write of file
+ */
+export const writeMetadata = () => {
+  return writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+};
+
+/**
+ * Deletes a package from the server
+ * @param id The ID of the package
+ */
+export const clearMetadata = async () => {
+  try {
+    await writeFile(metadataPath, JSON.stringify({ byName: {}, byId: {}, costCache: {} }));
+  } catch (error) {
+    logger.error(`Failed to clear file ${metadataPath}: ${(error as Error).message}`);
+  }
+  loadMetadata();
 };
 
 /**
