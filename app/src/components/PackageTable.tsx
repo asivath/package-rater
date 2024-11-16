@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState } from "react";
 import {
   Box,
   Collapse,
@@ -10,15 +10,15 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Button,
-  TextField
+  Snackbar,
+  Alert
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { fetcher } from "../util";
-import { Search } from "@mui/icons-material";
+import { SearchBar } from "./SearchBar";
 
-export type PackageDisplay = {
+type PackageDisplay = {
   Name: string;
   Version: string;
   ID: string;
@@ -28,7 +28,8 @@ export type PackageDisplay = {
   CostStatus?: string;
 };
 
-export function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   if (!o || typeof o !== "object") {
     throw new Error("Expected PackageDisplay to be an object");
   }
@@ -57,7 +58,7 @@ export function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
 
 function Row(props: { row: PackageDisplay[] }) {
   const { row } = props;
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <>
@@ -128,8 +129,9 @@ function Row(props: { row: PackageDisplay[] }) {
 }
 
 export function PackageTable() {
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [rows, setRows] = React.useState<Record<string, PackageDisplay[]>>({});
+  const [rows, setRows] = useState<Record<string, PackageDisplay[]>>({});
+  const [hasSearched, setHasSearched] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const fetchAllPackages = async () => {
     try {
@@ -139,7 +141,6 @@ export function PackageTable() {
         body: JSON.stringify([{ Version: "1", Name: "*" }])
       });
       const data = await response.json();
-      // assertIsPackageDisplayArray(data);
       const groupedData: Record<string, PackageDisplay[]> = {};
 
       data.forEach((pkg: PackageDisplay) => {
@@ -161,7 +162,7 @@ export function PackageTable() {
     }
   };
 
-  const fetchViaRegex = async () => {
+  const fetchViaRegex = async (searchValue: string) => {
     try {
       const response = await fetcher("/package/byRegEx", {
         method: "POST",
@@ -169,13 +170,11 @@ export function PackageTable() {
           "content-type": "application/json",
           allflag: "true"
         },
-        body: JSON.stringify({ RegEx: searchTerm })
+        body: JSON.stringify({ RegEx: searchValue })
       });
       const data = await response.json();
-      // assertIsPackageDisplayArray(data);
       if (response.status === 404) {
-        //show shit on ui
-        console.warn("No packages found for the given regex.");
+        setSnackbarOpen(true);
         setRows({});
         return;
       }
@@ -196,46 +195,44 @@ export function PackageTable() {
     }
   };
 
-  const handleSearch = () => {
-    if (searchTerm.trim() === "") {
+  const onSearch = (searchValue: string) => {
+    setHasSearched(true);
+    if (!searchValue.trim()) {
       fetchAllPackages();
     } else {
-      fetchViaRegex();
+      fetchViaRegex(searchValue);
     }
   };
 
   return (
-    <Paper sx={{ padding: 2, width: "100%" }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <TextField
-          variant="outlined"
-          placeholder="Search by package name"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: <Search />
-          }}
-          sx={{ width: "100%" }}
-        />
-        <Button variant="contained" onClick={handleSearch} sx={{ ml: 2 }}>
-          Search
-        </Button>
-      </Box>
-      <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 2, overflow: "hidden", width: "100%" }}>
-        <Table aria-label="collapsible table">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: "primary.main" }}>
-              <TableCell sx={{ width: "40px" }} />
-              <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1.2rem" }}>Package Name</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {Object.keys(rows).map((packageName) => (
-              <Row key={packageName} row={rows[packageName]} />
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
+    <Box width="50%">
+      <SearchBar onSearch={onSearch} />
+      {hasSearched && (
+        <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 2, overflow: "hidden", width: "100%" }}>
+          <Table aria-label="collapsible table">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "primary.main" }}>
+                <TableCell sx={{ width: "40px" }} />
+                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1.2rem" }}>Package Name</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {Object.keys(rows).map((packageName) => (
+                <Row key={packageName} row={rows[packageName]} />
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        <Alert onClose={() => setSnackbarOpen(false)} severity="warning" sx={{ width: "100%" }}>
+          No packages found for the given search term.
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }

@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
-import { retrievePackageInfo, retrievePackageByRegEx } from "./routes/postPackages.js";
+import { retrievePackageInfo, retrievePackageByRegEx } from "./routes/retrievePackages.js";
 import { getPackageCost } from "./routes/getPackageCost.js";
 import { getLogger } from "@package-rater/shared";
 import "dotenv/config";

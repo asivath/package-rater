@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { retrievePackageInfo, satisfiesCarat, satisfiesTilde, satisfiesRange } from "../routes/postPackages";
+import { retrievePackageInfo, satisfiesCarat, satisfiesTilde, satisfiesRange } from "../routes/retrievePackages.js";
 import Fastify from "fastify";
 
 const mockMetadataJson = vi.hoisted(() => ({
@@ -69,7 +69,7 @@ vi.mock("fs/promises", () => ({
   writeFile: vi.fn(() => Promise.resolve())
 }));
 
-describe("postPackages", () => {
+describe("retrievePackages", () => {
   const fastify = Fastify();
   fastify.post("/packages", retrievePackageInfo);
 
@@ -123,12 +123,10 @@ describe("postPackages", () => {
   });
 
   it("should return 400 when package requests are missing or invalid", async () => {
-    const body = [];
-
     const reply = await fastify.inject({
       method: "POST",
       url: "/packages",
-      body: body
+      body: []
     });
 
     expect(reply.statusCode).toBe(400);
