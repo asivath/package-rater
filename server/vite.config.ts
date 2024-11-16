@@ -7,7 +7,7 @@ export default defineConfig({
       provider: "istanbul",
       reporter: ["json-summary", "html", "json"],
       include: ["src/**"],
-      exclude: ["src/__tests__/**", "src/dist/**", "src/index.ts"],
+      exclude: ["src/__tests__/**", "src/dist/**", "src/index.ts", "src/types.ts"],
       // thresholds: {
       //   statements: 80,
       //   functions: 100,

@@ -7,12 +7,12 @@ export default defineConfig({
       provider: "istanbul",
       reporter: ["json-summary", "html", "json"],
       include: ["src/**"],
-      exclude: ["src/__tests__/**", "src/dist/**"],
-      // thresholds: {
-      //   statements: 80,
-      //   functions: 100,
-      //   lines: 80
-      // },
+      exclude: ["src/__tests__/**", "src/dist/**", "src/index.ts", "src/types.ts"],
+      thresholds: {
+        statements: 80,
+        functions: 100,
+        lines: 80
+      },
       reportOnFailure: true
     },
     hookTimeout: 30000

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
-import { getGithubRepo, cloneRepo } from "../util"; // Adjust to the correct file path
-import { fileURLToPath } from "url";
+import { getGithubRepo, cloneRepo } from "../util";
 import { getLogger } from "../logger";
 import fs from "fs/promises";
 import path from "path";
@@ -18,13 +17,12 @@ vi.mock("../logger", () => {
   };
 });
 
-// Mocking the fetch API
 global.fetch = vi.fn();
 describe("getGithubRepo", () => {
   const logger = getLogger("utilTest");
 
   beforeEach(() => {
-    vi.clearAllMocks(); // Clear mocks before each test
+    vi.clearAllMocks();
   });
 
   it("should fetch the GitHub repo URL from a valid NPM URL", async () => {
@@ -54,7 +52,7 @@ describe("getGithubRepo", () => {
     const githubUrl = "https://github.com/user/repo";
     const result = await getGithubRepo(githubUrl);
     expect(result).toBe(githubUrl);
-    expect(logger.error).not.toHaveBeenCalled(); // No error should be logged
+    expect(logger.error).not.toHaveBeenCalled();
   });
   it("should return null for an invalid URL format", async () => {
     const invalidUrl = "https://invalid.url.com";
@@ -71,11 +69,9 @@ describe("getGithubRepo", () => {
   });
 });
 describe("getGithubRepo", () => {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
   const repoUrl = "https://github.com/user/repo.git";
   const repoName = "repo";
-  const expectedRepoDir = path.resolve(os.tmpdir(), repoName); // Use a temp directory for expected path
+  const expectedRepoDir = path.resolve(os.tmpdir(), repoName);
   const logger = getLogger("utilTest");
   const mkdirSpy = vi.spyOn(fs, "mkdir");
   beforeEach(() => {

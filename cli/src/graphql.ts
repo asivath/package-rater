@@ -32,7 +32,6 @@ export async function getGitHubData(
       body: JSON.stringify(data)
     });
     const responseData = await response.json();
-    // console.log("responseData", responseData);
 
     // Check for errors in the GraphQL response
     if (responseData.errors) {

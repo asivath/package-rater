@@ -63,7 +63,7 @@ jobs:
             git pull
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
-            yarn workspaces focus -A --production
+            yarn workspaces focus @package-rater/app @package-rater/shared @package-rater/server --production
             
             cd server
             echo "AWS_REGION=${{ secrets.AWS_REGION }}" > .env

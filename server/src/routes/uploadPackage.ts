@@ -1,8 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import unzipper from "unzipper";
 import { getLogger, cloneRepo } from "@package-rater/shared";
-import { createHash } from "crypto";
-import { checkIfPackageExists, savePackage } from "../util.js";
+import { calculatePackageId, checkIfPackageExists, savePackage } from "../util.js";
 import { writeFile, readFile, rm, mkdir } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
@@ -34,7 +33,10 @@ export const uploadPackage = async (
     if (Content) {
       const buffer = Buffer.from(Content, "base64");
       const files = await unzipper.Open.buffer(buffer);
-      const packageJsonFile = files.files.find((file) => file.path.includes("package.json"));
+      const packageJsonFile = files.files.find((file) => {
+        const parths = file.path.split("/");
+        return parths[parths.length - 1] === "package.json";
+      });
       if (!packageJsonFile) {
         logger.error(`No package.json found in ${packageName}`);
         reply.code(400).send({ error: "No package.json found in the package" });
@@ -42,17 +44,10 @@ export const uploadPackage = async (
       }
       const packageData = await packageJsonFile.buffer();
       const packageJson = JSON.parse(packageData.toString());
-      packageName = packageJson.name;
-      version = packageJson.version;
-      if (!packageName || !version) {
-        logger.error(`Package name or version not found in the package.json of ${packageName}`);
-        reply.code(400).send({ error: "Invalid package.json found in the package" });
-        return;
-      }
-      id = createHash("sha256")
-        .update(packageName + version)
-        .digest("hex");
-      if (await checkIfPackageExists(id)) {
+      packageName = packageJson.name || files.files[0].path.split("/")[0];
+      version = "1.0.0";
+      id = calculatePackageId(packageName, version);
+      if (checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
@@ -107,10 +102,8 @@ export const uploadPackage = async (
         packageName = details.packageName;
         version = details.version;
       }
-      id = createHash("sha256")
-        .update(packageName + version)
-        .digest("hex");
-      if (await checkIfPackageExists(id)) {
+      id = calculatePackageId(packageName, version);
+      if (checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
@@ -198,15 +191,19 @@ const getGithubDetails = async (url: string) => {
  * @param packageName The npm package name
  * @returns Object containing packageName and version
  */
-async function getNpmPackageDetails(packageName: string): Promise<{ packageName: string; version: string } | null> {
+async function getNpmPackageDetails(
+  packageName: string
+): Promise<{ packageName: string; version: string; dependencies: { [dependency: string]: string } } | null> {
   try {
     const npmUrl = `https://registry.npmjs.org/${packageName}`;
     const response = await fetch(npmUrl);
     if (!response.ok) return null;
     const data = await response.json();
+    const dependencies = data.versions[data["dist-tags"].latest].dependencies || {};
     return {
       packageName: data.name,
-      version: data["dist-tags"].latest
+      version: data["dist-tags"].latest,
+      dependencies: dependencies
     };
   } catch (error) {
     logger.error(`Error fetching npm package details for ${packageName}: ${(error as Error).message}`);

@@ -5,7 +5,6 @@ import { describe, it, expect, vi, afterEach, beforeAll, beforeEach, afterAll } 
 import fs from "fs/promises";
 import path from "path";
 import { getLogger, reinitializeLogger } from "../logger.ts";
-import * as util from "util";
 import * as fsPromises from "fs/promises";
 
 vi.mock("util", async () => {

@@ -5,7 +5,7 @@ import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { calculatePinnedDependencyFraction } from "./Dependencies.js";
-import { cloneRepo } from "@package-rater/shared";
+import { cloneRepo, Ndjson, assertIsNdjson } from "@package-rater/shared";
 
 const logger = getLogger("cli");
 
@@ -61,7 +61,7 @@ async function getRepoOwner(url: string): Promise<[string, string, string] | nul
  * @param url The original URL of the package
  * @returns The metrics for the package or repository
  */
-export default async function calculateMetrics(url: string): Promise<Record<string, string | number>> {
+export default async function calculateMetrics(url: string): Promise<Ndjson> {
   try {
     const repoInfo = await getRepoOwner(url);
     if (!repoInfo) {
@@ -85,7 +85,7 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       0.2 * responsiveness.result +
       0.26 * licenseCompatibility.result;
 
-    const ndjsonOutput: Record<string, number | string> = {
+    const ndjsonOutput: Ndjson = {
       URL: url,
       NetScore: parseFloat(netscore.toFixed(2)),
       NetScore_Latency: parseFloat(
@@ -102,13 +102,14 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       License: parseFloat(licenseCompatibility.result.toFixed(2)),
       License_Latency: parseFloat(licenseCompatibility.time.toFixed(2)),
       Dependencies: parseFloat(dependencies.result.toFixed(2)),
-      Dependendencies_Latency: parseFloat(dependencies.time.toFixed(2))
+      Dependencies_Latency: parseFloat(dependencies.time.toFixed(2))
     };
+    assertIsNdjson(ndjsonOutput);
 
     return ndjsonOutput;
   } catch (error) {
     logger.error(`Error calculating metrics: ${error}`);
-    return {
+    const ndjson: Ndjson = {
       URL: url,
       NetScore: 0,
       NetScore_Latency: 0,
@@ -125,5 +126,7 @@ export default async function calculateMetrics(url: string): Promise<Record<stri
       Dependencies: 0,
       Dependencies_Latency: 0
     };
+    assertIsNdjson(ndjson);
+    return ndjson;
   }
 }
