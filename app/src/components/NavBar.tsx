@@ -1,6 +1,6 @@
 import { AppBar, Toolbar, Typography, Box, Avatar } from "@mui/material";
 import { ResetButton } from "./ResetButton";
-// import { DownloadButton } from "./DownloadButton";
+import { DownloadButton } from "./DownloadButton";
 import logo from "../assets/logo.webp";
 
 export const NavBar = () => {
@@ -23,7 +23,7 @@ export const NavBar = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             package-rater
           </Typography>
-          {/* <DownloadButton id="7536041697512265" /> */}
+          <DownloadButton id="7536041697512265" />
           <ResetButton />
         </Box>
       </Toolbar>

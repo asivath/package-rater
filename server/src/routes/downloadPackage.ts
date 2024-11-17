@@ -5,12 +5,12 @@ import { dirname } from "path";
 import { readFile } from "fs/promises";
 import path from "path";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getMetadata } from "../util.js";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "..", "packages");
-const metadataPath = path.join(packagesDirPath, "metadata.json");
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
@@ -31,8 +31,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
     return;
   }
 
-  const metaDataContent = await readFile(metadataPath, "utf-8");
-  const metadataJson = JSON.parse(metaDataContent);
+  const metadataJson = getMetadata();
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);
     reply.code(404).send({ error: "Package does not exist" });
@@ -62,12 +61,9 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
       streamToString = await data.Body.transformToString("base64");
     } else {
       const packagePath = path.join(packagesDirPath, name, id, `${name}.tgz`);
-      console.log("packagePath", packagePath);
       const data = await readFile(packagePath);
       streamToString = data.toString("base64");
     }
-
-    console.log();
 
     /**
     const pipelineAsync = promisify(pipeline);

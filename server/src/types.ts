@@ -1,11 +1,12 @@
 import { Ndjson, assertIsNdjson } from "@package-rater/shared";
+import { assert } from "console";
 
 export type Metadata = {
   byId: {
     [id: string]: {
       packageName: string;
       version: string;
-      ndjson: Ndjson | null;
+      ndjson: Ndjson;
       dependencies: {
         [dependency: string]: string;
       };
@@ -18,7 +19,7 @@ export type Metadata = {
     [packageName: string]: {
       [version: string]: {
         id: string;
-        ndjson: Ndjson | null;
+        ndjson: Ndjson;
         dependencies: {
           [dependency: string]: string;
         };
@@ -59,9 +60,7 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
     if (typeof v.version !== "string") {
       throw new Error("Metadata.byId values.version must be a string");
     }
-    if (v.ndjson !== null) {
-      assertIsNdjson(v.ndjson);
-    }
+    assertIsNdjson(v.ndjson);
     if (typeof v.dependencies !== "object") {
       throw new Error("Metadata.byId values.dependencies must be an object");
     }
@@ -93,9 +92,7 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
       if (typeof vv.id !== "string") {
         throw new Error("Metadata.byName values values.id must be a string");
       }
-      if (vv.ndjson !== null) {
-        assertIsNdjson(vv.ndjson);
-      }
+      assertIsNdjson(vv.ndjson);
       if (typeof vv.dependencies !== "object") {
         throw new Error("Metadata.byName values values.dependencies must be an object");
       }

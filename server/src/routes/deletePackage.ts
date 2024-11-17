@@ -47,7 +47,6 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
     } else {
       const packagePath = path.join(packagesDirPath, name, id);
       await rm(packagePath, { recursive: true, force: true });
-      console.log("getting here");
       const parentDir = path.join(packagesDirPath, name);
       const filesInParentDir = await readdir(parentDir);
 

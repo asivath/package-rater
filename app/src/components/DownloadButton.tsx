@@ -9,16 +9,11 @@ interface DownloadButtonProps {
 export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
   const handleDownload = async () => {
     try {
-      console.log("id", id);
       // Use the id parameter to fetch the package
       const response = await fetcher(`/package/${id}`, { method: "GET" });
-      console.log(response);
       const responseJson = await response.json();
-      console.log("response", responseJson.data);
 
       const { Name: name, Version: version } = responseJson.metadata;
-      console.log("name", name);
-      console.log("version", version);
 
       const streamToString = responseJson.data.Content;
       const byteArray = Uint8Array.from(atob(streamToString), (c) => c.charCodeAt(0));
