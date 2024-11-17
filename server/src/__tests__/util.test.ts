@@ -22,7 +22,23 @@ vi.mock("fs/promises", () => ({
         "8949875233423535": {
           packageName: "completed-package",
           version: "1.0.0",
-          ndjson: null,
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
           dependencies: {},
           standaloneCost: 0.5,
           totalCost: 0.5,
@@ -31,7 +47,23 @@ vi.mock("fs/promises", () => ({
         "6023484092574754": {
           packageName: "pending-package",
           version: "1.0.0",
-          ndjson: null,
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
           dependencies: {
             "completed-dep": "1.0.0"
           },
@@ -42,7 +74,23 @@ vi.mock("fs/promises", () => ({
         "1022435309464889": {
           packageName: "failing-package",
           version: "1.0.0",
-          ndjson: null,
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
           dependencies: {
             "incompleted-dep": "1.0.0"
           },
@@ -53,7 +101,23 @@ vi.mock("fs/promises", () => ({
         "5555118188997178": {
           packageName: "parent-package",
           version: "1.0.0",
-          ndjson: null,
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
           dependencies: {
             "child-package": "1.0.0"
           },
@@ -64,7 +128,23 @@ vi.mock("fs/promises", () => ({
         "5916553102338584": {
           packageName: "recursion-package",
           version: "1.0.0",
-          ndjson: null,
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
           dependencies: {
             "recursion-package-2": "1.0.0",
             "completed-dep": "1.0.0"
@@ -78,7 +158,23 @@ vi.mock("fs/promises", () => ({
         "completed-package": {
           "1.0.0": {
             id: "completed-ID",
-            ndjson: null,
+            ndjson: {
+              URL: "string",
+              NetScore: 1,
+              NetScore_Latency: 1,
+              RampUp: 1,
+              RampUp_Latency: 1,
+              Correctness: 1,
+              Correctness_Latency: 1,
+              BusFactor: 1,
+              BusFactor_Latency: 1,
+              ResponsiveMaintainer: 1,
+              ResponsiveMaintainer_Latency: 1,
+              License: 1,
+              License_Latency: 1,
+              Dependencies: 1,
+              Dependencies_Latency: 1
+            },
             dependencies: {},
             standaloneCost: 0.5,
             totalCost: 0.5,
@@ -88,7 +184,23 @@ vi.mock("fs/promises", () => ({
         "pending-package": {
           "1.0.0": {
             id: "6023484092574754",
-            ndjson: null,
+            ndjson: {
+              URL: "string",
+              NetScore: 1,
+              NetScore_Latency: 1,
+              RampUp: 1,
+              RampUp_Latency: 1,
+              Correctness: 1,
+              Correctness_Latency: 1,
+              BusFactor: 1,
+              BusFactor_Latency: 1,
+              ResponsiveMaintainer: 1,
+              ResponsiveMaintainer_Latency: 1,
+              License: 1,
+              License_Latency: 1,
+              Dependencies: 1,
+              Dependencies_Latency: 1
+            },
             dependencies: {
               "completed-dep": "1.0.0"
             },
@@ -100,7 +212,23 @@ vi.mock("fs/promises", () => ({
         "failing-package": {
           "1.0.0": {
             id: "failing-ID",
-            ndjson: null,
+            ndjson: {
+              URL: "string",
+              NetScore: 1,
+              NetScore_Latency: 1,
+              RampUp: 1,
+              RampUp_Latency: 1,
+              Correctness: 1,
+              Correctness_Latency: 1,
+              BusFactor: 1,
+              BusFactor_Latency: 1,
+              ResponsiveMaintainer: 1,
+              ResponsiveMaintainer_Latency: 1,
+              License: 1,
+              License_Latency: 1,
+              Dependencies: 1,
+              Dependencies_Latency: 1
+            },
             dependencies: {
               "incompleted-dep": "1.0.0"
             },
@@ -112,7 +240,23 @@ vi.mock("fs/promises", () => ({
         "parent-package": {
           "1.0.0": {
             id: "parent-ID",
-            ndjson: null,
+            ndjson: {
+              URL: "string",
+              NetScore: 1,
+              NetScore_Latency: 1,
+              RampUp: 1,
+              RampUp_Latency: 1,
+              Correctness: 1,
+              Correctness_Latency: 1,
+              BusFactor: 1,
+              BusFactor_Latency: 1,
+              ResponsiveMaintainer: 1,
+              ResponsiveMaintainer_Latency: 1,
+              License: 1,
+              License_Latency: 1,
+              Dependencies: 1,
+              Dependencies_Latency: 1
+            },
             dependencies: {
               "child-package": "1.0.0"
             },
@@ -124,7 +268,23 @@ vi.mock("fs/promises", () => ({
         "recursion-package": {
           "1.0.0": {
             id: "5555118188997178",
-            ndjson: null,
+            ndjson: {
+              URL: "string",
+              NetScore: 1,
+              NetScore_Latency: 1,
+              RampUp: 1,
+              RampUp_Latency: 1,
+              Correctness: 1,
+              Correctness_Latency: 1,
+              BusFactor: 1,
+              BusFactor_Latency: 1,
+              ResponsiveMaintainer: 1,
+              ResponsiveMaintainer_Latency: 1,
+              License: 1,
+              License_Latency: 1,
+              Dependencies: 1,
+              Dependencies_Latency: 1
+            },
             dependencies: {
               "recursion-package-2": "1.0.0",
               "completed-dep": "1.0.0"
@@ -250,20 +410,43 @@ describe("savePackage", () => {
   const testPackageId = calculatePackageId("test-package", "1.0.0");
   const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
   it("should save a package from file path and upload to S3 in prod", async () => {
-    vi.stubEnv("NODE_ENV", "prod");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CLI_API_URL", "https://test-api.com");
     const packageFilePath = "/path/to/package-file";
 
-    const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
+    vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
+      JSON.stringify({
+        name: "test-package",
+        version: "1.0.0",
+        dependencies: {},
+        repository: {
+          url: "https://www.npmjs.com/package/test-package"
+        }
+      })
+    );
 
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: { ...mockNdJson }
+        })
+      })
+
+    const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
     expect(result.success).toBe(true);
+
+    // Update the expectation to match the full paths that are being passed
     expect(tarSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         gzip: true,
-        file: expect.any(String),
-        cwd: expect.any(String)
+        file: expect.stringMatching(/test-package\.tgz$/), // Match the tar file name
+        cwd: expect.stringMatching(/test-package\/8474585353350172/) // Match the directory
       }),
-      ["."]
+      ["test-package"]
     );
+
     expect(logger.info).toHaveBeenCalledWith(
       `Uploaded package test-package to S3: test-package/${testPackageId}/test-package.tgz`
     );
@@ -278,6 +461,10 @@ describe("savePackage", () => {
     (global.fetch as Mock)
       .mockResolvedValueOnce({
         ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
         json: async () => ({
           success: true,
           result: { ...mockNdJson }
@@ -287,9 +474,9 @@ describe("savePackage", () => {
         ok: true,
         body: new ReadableStream()
       });
+ 
 
     const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
-
     expect(result.success).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
       `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.tgz`
@@ -353,6 +540,18 @@ describe("savePackage", () => {
 
   it("should debloat the package if debloat is true", async () => {
     const esbuildSpy = (esbuild as unknown as { default: { build: Mock } }).default.build;
+
+    vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
+      JSON.stringify({
+        name: "test-package",
+        version: "1.0.0",
+        dependencies: {},
+        repository: {
+          url: "https://www.npmjs.com/package/test-package"
+        }
+      })
+    );
+
     const result = await savePackage("test-package", "1.0.0", testPackageId, true, "/path/to/package-file", undefined);
 
     expect(result.success).toBe(true);

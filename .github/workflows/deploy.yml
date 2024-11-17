@@ -29,7 +29,7 @@ jobs:
         run: |
           yarn install
           echo "VITE_CLOUDFRONT_ORIGIN=${{ secrets.CLOUDFRONT_ORIGIN }}" > app/.env
-          yarn build
+          yarn build:production
 
       - name: Archive build files
         run: |
@@ -70,7 +70,7 @@ jobs:
             echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}" >> .env
             echo "CLI_API_URL=${{ secrets.CLI_API_URL }}" >> .env
             echo "CLOUDFRONT_ORIGIN=${{ secrets.CLOUDFRONT_ORIGIN }}" >> .env
-            echo "NODE_ENV=prod" >> .env
+            echo "NODE_ENV=production" >> .env
 
             yarn restart
           EOF
