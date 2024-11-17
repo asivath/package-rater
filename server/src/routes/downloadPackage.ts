@@ -65,15 +65,6 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
       streamToString = data.toString("base64");
     }
 
-    /**
-    const pipelineAsync = promisify(pipeline);
-    Uncomment this block to save the package to the server
-    const readableStream = Readable.from(Buffer.from(streamToString, "base64"));
-    const outputPath = path.join(packagesDirPath, ${name}-${version}.tgz);
-    const writableStream = createWriteStream(outputPath);
-    await pipelineAsync(readableStream, writableStream);
-    **/
-
     // Send response metadata
     reply.code(200).send({
       metadata: {

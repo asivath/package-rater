@@ -1,5 +1,4 @@
 import { Ndjson, assertIsNdjson } from "@package-rater/shared";
-import { assert } from "console";
 
 export type Metadata = {
   byId: {

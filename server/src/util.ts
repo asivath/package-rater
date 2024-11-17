@@ -78,6 +78,8 @@ export const savePackage = async (
     let pathToTarGz = packageIdPath;
     let packageJson = null;
     let loosePath = packageIdPath;
+    // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
+    // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
     if (packageFilePath) {
       // Given file path
       const targetUploadFilePath = path.join(packageIdPath, packageName);
@@ -85,7 +87,6 @@ export const savePackage = async (
 
       if (debloat) {
         await minifyProject(packageIdPath);
-        console.log("getting here");
 
         logger.info(`Finished debloating package ${packageName} v${version}`);
       }
@@ -108,7 +109,7 @@ export const savePackage = async (
       pathToTarGz = tarGzFilePath;
       loosePath = targetUploadFilePath;
     } else {
-      // Given url
+      // Given a url
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${version}.tgz`;
       const tarResponse = await fetch(npmTarURL);
       if (!tarResponse.ok || !tarResponse.body) {
@@ -138,7 +139,6 @@ export const savePackage = async (
     }
 
     if (process.env.NODE_ENV === "production") {
-      // Production
       await uploadToS3(packageName, id, pathToTarGz);
       await rm(packageNamePath, { recursive: true });
       if (!process.env.CLI_API_URL) {
@@ -152,7 +152,6 @@ export const savePackage = async (
       ndjson = (await response.json()).result;
       assertIsNdjson(ndjson);
     } else {
-      // Development
       const execAsync = promisify(exec);
       const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
         cwd: path.join(__dirname, "..", "..", "cli")
@@ -164,13 +163,11 @@ export const savePackage = async (
       assertIsNdjson(ndjson);
     }
 
-    // Make sure the package score is high enough
     const score = ndjson.NetScore;
     if (isNaN(score) || score < 0.5) {
       return { success: false, reason: "Package score is too low" };
     }
 
-    // cost calculation stuff
     dependencies = packageJson.dependencies || {};
     standaloneCost = (await getFolderSize.loose(loosePath)) / 1024 / 1024;
 
