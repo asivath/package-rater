@@ -106,7 +106,7 @@ export const savePackage = async (
 
       try {
         const files = await readdir(targetUploadFilePath);
-        const readmeRegex = /^readme(\.md)?$/i;
+        const readmeRegex = /^readme/i;
 
         for (const file of files) {
           if (readmeRegex.test(file)) {
@@ -156,7 +156,7 @@ export const savePackage = async (
 
       try {
         const files = await readdir(extractPath);
-        const readmeRegex = /^readme(\.md)?$/i;
+        const readmeRegex = /^readme/i;
 
         for (const file of files) {
           if (readmeRegex.test(file)) {
