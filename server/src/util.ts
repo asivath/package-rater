@@ -75,16 +75,6 @@ export const savePackage = async (
     let dependencies: { [dependency: string]: string } = {};
     let standaloneCost: number = 0;
     let readmeString: string | undefined;
-    const readmeVariations = [
-      "README.md",
-      "readme.md",
-      "ReadMe.md",
-      "Readme.md",
-      "README.MD",
-      "readme.MD",
-      "ReadMe.MD",
-      "Readme.MD"
-    ];
 
     if (packageFilePath) {
       // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
@@ -102,18 +92,24 @@ export const savePackage = async (
       dependencies = packageJson.dependencies || {};
       standaloneCost = (await getFolderSize.loose(targetUploadFilePath)) / 1024 / 1024;
 
-      for (const variation of readmeVariations) {
-        const readmeFilePath = path.join(targetUploadFilePath, variation);
-        try {
-          readmeString = await readFile(readmeFilePath, "utf-8");
-          logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
-          break;
-        } catch {
-          logger.warn(`No ${variation} found for package ${packageName} v${version}`);
-          if (variation === readmeVariations[readmeVariations.length - 1]) {
-            logger.warn(`No README found for package ${packageName} v${version}`);
+      try {
+        const files = await readdir(targetUploadFilePath);
+        const readmeRegex = /^readme(\.md)?$/i;
+
+        for (const file of files) {
+          if (readmeRegex.test(file)) {
+            const readmeFilePath = path.join(targetUploadFilePath, file);
+            readmeString = await readFile(readmeFilePath, "utf-8");
+            logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+            break;
           }
         }
+
+        if (!readmeString) {
+          logger.warn(`No README found for package ${packageName} v${version}`);
+        }
+      } catch (error) {
+        logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
       }
 
       const tarGzFilePath = path.join(packageIdPath, `${packageName}.tgz`);
@@ -176,18 +172,24 @@ export const savePackage = async (
       dependencies = packageJson.dependencies || {};
       standaloneCost = (await getFolderSize.loose(extractPath)) / 1024 / 1024;
 
-      for (const variation of readmeVariations) {
-        const readmeFilePath = path.join(extractPath, variation);
-        try {
-          readmeString = await readFile(readmeFilePath, "utf-8");
-          logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
-          break;
-        } catch {
-          logger.warn(`No ${variation} found for package ${packageName} v${version}`);
-          if (variation === readmeVariations[readmeVariations.length - 1]) {
-            logger.warn(`No README found for package ${packageName} v${version}`);
+      try {
+        const files = await readdir(extractPath);
+        const readmeRegex = /^readme(\.md)?$/i;
+
+        for (const file of files) {
+          if (readmeRegex.test(file)) {
+            const readmeFilePath = path.join(extractPath, file);
+            readmeString = await readFile(readmeFilePath, "utf-8");
+            logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+            break;
           }
         }
+
+        if (!readmeString) {
+          logger.warn(`No README found for package ${packageName} v${version}`);
+        }
+      } catch (error) {
+        logger.error(`Error reading files in directory ${extractPath}: ${(error as Error).message}`);
       }
 
       await rm(extractPath, { recursive: true });

@@ -105,8 +105,13 @@ export const UploadPackageForm: React.FC = () => {
   };
 
   return (
-    <Box mt={5}>
-      <Button variant="outlined" component="label" onClick={() => setUploadPackageFormOpen(true)}>
+    <Box>
+      <Button
+        variant="contained"
+        color="secondary"
+        component="label"
+        sx={{ marginLeft: "auto" }}
+        onClick={() => setUploadPackageFormOpen(true)}>
         Upload Package
       </Button>
       <Dialog

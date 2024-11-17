@@ -11,7 +11,8 @@ import {
   TableRow,
   Paper,
   Snackbar,
-  Alert
+  Alert,
+  Typography
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -62,7 +63,7 @@ function Row(props: { row: PackageDisplay[] }) {
 
   return (
     <>
-      <TableRow sx={{ "& > *": { borderBottom: "unset" } }}>
+      <TableRow sx={{ "& > *": { borderBottom: "1px solid gray" } }}>
         <TableCell sx={{ width: "40px", padding: "8px" }}>
           <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
@@ -73,9 +74,7 @@ function Row(props: { row: PackageDisplay[] }) {
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell
-          style={{ paddingBottom: 0, paddingTop: 0, borderBottom: "1px solid rgba(224, 224, 224, 1)" }}
-          colSpan={3}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0, borderBottom: "1px solid gray" }} colSpan={3}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: "12px 16px" }}>
               <Table size="small" aria-label="versions" sx={{ borderCollapse: "collapse" }}>
@@ -86,7 +85,7 @@ function Row(props: { row: PackageDisplay[] }) {
                       sx={{
                         fontWeight: "bold",
                         fontSize: "1rem",
-                        borderBottom: "1px solid rgba(224, 224, 224, 1)"
+                        borderBottom: "1px solid gray"
                       }}>
                       Version Number
                     </TableCell>
@@ -95,7 +94,7 @@ function Row(props: { row: PackageDisplay[] }) {
                       sx={{
                         fontWeight: "bold",
                         fontSize: "1rem",
-                        borderBottom: "1px solid rgba(224, 224, 224, 1)"
+                        borderBottom: "1px solid gray"
                       }}>
                       Package ID
                     </TableCell>
@@ -104,7 +103,7 @@ function Row(props: { row: PackageDisplay[] }) {
                       sx={{
                         fontWeight: "bold",
                         fontSize: "1rem",
-                        borderBottom: "1px solid rgba(224, 224, 224, 1)"
+                        borderBottom: "1px solid gray"
                       }}>
                       Net Score
                     </TableCell>
@@ -132,13 +131,22 @@ export function PackageTable() {
   const [rows, setRows] = useState<Record<string, PackageDisplay[]>>({});
   const [hasSearched, setHasSearched] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackBarMessage, setSnackBarMessage] = useState("");
+  const [snackBarSeverity, setSnackBarSeverity] = useState<"error" | "warning" | "info" | "success">("warning");
 
-  const fetchAllPackages = async () => {
+  function setSnackBar(message: string, severity: "error" | "warning" | "info" | "success") {
+    setSnackBarMessage(message);
+    setSnackBarSeverity(severity);
+    setSnackbarOpen(true);
+  }
+
+  const fetchViaName = async (searchValue: string, version?: string) => {
     try {
+      version = version || "0.0.0-999999.999999.999999";
       const response = await fetcher("/packages", {
         method: "POST",
         headers: { offset: "0", allflag: "true", "content-type": "application/json" },
-        body: JSON.stringify([{ Version: "1", Name: "*" }])
+        body: JSON.stringify([{ Version: version, Name: searchValue }])
       });
       const data = await response.json();
       const groupedData: Record<string, PackageDisplay[]> = {};
@@ -150,6 +158,11 @@ export function PackageTable() {
         }
         groupedData[pkg.Name].push(pkg);
       });
+      if (Object.keys(groupedData).length === 0) {
+        setSnackBar("No packages found for the given search term.", "warning");
+        setRows({});
+        return;
+      }
 
       // Sort each package's versions in descending order by Version number
       Object.keys(groupedData).forEach((packageName) => {
@@ -158,7 +171,8 @@ export function PackageTable() {
 
       setRows(groupedData);
     } catch (error) {
-      console.error("Error fetching all packages:", error);
+      console.error("Error fetching packages:", error);
+      setSnackBar("Error fetching packages.", "error");
     }
   };
 
@@ -174,7 +188,7 @@ export function PackageTable() {
       });
       const data = await response.json();
       if (response.status === 404) {
-        setSnackbarOpen(true);
+        setSnackBar("No packages found for the given search term.", "warning");
         setRows({});
         return;
       }
@@ -192,23 +206,35 @@ export function PackageTable() {
       setRows(groupedData);
     } catch (error) {
       console.error("Error fetching packages by regex:", error);
+      setSnackBar("Error fetching packages.", "error");
     }
   };
 
-  const onSearch = (searchValue: string) => {
+  const onSearch = (searchValue: string, searchByRegex: boolean, version?: string) => {
     setHasSearched(true);
-    if (!searchValue.trim()) {
-      fetchAllPackages();
-    } else {
+    if (searchByRegex) {
+      searchValue = searchValue.trim() === "" ? ".*" : searchValue;
       fetchViaRegex(searchValue);
+    } else {
+      searchValue = searchValue.trim() === "" ? "*" : searchValue;
+      fetchViaName(searchValue, version);
     }
   };
 
   return (
-    <Box width="50%">
+    <>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={5000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}>
+        <Alert onClose={() => setSnackbarOpen(false)} severity={snackBarSeverity} sx={{ width: "100%" }}>
+          <Typography>{snackBarMessage}</Typography>
+        </Alert>
+      </Snackbar>
       <SearchBar onSearch={onSearch} />
-      {hasSearched && (
-        <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 2, overflow: "hidden", width: "100%" }}>
+      <Collapse in={hasSearched && Object.keys(rows).length > 0} timeout={600} sx={{ width: "70%" }}>
+        <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 2, outline: "1px solid gray" }}>
           <Table aria-label="collapsible table">
             <TableHead>
               <TableRow sx={{ backgroundColor: "primary.main" }}>
@@ -223,16 +249,7 @@ export function PackageTable() {
             </TableBody>
           </Table>
         </TableContainer>
-      )}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
-        <Alert onClose={() => setSnackbarOpen(false)} severity="warning" sx={{ width: "100%" }}>
-          No packages found for the given search term.
-        </Alert>
-      </Snackbar>
-    </Box>
+      </Collapse>
+    </>
   );
 }
