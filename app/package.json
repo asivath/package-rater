@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b && vite build",
+    "build:production": "yarn build --mode production",
     "clean": "rm -rf .nyc_output test-results node_modules coverage playwright-report tsconfig.tsbuildinfo",
     "dev": "vite",
     "lint": "eslint src --fix",
