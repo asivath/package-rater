@@ -425,14 +425,13 @@ describe("savePackage", () => {
       })
     );
 
-    (global.fetch as Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          result: { ...mockNdJson }
-        })
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: { ...mockNdJson }
       })
+    });
 
     const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
     expect(result.success).toBe(true);
@@ -474,7 +473,6 @@ describe("savePackage", () => {
         ok: true,
         body: new ReadableStream()
       });
- 
 
     const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
     expect(result.success).toBe(true);
