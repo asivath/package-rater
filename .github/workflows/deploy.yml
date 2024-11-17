@@ -29,7 +29,7 @@ jobs:
         run: |
           yarn install
           echo "VITE_CLOUDFRONT_ORIGIN=${{ secrets.CLOUDFRONT_ORIGIN }}" > app/.env
-          yarn build --mode production
+          yarn build:production
 
       - name: Archive build files
         run: |
