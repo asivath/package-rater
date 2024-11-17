@@ -3,6 +3,9 @@ import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
 import { postPackages } from "./routes/postPackages.js";
+import { deletePackage } from "./routes/deletePackage.js";
+import { resetPackages } from "./routes/resetPackages.js";
+import { downloadPackage } from "./routes/downloadPackage.js";
 import { getPackageCost } from "./routes/getPackageCost.js";
 import { getLogger } from "@package-rater/shared";
 import "dotenv/config";
@@ -16,7 +19,7 @@ const fastify = Fastify({
 
 fastify.register(cors, {
   origin: ["http://127.0.0.1:3000", "http://localhost:5173", process.env.CLOUDFRONT_ORIGIN].filter(Boolean),
-  methods: ["GET", "POST", "PUT", "OPTIONS"]
+  methods: ["GET", "POST", "PUT", "OPTIONS", "DELETE"]
 });
 
 fastify.register(fastifyStatic, {
@@ -26,6 +29,9 @@ fastify.register(fastifyStatic, {
 
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", postPackages);
+fastify.get("/package/:id", downloadPackage);
+fastify.delete("/package/:id", deletePackage);
+fastify.delete("/reset", resetPackages);
 fastify.get("/package/:id/cost", getPackageCost);
 
 const start = async () => {

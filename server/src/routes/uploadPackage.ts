@@ -45,7 +45,7 @@ export const uploadPackage = async (
       const packageData = await packageJsonFile.buffer();
       const packageJson = JSON.parse(packageData.toString());
       packageName = packageJson.name || files.files[0].path.split("/")[0];
-      version = "1.0.0";
+      version = packageJson.version || "1.0.0";
       id = calculatePackageId(packageName, version);
       if (checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);

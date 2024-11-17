@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { readFile, mkdir, writeFile, rm, cp, readdir, stat, access } from "fs/promises";
+import { readFile, mkdir, writeFile, rm, cp, access, readdir, stat } from "fs/promises";
 import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import { exec } from "child_process";
@@ -28,12 +28,13 @@ try {
   await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }, null, 2));
 }
 
-async function loadMetadata(): Promise<Metadata> {
-  const metadata = JSON.parse(await readFile(metadataPath, "utf-8"));
-  assertIsMetadata(metadata);
-  return metadata;
+let metadata: Metadata;
+async function loadMetadata(): Promise<void> {
+  const metadataFile = JSON.parse(await readFile(metadataPath, "utf-8"));
+  assertIsMetadata(metadataFile);
+  metadata = metadataFile;
 }
-const metadata = await loadMetadata(); // Do not directly modify this variable outside of this file
+await loadMetadata();
 
 const packageCostPromisesMap = new Map<string, Promise<number>>();
 
@@ -74,58 +75,41 @@ export const savePackage = async (
     let ndjson = null;
     let dependencies: { [dependency: string]: string } = {};
     let standaloneCost: number = 0;
+    let pathToTarGz = packageIdPath;
+    let packageJson = null;
+    let loosePath = packageIdPath;
+    // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
+    // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
     if (packageFilePath) {
-      // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
-      // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
+      // Given file path
       const targetUploadFilePath = path.join(packageIdPath, packageName);
       await cp(packageFilePath, targetUploadFilePath, { recursive: true });
 
       if (debloat) {
         await minifyProject(packageIdPath);
+
         logger.info(`Finished debloating package ${packageName} v${version}`);
       }
-
       const packageJsonPath = path.join(targetUploadFilePath, "package.json");
-      const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
-      dependencies = packageJson.dependencies || {};
-      standaloneCost = (await getFolderSize.loose(targetUploadFilePath)) / 1024 / 1024;
 
-      const tarGzFilePath = path.join(packageIdPath, `${packageName}.tgz`);
-      await create({ gzip: true, file: tarGzFilePath, cwd: packageIdPath }, ["."]);
-      await rm(targetUploadFilePath, { recursive: true });
-
-      if (process.env.NODE_ENV === "prod") {
-        await uploadToS3(packageName, id, tarGzFilePath);
-        await rm(packageNamePath, { recursive: true });
-      }
-    } else {
-      if (process.env.NODE_ENV === "prod") {
-        if (!process.env.CLI_API_URL) {
-          return { success: false, reason: "CLI API URL not provided" };
-        }
-        const response = await fetch(process.env.CLI_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
-        });
-        ndjson = (await response.json()).result;
-        assertIsNdjson(ndjson);
-      } else {
-        const execAsync = promisify(exec);
-        const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
-          cwd: path.join(__dirname, "..", "..", "cli")
-        });
-        if (stderr) {
-          return { success: false, reason: stderr };
-        }
-        ndjson = JSON.parse(stdout);
-        assertIsNdjson(ndjson);
-      }
-      const score = ndjson.NetScore;
-      if (isNaN(score) || score < 0.5) {
+      packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8")) as {
+        repository: { url: string };
+        dependencies: { [key: string]: string };
+      };
+      if (!packageJson.repository || !packageJson.repository.url) {
         return { success: false, reason: "Package score is too low" };
       }
 
+      url = packageJson.repository.url;
+
+      const tarGzFilePath = path.join(packageIdPath, `${packageName}.tgz`);
+      await create({ gzip: true, file: tarGzFilePath, cwd: packageIdPath }, [packageName]);
+      await rm(targetUploadFilePath, { recursive: true });
+
+      pathToTarGz = tarGzFilePath;
+      loosePath = targetUploadFilePath;
+    } else {
+      // Given a url
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${version}.tgz`;
       const tarResponse = await fetch(npmTarURL);
       if (!tarResponse.ok || !tarResponse.body) {
@@ -146,17 +130,46 @@ export const savePackage = async (
       }
 
       const packageJsonPath = path.join(extractPath, "package.json");
-      const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
-      dependencies = packageJson.dependencies || {};
-      standaloneCost = (await getFolderSize.loose(extractPath)) / 1024 / 1024;
+      packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
 
       await rm(extractPath, { recursive: true });
 
-      if (process.env.NODE_ENV === "prod") {
-        await uploadToS3(packageName, id, tarballPath);
-        await rm(packageNamePath, { recursive: true });
-      }
+      pathToTarGz = tarballPath;
+      loosePath = extractPath;
     }
+
+    if (process.env.NODE_ENV === "production") {
+      await uploadToS3(packageName, id, pathToTarGz);
+      await rm(packageNamePath, { recursive: true });
+      if (!process.env.CLI_API_URL) {
+        return { success: false, reason: "CLI API URL not provided" };
+      }
+      const response = await fetch(process.env.CLI_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+      ndjson = (await response.json()).result;
+      assertIsNdjson(ndjson);
+    } else {
+      const execAsync = promisify(exec);
+      const { stdout, stderr } = await execAsync(`./run --url ${url}`, {
+        cwd: path.join(__dirname, "..", "..", "cli")
+      });
+      if (stderr) {
+        return { success: false, reason: stderr };
+      }
+      ndjson = JSON.parse(stdout);
+      assertIsNdjson(ndjson);
+    }
+
+    const score = ndjson.NetScore;
+    if (isNaN(score) || score < 0.5) {
+      return { success: false, reason: "Package score is too low" };
+    }
+
+    dependencies = packageJson.dependencies || {};
+    standaloneCost = (await getFolderSize.loose(loosePath)) / 1024 / 1024;
 
     metadata.byId[id] = {
       packageName,
@@ -167,9 +180,11 @@ export const savePackage = async (
       totalCost: 0,
       costStatus: "pending"
     };
+
     if (!metadata.byName[packageName]) {
       metadata.byName[packageName] = {};
     }
+
     metadata.byName[packageName][version] = {
       id,
       ndjson,
@@ -178,6 +193,7 @@ export const savePackage = async (
       totalCost: 0,
       costStatus: "pending"
     };
+
     await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
     logger.info(
       `Saved package ${packageName} v${version} with ID ${id} and standalone cost ${standaloneCost.toFixed(2)} MB`
@@ -185,7 +201,6 @@ export const savePackage = async (
 
     // Do not await this promise to allow calculation to happen in the background
     calculateTotalPackageCost(packageName, version);
-
     return { success: true };
   } catch (error) {
     await rm(packageIdPath, { recursive: true });
@@ -565,6 +580,27 @@ export const checkIfPackageExists = (id: string) => {
  */
 export const getMetadata = () => {
   return metadata;
+};
+
+/**
+ * Writes the metadata object to the metadata file
+ * @returns write of file
+ */
+export const writeMetadata = () => {
+  return writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+};
+
+/**
+ * Deletes a package from the server
+ * @param id The ID of the package
+ */
+export const clearMetadata = async () => {
+  try {
+    await writeFile(metadataPath, JSON.stringify({ byName: {}, byId: {}, costCache: {} }));
+  } catch (error) {
+    logger.error(`Failed to clear file ${metadataPath}: ${(error as Error).message}`);
+  }
+  loadMetadata();
 };
 
 /**
