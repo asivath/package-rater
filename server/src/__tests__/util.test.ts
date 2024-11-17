@@ -411,6 +411,7 @@ describe("savePackage", () => {
   const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
   it("should save a package from file path and upload to S3 in prod", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CLI_API_URL", "https://test-api.com");
     const packageFilePath = "/path/to/package-file";
 
     vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
@@ -432,13 +433,8 @@ describe("savePackage", () => {
           result: { ...mockNdJson }
         })
       })
-      .mockResolvedValueOnce({
-        ok: true,
-        body: new ReadableStream()
-      });
 
     const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
-
     expect(result.success).toBe(true);
 
     // Update the expectation to match the full paths that are being passed
@@ -465,6 +461,10 @@ describe("savePackage", () => {
     (global.fetch as Mock)
       .mockResolvedValueOnce({
         ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
         json: async () => ({
           success: true,
           result: { ...mockNdJson }
@@ -474,9 +474,9 @@ describe("savePackage", () => {
         ok: true,
         body: new ReadableStream()
       });
+ 
 
     const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
-
     expect(result.success).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
       `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.tgz`
