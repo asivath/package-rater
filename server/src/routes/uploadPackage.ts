@@ -71,10 +71,11 @@ export const uploadPackage = async (
       }
       await rm(uploadedTempDirPath, { recursive: true });
     } else {
-      if (URL.includes("npmjs.com")) {
-        const npmPackageMatch = URL.match(/npmjs\.com\/package\/([^/]+)(?:\/v\/([^/]+))?/);
+      const normalizedURL = URL.replace("www.npmjs.org", "www.npmjs.com");
+      if (normalizedURL.includes("npmjs.com")) {
+        const npmPackageMatch = normalizedURL.match(/npmjs\.com\/package\/([^/]+)(?:\/v\/([^/]+))?/);
         if (!npmPackageMatch) {
-          logger.error(`Invalid npm URL: ${URL}`);
+          logger.error(`Invalid npm URL: ${normalizedURL}`);
           reply.code(400).send({ error: "Invalid npm URL" });
           return;
         }
@@ -93,9 +94,9 @@ export const uploadPackage = async (
         }
         packageName = npmPackageName;
       } else {
-        const details = await getGithubDetails(URL);
+        const details = await getGithubDetails(normalizedURL);
         if (!details) {
-          logger.error(`Invalid Github URL: ${URL}`);
+          logger.error(`Invalid Github URL: ${normalizedURL}`);
           reply.code(400).send({ error: "Invalid Github URL" });
           return;
         }
@@ -108,7 +109,7 @@ export const uploadPackage = async (
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
-      const result = await savePackage(packageName, version, id, debloat, undefined, URL);
+      const result = await savePackage(packageName, version, id, debloat, undefined, normalizedURL);
       if (result.success === false) {
         if (result.reason === "Package score is too low") {
           logger.error(`Package ${packageName} is not uploaded due to the disqualified rating.`);
