@@ -1,0 +1,18 @@
+{
+  "name": "@package-rater/performance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ECE 461 Project Phase 2",
+  "homepage": "https://github.com/asivath/package-rater#readme",
+  "bugs": "https://github.com/asivath/package-rater/issues",
+  "repository": "asivath/package-rater.git",
+  "license": "MIT",
+  "author": "Aditya Sivathanu, Kevin Chang, Ellis Selznick",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "tsx": "^4.19.2",
+    "typescript": "5.5.4"
+  },
+  "packageManager": "yarn@4.5.1"
+}

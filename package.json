@@ -13,7 +13,8 @@
     "app",
     "cli",
     "server",
-    "shared"
+    "shared",
+    "performance"
   ],
   "scripts": {
     "build": "yarn workspaces foreach -A --parallel --topological-dev run build",
