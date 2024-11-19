@@ -2120,6 +2120,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": "npm:^8.3.0"
     "@typescript-eslint/parser": "npm:^8.3.0"
     "@vitest/coverage-istanbul": "npm:2.1.2"
+    cloc: "npm:2.2.0-cloc"
     dotenv: "npm:^16.4.5"
     eslint: "npm:^9.11.1"
     eslint-config-prettier: "npm:^9.1.0"
@@ -3996,6 +3997,15 @@ __metadata:
     strip-ansi: "npm:^6.0.1"
     wrap-ansi: "npm:^7.0.0"
   checksum: 10c0/4bda0f09c340cbb6dfdc1ed508b3ca080f12992c18d68c6be4d9cf51756033d5266e61ec57529e610dacbf4da1c634423b0c1b11037709cc6b09045cbd815df5
+  languageName: node
+  linkType: hard
+
+"cloc@npm:2.2.0-cloc":
+  version: 2.2.0-cloc
+  resolution: "cloc@npm:2.2.0-cloc"
+  bin:
+    cloc: lib/cloc
+  checksum: 10c0/07f07578f826c33bafb7ce076b3ee77375aba2acb1e8a768ebc8717758ffc3e20c1d304ca4293446d7f10be55fa4c8b69d1be9425cfb35120bd4b18e6e4c3f3a
   languageName: node
   linkType: hard
 

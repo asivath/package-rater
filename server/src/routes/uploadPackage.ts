@@ -5,6 +5,7 @@ import { calculatePackageId, checkIfPackageExists, savePackage } from "../util.j
 import { writeFile, readFile, rm, mkdir } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
+import { URL } from "url";
 
 const logger = getLogger("server");
 
@@ -18,7 +19,7 @@ export const uploadPackage = async (
   request: FastifyRequest<{ Body: { Content: string; URL: string; debloat: boolean } }>,
   reply: FastifyReply
 ) => {
-  const { Content, URL, debloat } = request.body;
+  const { Content, URL: packageURL, debloat } = request.body;
   if ((!Content && !URL) || (Content && URL)) {
     reply.code(400).send({
       error:
@@ -71,16 +72,20 @@ export const uploadPackage = async (
       }
       await rm(uploadedTempDirPath, { recursive: true });
     } else {
-      const normalizedURL = URL.replace("www.npmjs.org", "www.npmjs.com");
+      const normalizedURL = packageURL.replace("www.npmjs.org", "www.npmjs.com");
       if (normalizedURL.includes("npmjs.com")) {
-        const npmPackageMatch = normalizedURL.match(/npmjs\.com\/package\/([^/]+)(?:\/v\/([^/]+))?/);
-        if (!npmPackageMatch) {
+        const pathParts = normalizedURL.split("/");
+        const packageIndex = pathParts.indexOf("package");
+        if (packageIndex === -1) {
           logger.error(`Invalid npm URL: ${normalizedURL}`);
           reply.code(400).send({ error: "Invalid npm URL" });
           return;
         }
-        const npmPackageName = npmPackageMatch[1];
-        const npmPackageVersion = npmPackageMatch[2];
+        let npmPackageName = decodeURIComponent(pathParts[packageIndex + 1]);
+        if (npmPackageName.startsWith("@")) {
+          npmPackageName += `/${decodeURIComponent(pathParts[packageIndex + 2])}`;
+        }
+        const npmPackageVersion = pathParts.includes('v') ? pathParts[pathParts.indexOf('v') + 1] : null;
         if (!npmPackageVersion) {
           const npmPackageDetails = await getNpmPackageDetails(npmPackageName);
           if (!npmPackageDetails) {

@@ -1,5 +1,7 @@
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
+import { promisify } from "util";
+import { exec } from "child_process";
 
 const logger = getLogger("cli");
 
@@ -48,90 +50,36 @@ async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
   }
 }
 
-async function calculateLOC(owner: string, repo: string): Promise<number> {
+async function calculateLOC(repoDir: string): Promise<number> {
   try {
-    type TreeEntry = {
-      name: string;
-      type: string;
-      object?: {
-        text?: string;
-        entries?: TreeEntry[];
-      };
-    };
-
-    type RepositoryData = {
-      data: {
-        repository: {
-          object?: {
-            entries?: TreeEntry[];
-          };
-        };
-      };
-    };
-
-    const query = `{
-      repository(owner: "${owner}", name: "${repo}") {
-        object(expression: "HEAD:") {
-          ... on Tree {
-            entries {
-              name
-              type
-              object {
-                ... on Blob {
-                  text
-                }
-                ... on Tree {
-                  entries {
-                    name
-                    type
-                    object {
-                      ... on Blob {
-                        text
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }`;
-    const result = (await getGitHubData(repo, owner, query)) as RepositoryData;
-
-    let totalLines = 0;
-    function countLines(text: string) {
-      return text.split("\n").length;
-    }
-
-    function traverseTree(entries: TreeEntry[]) {
-      if (!entries) return;
-      entries.forEach((entry: TreeEntry) => {
-        if (entry.type === "blob" && entry.object && entry.object.text) {
-          totalLines += countLines(entry.object.text);
-        } else if (entry.type === "tree" && entry.object && entry.object.entries) {
-          traverseTree(entry.object.entries); // Recursively traverse subdirectories
-        }
-      });
-    }
-
-    if (result.data.repository.object && result.data.repository.object.entries) {
-      traverseTree(result.data.repository.object.entries);
-    } else {
-      logger.error("No entries found in the repository object.");
-    }
-
-    logger.info(`Calculated LOC for ${owner}/${repo}: ${totalLines}`);
+    const execAsync = promisify(exec);
+    const { stdout } = await execAsync(`npx cloc --json ${repoDir}`);
+    const clocData = JSON.parse(stdout);
+    const jsLines = clocData.JavaScript?.code || 0;
+    const tsLines = clocData.TypeScript?.code || 0;
+    const totalLines = jsLines + tsLines;
+    logger.info(`Calculated LOC for ${repoDir}: ${totalLines}`);
     return totalLines;
   } catch (error) {
-    logger.error(`Error calculating LOC for ${owner}/${repo}: ${(error as Error).message}`);
+    logger.info(`Error calculating lines of code: ${error}`);
     return 0;
   }
 }
 
-export async function calculateCorrectness(owner: string, repo: string) {
+/**
+ * Calculate the correctness of a repository based on resolved issues and bugs
+ * @param owner 
+ * @param repo 
+ * @param repoDir 
+ * @returns 
+ */
+export async function calculateCorrectness(owner: string, repo: string, repoDir?: string): Promise<number> {
+  if (!repoDir) {
+    logger.error("Repository directory is not defined");
+    return 0;
+  }
   const issuesData = await fetchIssues(owner, repo);
-  const totalLinesOfCode = await calculateLOC(owner, repo);
+  const totalLinesOfCode = await calculateLOC(repoDir);
   const totalIssues = issuesData.data.repository.issues.totalCount;
   const resolvedIssues = issuesData.data.repository.closedIssues.totalCount;
   const totalBugs = issuesData.data.repository.bugIssues.totalCount;

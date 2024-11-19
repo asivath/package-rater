@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { readFile, mkdir, writeFile, rm, cp, access, readdir, stat } from "fs/promises";
+import { readFile, mkdir, writeFile, rm, cp, access, readdir, stat, rmdir } from "fs/promises";
 import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import { exec } from "child_process";
@@ -10,7 +10,7 @@ import { pipeline } from "stream/promises";
 import { assertIsMetadata, Metadata } from "./types.js";
 import { createHash } from "crypto";
 import { tmpdir } from "os";
-import { minVersion, inc, satisfies, parse } from "semver";
+import { satisfies } from "semver";
 import getFolderSize from "get-folder-size";
 import esbuild from "esbuild";
 import path from "path";
@@ -65,24 +65,30 @@ export const savePackage = async (
   if (packageFilePath && url) {
     return { success: false, reason: "Provide either package file path or URL, not both" };
   }
+  const escapedPackageName = packageName.replace("/", "_");
   // Path where packages of the same name are stored e.g. packages/react
-  const packageNamePath = path.join(packagesDirPath, packageName);
+  const packageNamePath = path.join(packagesDirPath, escapedPackageName);
   // Inside the package name directory, each package (different version of the same package) has its own directory with the ID as the name e.g. packages/react/1234567890abcdef
   const packageIdPath = path.join(packageNamePath, id);
+  const cleanupFiles = async () => {
+    await rm(packageIdPath, { recursive: true });
+    if ((await readdir(packageNamePath)).length === 0) {
+      await rmdir(packageNamePath);
+    }
+  }
   try {
     await mkdir(packageIdPath, { recursive: true });
 
-    let ndjson = null;
     let dependencies: { [dependency: string]: string } = {};
     let standaloneCost: number = 0;
-    let pathToTarGz = packageIdPath;
-    let packageJson = null;
-    let loosePath = packageIdPath;
+    let ndjson;
+    let tarBallPath;
+    let packageJson;
     // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
     // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
     if (packageFilePath) {
       // Given file path
-      const targetUploadFilePath = path.join(packageIdPath, packageName);
+      const targetUploadFilePath = path.join(packageIdPath, escapedPackageName);
       await cp(packageFilePath, targetUploadFilePath, { recursive: true });
 
       if (debloat) {
@@ -97,49 +103,55 @@ export const savePackage = async (
         dependencies: { [key: string]: string };
       };
       if (!packageJson.repository || !packageJson.repository.url) {
+        await cleanupFiles();
         return { success: false, reason: "Package score is too low" };
       }
 
       url = packageJson.repository.url;
 
-      const tarGzFilePath = path.join(packageIdPath, `${packageName}.tgz`);
-      await create({ gzip: true, file: tarGzFilePath, cwd: packageIdPath }, [packageName]);
+      tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
+      await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [escapedPackageName]);
       await rm(targetUploadFilePath, { recursive: true });
-
-      pathToTarGz = tarGzFilePath;
-      loosePath = targetUploadFilePath;
     } else {
       // Given a url
-      const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${version}.tgz`;
+      const unscopedName = packageName.startsWith('@') ? packageName.split('/')[1] : packageName;
+      const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${unscopedName}-${version}.tgz`;
       const tarResponse = await fetch(npmTarURL);
       if (!tarResponse.ok || !tarResponse.body) {
+        await cleanupFiles();
         return { success: false, reason: "Failed to fetch package" };
       }
 
-      const tarballPath = path.join(packageIdPath, `${packageName}.tgz`);
-      const tarballStream = createWriteStream(tarballPath);
+      tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
+      const tarballStream = createWriteStream(tarBallPath);
       await pipeline(tarResponse.body, tarballStream);
 
-      await extract({ file: tarballPath, cwd: packageIdPath });
-      const extractPath = path.join(packageIdPath, "package");
+      await extract({ file: tarBallPath, cwd: packageIdPath });
+      const extractedContents = await readdir(packageIdPath);
+      const topLevelDirs = await Promise.all(
+        extractedContents.map(async (content) => {
+          const contentPath = path.join(packageIdPath, content);
+          const stats = await stat(contentPath);
+          return stats.isDirectory() && path.extname(contentPath) !== ".tgz" ? content : null;
+        })
+      );
+      const validDirs = topLevelDirs.filter((dir) => dir !== null);
+      const extractPath = path.join(packageIdPath, validDirs[0]);
 
       if (debloat) {
         await minifyProject(extractPath);
         logger.info(`Finished debloating package ${packageName} v${version}`);
-        await create({ gzip: true, file: tarballPath, cwd: extractPath }, ["."]);
+        await create({ gzip: true, file: tarBallPath, cwd: extractPath }, ["."]);
       }
 
       const packageJsonPath = path.join(extractPath, "package.json");
       packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
 
       await rm(extractPath, { recursive: true });
-
-      pathToTarGz = tarballPath;
-      loosePath = extractPath;
     }
 
     if (process.env.NODE_ENV === "production") {
-      await uploadToS3(packageName, id, pathToTarGz);
+      await uploadToS3(escapedPackageName, id, tarBallPath);
       await rm(packageNamePath, { recursive: true });
       if (!process.env.CLI_API_URL) {
         return { success: false, reason: "CLI API URL not provided" };
@@ -165,11 +177,12 @@ export const savePackage = async (
 
     const score = ndjson.NetScore;
     if (isNaN(score) || score < 0.5) {
+      await cleanupFiles();
       return { success: false, reason: "Package score is too low" };
     }
 
     dependencies = packageJson.dependencies || {};
-    standaloneCost = (await getFolderSize.loose(loosePath)) / 1024 / 1024;
+    standaloneCost = (await getFolderSize.loose(tarBallPath)) / 1024 / 1024;
 
     metadata.byId[id] = {
       packageName,
@@ -200,10 +213,24 @@ export const savePackage = async (
     );
 
     // Do not await this promise to allow calculation to happen in the background
-    calculateTotalPackageCost(packageName, version);
+    calculateTotalPackageCost(packageName, version)
+      .then((cost) => {
+        if (cost === 0) {
+          logger.error(`Failed to calculate total cost of package ${packageName} v${version}`);
+          metadata.byId[id].costStatus = "failed";
+          return;
+        }
+        logger.info(`Calculated total cost of package ${packageName} v${version}: ${cost.toFixed(2)} MB`);
+      })
+      .catch((error) => {
+        logger.error(
+          `Failed to calculate total cost of package ${packageName} v${version}: ${(error as Error).message}`
+        );
+        metadata.byId[id].costStatus = "failed";
+      })
     return { success: true };
   } catch (error) {
-    await rm(packageIdPath, { recursive: true });
+    await cleanupFiles();
     return { success: false, reason: (error as Error).message };
   }
 };
@@ -215,30 +242,23 @@ export const savePackage = async (
  * @returns
  */
 export async function getExactAvailableVersion(packageName: string, versionRange: string): Promise<string | null> {
-  const minResolvedVersion = minVersion(versionRange);
-  if (!minResolvedVersion) return null;
-
   try {
-    let currentVersion = minResolvedVersion;
-    while (satisfies(currentVersion, versionRange)) {
-      const npmUrl = `https://registry.npmjs.org/${packageName}/${currentVersion}`;
-      const response = await fetch(npmUrl);
-      if (response.ok) {
-        return currentVersion.version;
-      }
-      const nextVersionStr = inc(currentVersion, "patch");
-      if (!nextVersionStr) break;
-      const nextVersion = parse(nextVersionStr);
-      if (!nextVersion) break;
-      currentVersion = nextVersion;
+    const response = await fetch(`https://registry.npmjs.org/${packageName}`);
+    if (!response.ok) {
+      logger.error(`Failed to fetch metadata for ${packageName}`);
+      return null;
     }
-  } catch (error) {
-    logger.error(
-      `Failed to fetch exact available version of ${packageName} with version range ${versionRange}: ${(error as Error).message}`
-    );
-  }
 
-  return null;
+    const data = await response.json();
+    const availableVersions = Object.keys(data.versions);
+
+    // Find the first version that satisfies the range
+    const satisfyingVersion = availableVersions.find(version => satisfies(version, versionRange));
+    return satisfyingVersion || null;
+  } catch (error) {
+    logger.error(`Failed to fetch exact available version for ${packageName}: ${(error as Error).message}`);
+    return null;
+  }
 }
 
 type PackageNode = {
@@ -321,7 +341,8 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
       continue;
     }
     try {
-      const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${packageName}-${exactVersion}.tgz`;
+      const unscopedName = packageName.startsWith('@') ? packageName.split('/')[1] : packageName;
+      const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${unscopedName}-${exactVersion}.tgz`;
       const tarResponse = await fetch(npmTarURL);
       if (!tarResponse.ok || !tarResponse.body) {
         logger.error(`Failed to fetch package ${packageName} with version ${exactVersion}`);
@@ -334,14 +355,24 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
         continue;
       }
 
-      const tmpDir = path.join(tmpdir(), `${packageName}-${exactVersion}`);
+      const escapedPackageName = packageName.replace("/", "_");
+      const tmpDir = path.join(tmpdir(), `${escapedPackageName}-${exactVersion}`);
       await mkdir(tmpDir, { recursive: true });
-      const tarballPath = path.join(tmpDir, `${packageName}.tgz`);
+      const tarballPath = path.join(tmpDir, `${escapedPackageName}.tgz`);
       const tarballStream = createWriteStream(tarballPath);
       await pipeline(tarResponse.body, tarballStream);
 
       await extract({ file: tarballPath, cwd: tmpDir });
-      const extractPath = path.join(tmpDir, "package");
+      const extractedContents = await readdir(tmpDir);
+      const topLevelDirs = await Promise.all(
+        extractedContents.map(async (content) => {
+          const contentPath = path.join(tmpDir, content);
+          const stats = await stat(contentPath);
+          return stats.isDirectory() && path.extname(contentPath) !== ".tgz" ? content : null;
+        })
+      );
+      const validDirs = topLevelDirs.filter((dir) => dir !== null);
+      const extractPath = path.join(tmpDir, validDirs[0]);
       const packageJsonPath = path.join(extractPath, "package.json");
       const packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
       const dependencies = Object.entries(packageJson.dependencies || {}).map(([depName, depVersion]) => {
@@ -367,7 +398,7 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
 
       await rm(tmpDir, { recursive: true });
     } catch (error) {
-      logger.error(`Failed to fetch package ${packageName} with version ${exactVersion}: ${(error as Error).message}`);
+      logger.error(`Failed to build graph for ${packageName} with version ${exactVersion}: ${(error as Error).message}`);
       graph.set(id, failedNode);
       metadata.costCache[id] = failedCache;
       continue;
