@@ -70,7 +70,7 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
     const [repoName, repoOwner, gitUrl] = repoInfo;
     const repoDir = await cloneRepo(gitUrl, repoName);
     const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor, dependencies] = await Promise.all([
-      latencyWrapper(() => calculateCorrectness(repoOwner, repoName)),
+      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, repoDir)),
       latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
       latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
       latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
@@ -84,6 +84,7 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
       0.15 * rampUp.result +
       0.2 * responsiveness.result +
       0.26 * licenseCompatibility.result;
+    logger.info(`Calculated NetScore for ${repoOwner}/${repoName}: ${netscore}`);
 
     const ndjsonOutput: Ndjson = {
       URL: url,

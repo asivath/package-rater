@@ -85,13 +85,12 @@ describe("getGithubRepo", () => {
     expect(logger.info).toHaveBeenCalledWith(`Repository successfully cloned to ${expectedRepoDir}`);
     expect(repoDir).toBe(expectedRepoDir);
     expect(mkdirSpy).toHaveBeenCalledWith(expectedRepoDir, { recursive: true });
-    expect(gitClone).toHaveBeenCalledWith(repoUrl, expectedRepoDir);
+    expect(gitClone).toHaveBeenCalledWith(repoUrl, expectedRepoDir, ["--depth", "1"]);
   });
-
   it("should return null if the file path is invalid", async () => {
     const invalidRepoName = "..";
     const repoDir = await cloneRepo(repoUrl, invalidRepoName);
-    expect(repoDir).toBeNull();
+    expect(repoDir).toBeUndefined();
     expect(logger.info).toHaveBeenCalledWith("Invalid file path");
     expect(mkdirSpy).not.toHaveBeenCalled();
   });
@@ -100,7 +99,7 @@ describe("getGithubRepo", () => {
     (simpleGit as Mock).mockReturnValueOnce({ clone: gitClone });
     const repoDir = await cloneRepo(repoUrl, repoName);
 
-    expect(repoDir).toBeNull();
+    expect(repoDir).toBeUndefined();
     expect(logger.error).toHaveBeenCalledWith(`Error cloning repository ${repoUrl}:`, new Error("some other error"));
   });
 });

@@ -121,8 +121,6 @@ const mockMetadataJson = vi.hoisted(() => ({
     }
   }
 }));
-
-// Mocking the dependencies
 vi.mock("@package-rater/shared", async (importOriginal) => {
   const original = await importOriginal<typeof shared>();
   return {
@@ -134,18 +132,16 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
     })
   };
 });
-
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue({
       Body: {
-        transformToString: vi.fn().mockResolvedValue("test-package-data") // Mock the transformToString method
+        transformToString: vi.fn().mockResolvedValue("test-package-data")
       }
-    }) // Mock send method with Body that has transformToString
+    })
   })),
   GetObjectCommand: vi.fn()
 }));
-
 vi.mock("fs/promises", () => ({
   readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
   writeFile: vi.fn().mockResolvedValue(undefined),
@@ -153,15 +149,19 @@ vi.mock("fs/promises", () => ({
   readdir: vi.fn(() => Promise.resolve([])),
   mkdir: vi.fn()
 }));
+vi.mock("node-cache", () => ({
+  default: vi.fn().mockImplementation(() => ({
+    get: vi.fn().mockReturnValue(undefined),
+    set: vi.fn().mockReturnValue(true)
+  }))
+}));
 
 describe("downloadPackage", () => {
-  let fastify;
+  const fastify = Fastify();
+  fastify.get("/packages/:id", downloadPackage);
 
   beforeEach(() => {
-    // Reset the environment variable and Fastify instance before each test
-    process.env.NODE_ENV = "development"; // Default environment
-    fastify = Fastify();
-    fastify.get("/packages/:id", downloadPackage);
+    process.env.NODE_ENV = "development";
     vi.clearAllMocks();
   });
 
@@ -180,7 +180,7 @@ describe("downloadPackage", () => {
   it("should return 404 if package does not exist", async () => {
     const reply = await fastify.inject({
       method: "GET",
-      url: "/packages/id2" // Non-existing package ID
+      url: "/packages/id2"
     });
 
     expect(reply.statusCode).toBe(404);
@@ -190,7 +190,6 @@ describe("downloadPackage", () => {
   });
 
   it("should return 200 with metadata and base64 data when package exists (in development mode)", async () => {
-    // Mock both metadata.json and package data
     vi.mocked(fs.readFile).mockResolvedValueOnce("test-content");
 
     const reply = await fastify.inject({
@@ -205,7 +204,7 @@ describe("downloadPackage", () => {
       Version: "1.0.0",
       ID: "completed-ID"
     });
-    expect(responseData.data.Content).toBe("test-content"); // Base64 encoding of "test-package-data"
+    expect(responseData.data.Content).toBe("test-content");
   });
 
   it("should return 200 with metadata and base64 data when package exists (in production mode)", async () => {
@@ -216,7 +215,6 @@ describe("downloadPackage", () => {
       url: "/packages/completed-ID"
     });
 
-    // Check the return status and ensure the mock worked correctly
     expect(reply.statusCode).toBe(200);
   });
 

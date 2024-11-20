@@ -6,27 +6,9 @@ import { resetPackages } from "../routes/resetPackages";
 import { S3Client } from "@aws-sdk/client-s3";
 import { getLogger } from "@package-rater/shared";
 
-vi.mock("../util.js", async (importOriginal) => {
-  const original = await importOriginal<typeof util>();
-  return {
-    ...original,
-    getMetadata: vi.fn().mockReturnValue({
-      byId: {
-        "completed-ID": {
-          packageName: "completed-package",
-          version: "1.0.0",
-          ndjson: null,
-          dependencies: { "completed-dep": "1.0.0" },
-          standaloneCost: 0.5,
-          totalCost: 1.5,
-          costStatus: "completed"
-        }
-      }
-    }),
-    clearMetadata: vi.fn().mockResolvedValue(undefined) // Mock clearMetadata
-  };
-});
-
+vi.mock("../util", () => ({
+  clearMetadata: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock("@package-rater/shared", async (importOriginal) => {
   const original = await importOriginal<typeof shared>();
   return {
@@ -38,13 +20,16 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
     })
   };
 });
-
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn().mockImplementation(() => ({
     send: vi.fn(() => Promise.resolve({ Contents: [] }))
   })),
   DeleteObjectsCommand: vi.fn(),
   ListObjectsV2Command: vi.fn(() => Promise.resolve({ Contents: ["something"], IsTruncated: false }))
+}));
+vi.mock("fs/promises", () => ({
+  readdir: vi.fn().mockResolvedValue([]),
+  rm: vi.fn().mockResolvedValue(undefined)
 }));
 
 describe("resetPackages", () => {

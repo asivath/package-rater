@@ -49,12 +49,13 @@ export async function findPackageJsonFiles(dir: string): Promise<string[]> {
  * Clone a repository, find all package.json files, and calculate the fraction of pinned dependencies
  * @param owner The owner of the repository
  * @param repo The name of the repository
+ * @param repoDir The path to the cloned repository directory
  * @returns The fraction of pinned dependencies (0.0 to 1.0)
  */
 export async function calculatePinnedDependencyFraction(
   owner: string,
   repo: string,
-  repoDir: string | null
+  repoDir?: string
 ): Promise<number> {
   if (!repoDir) {
     logger.error("Repository directory is not defined");

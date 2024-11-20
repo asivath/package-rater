@@ -11,6 +11,7 @@
   "bin": "./dist/install.js",
   "scripts": {
     "build": "tsc",
+    "dev": "tsc -w",
     "clean": "rm -rf coverage node_modules tsconfig.tsbuildinfo",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
     "quality": "yarn format && yarn lint",
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "@package-rater/shared": "workspace:1.0.0",
+    "cloc": "2.2.0-cloc",
     "dotenv": "^16.4.5",
     "winston": "^3.15.0"
   },

@@ -12,8 +12,8 @@ import * as s3Client from "@aws-sdk/client-s3";
 import * as tar from "tar";
 import * as util from "util";
 import * as esbuild from "esbuild";
-import * as getFolderSize from "get-folder-size";
 import * as fsPromises from "fs/promises";
+import { Dirent } from "fs";
 
 vi.mock("fs/promises", () => ({
   readFile: vi.fn().mockResolvedValue(
@@ -309,9 +309,10 @@ vi.mock("fs/promises", () => ({
   mkdir: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
   cp: vi.fn().mockResolvedValue(undefined),
-  readdir: vi.fn().mockResolvedValue(["file.js"]),
-  stat: vi.fn().mockResolvedValue({ isDirectory: () => false }),
-  access: vi.fn().mockResolvedValue(undefined)
+  readdir: vi.fn().mockResolvedValue(["package/", "file.js"]),
+  stat: vi.fn().mockResolvedValue(undefined),
+  access: vi.fn().mockResolvedValue(undefined),
+  rmdir: vi.fn().mockResolvedValue(undefined)
 }));
 vi.mock("fs", () => ({
   createWriteStream: vi.fn()
@@ -370,15 +371,6 @@ vi.mock("esbuild", async (importOriginal) => {
     }
   };
 });
-vi.mock("get-folder-size", async (importOriginal) => {
-  const original = await importOriginal<typeof getFolderSize>();
-  return {
-    default: {
-      ...original,
-      loose: vi.fn().mockResolvedValue(524288) // 0.5 MB
-    }
-  };
-});
 
 const mockNdJson: shared.Ndjson = {
   URL: "https://www.npmjs.com/package/express",
@@ -397,6 +389,36 @@ const mockNdJson: shared.Ndjson = {
   Dependencies: 0.8,
   Dependencies_Latency: 0.1
 };
+
+function createMockStat(isDirectory: boolean) {
+  return {
+    isDirectory: () => isDirectory,
+    isFile: () => !isDirectory,
+    isBlockDevice: () => false,
+    isCharacterDevice: () => false,
+    isFIFO: () => false,
+    isSocket: () => false,
+    isSymbolicLink: () => false,
+    dev: 0,
+    ino: 0,
+    mode: 0,
+    nlink: 0,
+    uid: 0,
+    gid: 0,
+    rdev: 0,
+    size: 512000,
+    blksize: 0,
+    blocks: 0,
+    atimeMs: 0,
+    mtimeMs: 0,
+    ctimeMs: 0,
+    birthtimeMs: 0,
+    atime: new Date(),
+    mtime: new Date(),
+    ctime: new Date(),
+    birthtime: new Date()
+  };
+}
 
 describe("savePackage", () => {
   const tarSpy = vi.spyOn(tar, "create");
@@ -424,25 +446,22 @@ describe("savePackage", () => {
         }
       })
     );
-
-    (global.fetch as Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          result: { ...mockNdJson }
-        })
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: { ...mockNdJson }
       })
+    });
+    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true));
 
     const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
     expect(result.success).toBe(true);
-
-    // Update the expectation to match the full paths that are being passed
     expect(tarSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         gzip: true,
-        file: expect.stringMatching(/test-package\.tgz$/), // Match the tar file name
-        cwd: expect.stringMatching(/test-package\/8474585353350172/) // Match the directory
+        file: expect.stringMatching(/test-package\.tgz$/),
+        cwd: expect.stringMatching(/test-package\/8474585353350172/)
       }),
       ["test-package"]
     );
@@ -474,9 +493,13 @@ describe("savePackage", () => {
         ok: true,
         body: new ReadableStream()
       });
- 
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false));
 
     const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
+
     expect(result.success).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
       `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.tgz`
@@ -494,6 +517,7 @@ describe("savePackage", () => {
         stderr: null
       });
     });
+    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
 
     const result = await savePackage(
       "test-package",
@@ -540,7 +564,13 @@ describe("savePackage", () => {
 
   it("should debloat the package if debloat is true", async () => {
     const esbuildSpy = (esbuild as unknown as { default: { build: Mock } }).default.build;
-
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
+    vi.mocked(fsPromises.readdir)
+      .mockResolvedValueOnce(["package/"] as unknown as Dirent[])
+      .mockResolvedValueOnce(["package.js"] as unknown as Dirent[]);
     vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
       JSON.stringify({
         name: "test-package",
@@ -565,6 +595,13 @@ describe("savePackage", () => {
       ok: true,
       body: new ReadableStream()
     });
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
+    vi.mocked(fsPromises.readdir)
+      .mockResolvedValueOnce(["package/"] as unknown as Dirent[])
+      .mockResolvedValueOnce(["package.js"] as unknown as Dirent[]);
 
     const result = await savePackage(
       "test-package",
@@ -604,28 +641,38 @@ describe("getExactAvailableVersion", () => {
 
   it("should return the minimum available version within the range", async () => {
     (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true
+      ok: true,
+      json: async () => ({
+        versions: {
+          "1.0.0": {}
+        }
+      })
     });
 
     const result = await getExactAvailableVersion("test-package", "^1.0.0");
     expect(result).toBe("1.0.0");
-    expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/test-package/1.0.0");
+    expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/test-package");
   });
 
   it("should iterate through patch versions until a matching version is found", async () => {
-    (global.fetch as Mock).mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: true });
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        versions: {
+          "1.0.0": {},
+          "1.0.1": {},
+          "1.0.2": {}
+        }
+      })
+    });
 
-    const result = await getExactAvailableVersion("test-package", "^1.0.0");
-    expect(result).toBe("1.0.1");
-    expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/test-package/1.0.0");
-    expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/test-package/1.0.1");
+    const result = await getExactAvailableVersion("test-package", "^1.0.2");
+    expect(result).toBe("1.0.2");
+    expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/test-package");
   });
 
-  it("should return null if all patch versions within the range are unavailable", async () => {
-    (global.fetch as Mock)
-      .mockResolvedValueOnce({ ok: false })
-      .mockResolvedValueOnce({ ok: false })
-      .mockResolvedValueOnce({ ok: false });
+  it("should return null if fetch fails", async () => {
+    (global.fetch as Mock).mockResolvedValueOnce({ ok: false });
 
     const result = await getExactAvailableVersion("test-package", "1.0.0-1.0.3");
     expect(result).toBe(null);
@@ -652,15 +699,6 @@ describe("calculateTotalPackageCost", () => {
   });
 
   it("should calculate and update total cost if costStatus is neither 'completed' nor 'failed'", async () => {
-    (global.fetch as Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        body: new ReadableStream()
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        body: new ReadableStream()
-      });
     const metadata = getMetadata();
 
     const result = await calculateTotalPackageCost("pending-package", "1.0.0");
@@ -681,14 +719,33 @@ describe("calculateTotalPackageCost", () => {
     vi.mocked(fsPromises.readFile)
       .mockResolvedValueOnce(JSON.stringify({ dependencies: { "grandchild-package": "1.0.0" } }))
       .mockResolvedValueOnce(JSON.stringify({ dependencies: {} }));
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
     (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          versions: {
+            "1.0.0": {}
+          }
+        })
+      })
       .mockResolvedValueOnce({
         ok: true,
         body: new ReadableStream()
       })
       .mockResolvedValueOnce({
         ok: true,
-        body: new ReadableStream()
+        json: async () => ({
+          versions: {
+            "1.0.0": {}
+          }
+        })
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -764,16 +821,26 @@ describe("calculateTotalPackageCost", () => {
   });
 
   it("should handle circular dependencies gracefully", async () => {
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true
-    });
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true,
-      body: new ReadableStream()
-    });
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          versions: {
+            "1.0.0": {}
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
     vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
       JSON.stringify({ dependencies: { "recursion-package": "1.0.0", "completed-dep": "1.0.0" } })
     );
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
     const metadata = getMetadata();
 
     const result = await calculateTotalPackageCost("recursion-package", "1.0.0");

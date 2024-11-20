@@ -1,10 +1,10 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import unzipper from "unzipper";
 import { getLogger, cloneRepo } from "@package-rater/shared";
 import { calculatePackageId, checkIfPackageExists, savePackage } from "../util.js";
 import { writeFile, readFile, rm, mkdir } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
+import unzipper from "unzipper";
 
 const logger = getLogger("server");
 
@@ -71,15 +71,20 @@ export const uploadPackage = async (
       }
       await rm(uploadedTempDirPath, { recursive: true });
     } else {
-      if (URL.includes("npmjs.com")) {
-        const npmPackageMatch = URL.match(/npmjs\.com\/package\/([^/]+)(?:\/v\/([^/]+))?/);
-        if (!npmPackageMatch) {
-          logger.error(`Invalid npm URL: ${URL}`);
+      const normalizedURL = URL.replace("www.npmjs.org", "www.npmjs.com");
+      if (normalizedURL.includes("npmjs.com")) {
+        const pathParts = normalizedURL.split("/");
+        const packageIndex = pathParts.indexOf("package");
+        if (packageIndex === -1) {
+          logger.error(`Invalid npm URL: ${normalizedURL}`);
           reply.code(400).send({ error: "Invalid npm URL" });
           return;
         }
-        const npmPackageName = npmPackageMatch[1];
-        const npmPackageVersion = npmPackageMatch[2];
+        let npmPackageName = decodeURIComponent(pathParts[packageIndex + 1]);
+        if (npmPackageName.startsWith("@")) {
+          npmPackageName += `/${decodeURIComponent(pathParts[packageIndex + 2])}`;
+        }
+        const npmPackageVersion = pathParts.includes("v") ? pathParts[pathParts.indexOf("v") + 1] : null;
         if (!npmPackageVersion) {
           const npmPackageDetails = await getNpmPackageDetails(npmPackageName);
           if (!npmPackageDetails) {
@@ -93,9 +98,9 @@ export const uploadPackage = async (
         }
         packageName = npmPackageName;
       } else {
-        const details = await getGithubDetails(URL);
+        const details = await getGithubDetails(normalizedURL);
         if (!details) {
-          logger.error(`Invalid Github URL: ${URL}`);
+          logger.error(`Invalid Github URL: ${normalizedURL}`);
           reply.code(400).send({ error: "Invalid Github URL" });
           return;
         }
@@ -108,7 +113,7 @@ export const uploadPackage = async (
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
-      const result = await savePackage(packageName, version, id, debloat, undefined, URL);
+      const result = await savePackage(packageName, version, id, debloat, undefined, normalizedURL);
       if (result.success === false) {
         if (result.reason === "Package score is too low") {
           logger.error(`Package ${packageName} is not uploaded due to the disqualified rating.`);

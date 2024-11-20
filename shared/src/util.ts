@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs/promises";
 import os from "os";
 
-const logger = getLogger("util");
+const logger = getLogger("shared");
 
 /**
  * Fetches the GitHub repository owner and package name from a provided URL (npm or GitHub)
@@ -13,7 +13,7 @@ const logger = getLogger("util");
  */
 export async function getGithubRepo(url: string): Promise<string | null> {
   const trimmedUrl = url.trim();
-  const npmRegex = /npmjs\.com\/package\/(?<packageName>[^/]+)/;
+  const npmRegex = /npmjs\.com\/package\/(?<packageName>@[^/]+\/[^/]+|[^/]+)/;
   const githubRegex = /github\.com\/(?<owner>[^/]+)\/(?<packageName>[^/]+)/;
   if (trimmedUrl.includes("npmjs.com")) {
     logger.info("Handling NPM URL");
@@ -56,12 +56,12 @@ export async function getGithubRepo(url: string): Promise<string | null> {
  * @param repoName The name of the repository
  * @returns The path to the cloned repository or null if an error occurred
  */
-export async function cloneRepo(repoUrl: string, repoName: string): Promise<string | null> {
+export async function cloneRepo(repoUrl: string, repoName: string): Promise<string | undefined> {
   // Validate the file path directly
   const resolvedPath = path.resolve(repoName);
   if (!path.isAbsolute(resolvedPath) || repoName.includes("..")) {
     logger.info("Invalid file path");
-    return null;
+    return;
   }
 
   const git: SimpleGit = simpleGit();
@@ -72,11 +72,11 @@ export async function cloneRepo(repoUrl: string, repoName: string): Promise<stri
     await fs.rm(repoDir, { recursive: true, force: true });
     await fs.mkdir(repoDir, { recursive: true });
     // Clone the repository with a shallow clone for efficiency
-    await git.clone(repoUrl, repoDir);
+    await git.clone(repoUrl, repoDir, ["--depth", "1"]);
     logger.info(`Repository successfully cloned to ${repoDir}`);
     return repoDir;
   } catch (error) {
     logger.error(`Error cloning repository ${repoUrl}:`, error);
-    return null;
+    return;
   }
 }

@@ -3,6 +3,7 @@ node_modules
 dist
 coverage
 *.txt
+!dependencies.txt
 *.log
 .pnp.*
 .yarn/*
