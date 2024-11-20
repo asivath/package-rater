@@ -48,16 +48,6 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
     });
     return;
   }
-
-  const cacheKey = id;
-  const cachedData = cache.get(cacheKey) as CachedPackage | undefined;
-  if (cachedData) {
-    reply.code(200).send({
-      metadata: { Name: cachedData.Name, Version: cachedData.Version, ID: cachedData.ID },
-      data: { Content: cachedData }
-    });
-    return;
-  }
   const metadataJson = getPackageMetadata();
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);

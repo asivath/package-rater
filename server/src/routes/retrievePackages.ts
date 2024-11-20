@@ -132,6 +132,19 @@ export const retrievePackageByRegEx = async (
 ) => {
   const { RegEx } = request.body;
   const allFlagHeader = request.headers["allflag"] === "true";
+  const offsetHeader = request.headers["offset"] || "0";
+  const limit = 15;
+  let offset = 0;
+
+  if (Array.isArray(offsetHeader)) {
+    offset = parseInt(offsetHeader[0], 10);
+  } else {
+    offset = parseInt(offsetHeader || "0", 10);
+  }
+  if (isNaN(offset) || offset < 0) {
+    reply.code(400).send({ error: "Invalid offset value" });
+    return;
+  }
 
   // There is missing field(s) in the PackageRegEx or it is formed improperly, or is invalid
   if (!RegEx) {
@@ -174,8 +187,8 @@ export const retrievePackageByRegEx = async (
       reply.code(404).send({ error: "No package found under this regex." });
       return;
     }
-
-    reply.code(200).send(packages);
+    const paginatedPackages = packages.slice(offset, offset + limit);
+    reply.code(200).send(paginatedPackages);
   } catch (error) {
     logger.error(`Error fetching packages by RegEx: ${error}`);
     reply.code(500).send({ error: "Server error occurred while fetching packages by RegEx" });

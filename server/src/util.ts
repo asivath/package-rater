@@ -143,7 +143,6 @@ export const savePackage = async (
           }
         }
 
-        
         if (!readmeString) {
           logger.warn(`No README found for package ${packageName} v${version}`);
         }

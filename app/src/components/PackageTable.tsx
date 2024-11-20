@@ -12,7 +12,9 @@ import {
   Paper,
   Snackbar,
   Alert,
-  Typography
+  Typography,
+  Button,
+  CircularProgress
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -133,6 +135,10 @@ export function PackageTable() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState("");
   const [snackBarSeverity, setSnackBarSeverity] = useState<"error" | "warning" | "info" | "success">("warning");
+  const [offset, setOffset] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [searchMode, setSearchMode] = useState<"name" | "regex">("name");
 
   function setSnackBar(message: string, severity: "error" | "warning" | "info" | "success") {
     setSnackBarMessage(message);
@@ -140,12 +146,12 @@ export function PackageTable() {
     setSnackbarOpen(true);
   }
 
-  const fetchViaName = async (searchValue: string, version?: string) => {
+  const fetchViaName = async (searchValue: string, version?: string, fetchOffset = 0) => {
     try {
       version = version || "0.0.0-999999.999999.999999";
       const response = await fetcher("/packages", {
         method: "POST",
-        headers: { offset: "0", allflag: "true", "content-type": "application/json" },
+        headers: { offset: fetchOffset.toString(), allflag: "true", "content-type": "application/json" },
         body: JSON.stringify([{ Version: version, Name: searchValue }])
       });
       const data = await response.json();
@@ -158,9 +164,10 @@ export function PackageTable() {
         }
         groupedData[pkg.Name].push(pkg);
       });
-      if (Object.keys(groupedData).length === 0) {
+      if (Object.keys(groupedData).length === 0 && fetchOffset === 0) {
         setSnackBar("No packages found for the given search term.", "warning");
         setRows({});
+        setHasMore(false);
         return;
       }
 
@@ -168,28 +175,47 @@ export function PackageTable() {
       Object.keys(groupedData).forEach((packageName) => {
         groupedData[packageName].sort((a, b) => parseFloat(b.Version) - parseFloat(a.Version));
       });
-
-      setRows(groupedData);
+      if (fetchOffset === 0) {
+        // First load
+        setRows(groupedData);
+      } else {
+        // Append to existing rows
+        setRows((prevRows) => {
+          const updatedRows = { ...prevRows };
+          Object.keys(groupedData).forEach((packageName) => {
+            if (!updatedRows[packageName]) {
+              updatedRows[packageName] = [];
+            }
+            updatedRows[packageName] = [...updatedRows[packageName], ...groupedData[packageName]];
+          });
+          return updatedRows;
+        });
+      }
+      if (data.length < 15) {
+        setHasMore(false);
+      }
     } catch (error) {
       console.error("Error fetching packages:", error);
       setSnackBar("Error fetching packages.", "error");
     }
   };
 
-  const fetchViaRegex = async (searchValue: string) => {
+  const fetchViaRegex = async (searchValue: string, fetchOffset = 0) => {
     try {
       const response = await fetcher("/package/byRegEx", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          allflag: "true"
+          allflag: "true",
+          offset: fetchOffset.toString()
         },
         body: JSON.stringify({ RegEx: searchValue })
       });
       const data = await response.json();
-      if (response.status === 404) {
+      if (response.status === 404 && fetchOffset === 0) {
         setSnackBar("No packages found for the given search term.", "warning");
         setRows({});
+        setHasMore(false);
         return;
       }
       const groupedData: Record<string, PackageDisplay[]> = {};
@@ -203,7 +229,23 @@ export function PackageTable() {
       Object.keys(groupedData).forEach((packageName) => {
         groupedData[packageName].sort((a, b) => parseFloat(b.Version) - parseFloat(a.Version));
       });
-      setRows(groupedData);
+      if (fetchOffset === 0) {
+        setRows(groupedData);
+      } else {
+        setRows((prevRows) => {
+          const updatedRows = { ...prevRows };
+          Object.keys(groupedData).forEach((packageName) => {
+            if (!updatedRows[packageName]) {
+              updatedRows[packageName] = [];
+            }
+            updatedRows[packageName] = [...updatedRows[packageName], ...groupedData[packageName]];
+          });
+          return updatedRows;
+        });
+      }
+      if (data.length < 15) {
+        setHasMore(false);
+      }
     } catch (error) {
       console.error("Error fetching packages by regex:", error);
       setSnackBar("Error fetching packages.", "error");
@@ -212,12 +254,27 @@ export function PackageTable() {
 
   const onSearch = (searchValue: string, searchByRegex: boolean, version?: string) => {
     setHasSearched(true);
+    setOffset(0);
+    setHasMore(true);
+    setSearchMode(searchByRegex ? "regex" : "name");
     if (searchByRegex) {
       searchValue = searchValue.trim() === "" ? ".*" : searchValue;
       fetchViaRegex(searchValue);
     } else {
       searchValue = searchValue.trim() === "" ? "*" : searchValue;
       fetchViaName(searchValue, version);
+    }
+  };
+
+  const loadMore = () => {
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    const nextOffset = offset + 15;
+    setOffset(nextOffset);
+    if (searchMode === "regex") {
+      fetchViaRegex(".*", nextOffset).finally(() => setIsLoadingMore(false));
+    } else {
+      fetchViaName("*", undefined, nextOffset).finally(() => setIsLoadingMore(false));
     }
   };
 
@@ -249,6 +306,19 @@ export function PackageTable() {
             </TableBody>
           </Table>
         </TableContainer>
+        <Box sx={{ textAlign: "center", marginTop: 2 }}>
+          {hasMore && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              startIcon={isLoadingMore && <CircularProgress size={20} color="inherit" />}
+              sx={{ marginBottom: 2, textTransform: "none", padding: "8px 16px", fontSize: "1rem" }}>
+              {isLoadingMore ? "Loading..." : "Load More"}
+            </Button>
+          )}
+        </Box>
       </Collapse>
     </>
   );
