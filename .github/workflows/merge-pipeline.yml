@@ -109,7 +109,7 @@ jobs:
         run: yarn
 
       - name: Install Playwright dependencies
-        run: yarn dlx playwright install --with-deps
+        run: yarn dlx playwright@1.48.0 install --with-deps
 
       - name: Build the project
         id: build
