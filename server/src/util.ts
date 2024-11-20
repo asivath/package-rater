@@ -11,7 +11,6 @@ import { assertIsMetadata, Metadata } from "./types.js";
 import { createHash } from "crypto";
 import { tmpdir } from "os";
 import { satisfies } from "semver";
-import getFolderSize from "get-folder-size";
 import esbuild from "esbuild";
 import path from "path";
 import "dotenv/config";
@@ -182,7 +181,7 @@ export const savePackage = async (
     }
 
     dependencies = packageJson.dependencies || {};
-    standaloneCost = (await getFolderSize.loose(tarBallPath)) / 1024 / 1024;
+    standaloneCost = (await stat(tarBallPath)).size / (1024 * 1000);
 
     metadata.byId[id] = {
       packageName,
@@ -358,11 +357,11 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
       const escapedPackageName = packageName.replace("/", "_");
       const tmpDir = path.join(tmpdir(), `${escapedPackageName}-${exactVersion}`);
       await mkdir(tmpDir, { recursive: true });
-      const tarballPath = path.join(tmpDir, `${escapedPackageName}.tgz`);
-      const tarballStream = createWriteStream(tarballPath);
+      const tarBallPath = path.join(tmpDir, `${escapedPackageName}.tgz`);
+      const tarballStream = createWriteStream(tarBallPath);
       await pipeline(tarResponse.body, tarballStream);
 
-      await extract({ file: tarballPath, cwd: tmpDir });
+      await extract({ file: tarBallPath, cwd: tmpDir });
       const extractedContents = await readdir(tmpDir);
       const topLevelDirs = await Promise.all(
         extractedContents.map(async (content) => {
@@ -385,7 +384,7 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
         id,
         packageName,
         version,
-        standaloneCost: (await getFolderSize.loose(extractPath)) / 1024 / 1024,
+        standaloneCost: (await stat(tarBallPath)).size / (1024 * 1000),
         totalCost: 0,
         dependencies
       };

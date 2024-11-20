@@ -12,7 +12,6 @@ import * as s3Client from "@aws-sdk/client-s3";
 import * as tar from "tar";
 import * as util from "util";
 import * as esbuild from "esbuild";
-import * as getFolderSize from "get-folder-size";
 import * as fsPromises from "fs/promises";
 import { Dirent } from "fs";
 
@@ -372,15 +371,6 @@ vi.mock("esbuild", async (importOriginal) => {
     }
   };
 });
-vi.mock("get-folder-size", async (importOriginal) => {
-  const original = await importOriginal<typeof getFolderSize>();
-  return {
-    default: {
-      ...original,
-      loose: vi.fn().mockResolvedValue(524288) // 0.5 MB
-    }
-  };
-});
 
 const mockNdJson: shared.Ndjson = {
   URL: "https://www.npmjs.com/package/express",
@@ -416,7 +406,7 @@ function createMockStat(isDirectory: boolean) {
     uid: 0,
     gid: 0,
     rdev: 0,
-    size: 0,
+    size: 512000,
     blksize: 0,
     blocks: 0,
     atimeMs: 0,
@@ -463,6 +453,7 @@ describe("savePackage", () => {
         result: { ...mockNdJson }
       })
     });
+    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true));
 
     const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
     expect(result.success).toBe(true);
@@ -502,7 +493,10 @@ describe("savePackage", () => {
         ok: true,
         body: new ReadableStream()
       });
-    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false));
 
     const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
 
@@ -570,7 +564,10 @@ describe("savePackage", () => {
 
   it("should debloat the package if debloat is true", async () => {
     const esbuildSpy = (esbuild as unknown as { default: { build: Mock } }).default.build;
-    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
     vi.mocked(fsPromises.readdir)
       .mockResolvedValueOnce(["package/"] as unknown as Dirent[])
       .mockResolvedValueOnce(["package.js"] as unknown as Dirent[]);
@@ -598,7 +595,10 @@ describe("savePackage", () => {
       ok: true,
       body: new ReadableStream()
     });
-    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
     vi.mocked(fsPromises.readdir)
       .mockResolvedValueOnce(["package/"] as unknown as Dirent[])
       .mockResolvedValueOnce(["package.js"] as unknown as Dirent[]);
@@ -723,7 +723,9 @@ describe("calculateTotalPackageCost", () => {
       .mockResolvedValueOnce(createMockStat(true))
       .mockResolvedValueOnce(createMockStat(false))
       .mockResolvedValueOnce(createMockStat(true))
-      .mockResolvedValueOnce(createMockStat(false));
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
     (global.fetch as Mock)
       .mockResolvedValueOnce({
         ok: true,
@@ -835,7 +837,10 @@ describe("calculateTotalPackageCost", () => {
     vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
       JSON.stringify({ dependencies: { "recursion-package": "1.0.0", "completed-dep": "1.0.0" } })
     );
-    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
     const metadata = getMetadata();
 
     const result = await calculateTotalPackageCost("recursion-package", "1.0.0");
