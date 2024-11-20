@@ -151,7 +151,6 @@ export const savePackage = async (
 
     if (process.env.NODE_ENV === "production") {
       await uploadToS3(escapedPackageName, id, tarBallPath);
-      await rm(packageNamePath, { recursive: true });
       if (!process.env.CLI_API_URL) {
         return { success: false, reason: "CLI API URL not provided" };
       }
@@ -210,6 +209,10 @@ export const savePackage = async (
     logger.info(
       `Saved package ${packageName} v${version} with ID ${id} and standalone cost ${standaloneCost.toFixed(2)} MB`
     );
+
+    if (process.env.NODE_ENV === "production") {
+      await cleanupFiles();
+    }
 
     // Do not await this promise to allow calculation to happen in the background
     calculateTotalPackageCost(packageName, version)
