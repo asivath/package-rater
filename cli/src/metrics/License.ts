@@ -86,7 +86,7 @@ const compatibilityTable = new Map([
  * @param repoDir The path to the cloned repository directory.
  * @returns The compatibility score based on the license.
  */
-export async function calculateLicense(owner: string, repo: string, repoDir: string | null): Promise<number> {
+export async function calculateLicense(owner: string, repo: string, repoDir?: string): Promise<number> {
   if (!repoDir) {
     logger.error("Repository directory is not defined");
     return 0;

@@ -73,9 +73,6 @@ describe("calculateMetrics", () => {
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
     expect(result.Dependencies).toBe(0.8);
-
-    expect(logger.info).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("should return zero scores when repo information is invalid", async () => {

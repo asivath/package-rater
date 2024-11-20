@@ -1,19 +1,27 @@
 import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
+import { dirname, join } from "path";
 import { readFile } from "fs/promises";
-import path from "path";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getPackageMetadata } from "../util.js";
+import NodeCache from "node-cache";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const packagesDirPath = path.join(__dirname, "..", "..", "packages");
+const packagesDirPath = join(__dirname, "..", "..", "packages");
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
+
+type CachedPackage = {
+  Name: string;
+  Version: string;
+  ID: string;
+  Content: string;
+};
+const cache = new NodeCache({ stdTTL: 60 * 60 });
 
 /**
  * Downloads a package from the server
@@ -31,6 +39,25 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
     return;
   }
 
+  const cacheKey = id;
+  const cachedData = cache.get(cacheKey) as CachedPackage | undefined;
+  if (cachedData) {
+    reply.code(200).send({
+      metadata: { Name: cachedData.Name, Version: cachedData.Version, ID: cachedData.ID },
+      data: { Content: cachedData }
+    });
+    return;
+  }
+
+  const cacheKey = id;
+  const cachedData = cache.get(cacheKey) as CachedPackage | undefined;
+  if (cachedData) {
+    reply.code(200).send({
+      metadata: { Name: cachedData.Name, Version: cachedData.Version, ID: cachedData.ID },
+      data: { Content: cachedData }
+    });
+    return;
+  }
   const metadataJson = getPackageMetadata();
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);
@@ -42,7 +69,6 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
   const version: string = metadataJson.byId[id].version;
 
   let streamToString = "";
-
   try {
     if (process.env.NODE_ENV === "production") {
       const params = {
@@ -57,15 +83,15 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
         return;
       }
 
-      // Convert stream to string
       streamToString = await data.Body.transformToString("base64");
     } else {
-      const packagePath = path.join(packagesDirPath, name, id, `${name}.tgz`);
+      const packagePath = join(packagesDirPath, name, id, `${name}.tgz`);
       const data = await readFile(packagePath);
       streamToString = data.toString("base64");
     }
 
-    // Send response metadata
+    cache.set(cacheKey, { Name: name, Version: version, ID: id, Content: streamToString });
+
     reply.code(200).send({
       metadata: {
         Name: name,
