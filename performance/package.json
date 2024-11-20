@@ -14,5 +14,8 @@
     "tsx": "^4.19.2",
     "typescript": "5.5.4"
   },
-  "packageManager": "yarn@4.5.1"
+  "packageManager": "yarn@4.5.1",
+  "dependencies": {
+    "p-limit": "^6.1.0"
+  }
 }

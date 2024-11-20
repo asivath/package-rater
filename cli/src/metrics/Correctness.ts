@@ -61,17 +61,17 @@ async function calculateLOC(repoDir: string): Promise<number> {
     logger.info(`Calculated LOC for ${repoDir}: ${totalLines}`);
     return totalLines;
   } catch (error) {
-    logger.info(`Error calculating lines of code: ${error}`);
+    logger.error(`Error calculating LOC for ${repoDir}: ${(error as Error).message}`);
     return 0;
   }
 }
 
 /**
  * Calculate the correctness of a repository based on resolved issues and bugs
- * @param owner 
- * @param repo 
- * @param repoDir 
- * @returns 
+ * @param owner
+ * @param repo
+ * @param repoDir
+ * @returns
  */
 export async function calculateCorrectness(owner: string, repo: string, repoDir?: string): Promise<number> {
   if (!repoDir) {

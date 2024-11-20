@@ -25,7 +25,7 @@ try {
   await access(metadataPath);
 } catch {
   await mkdir(path.dirname(metadataPath), { recursive: true });
-  await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }, null, 2));
+  await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }));
 }
 
 let metadata: Metadata;
@@ -75,7 +75,7 @@ export const savePackage = async (
     if ((await readdir(packageNamePath)).length === 0) {
       await rmdir(packageNamePath);
     }
-  }
+  };
   try {
     await mkdir(packageIdPath, { recursive: true });
 
@@ -114,7 +114,7 @@ export const savePackage = async (
       await rm(targetUploadFilePath, { recursive: true });
     } else {
       // Given a url
-      const unscopedName = packageName.startsWith('@') ? packageName.split('/')[1] : packageName;
+      const unscopedName = packageName.startsWith("@") ? packageName.split("/")[1] : packageName;
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${unscopedName}-${version}.tgz`;
       const tarResponse = await fetch(npmTarURL);
       if (!tarResponse.ok || !tarResponse.body) {
@@ -207,7 +207,7 @@ export const savePackage = async (
       costStatus: "pending"
     };
 
-    await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+    await writeFile(metadataPath, JSON.stringify(metadata));
     logger.info(
       `Saved package ${packageName} v${version} with ID ${id} and standalone cost ${standaloneCost.toFixed(2)} MB`
     );
@@ -227,7 +227,7 @@ export const savePackage = async (
           `Failed to calculate total cost of package ${packageName} v${version}: ${(error as Error).message}`
         );
         metadata.byId[id].costStatus = "failed";
-      })
+      });
     return { success: true };
   } catch (error) {
     await cleanupFiles();
@@ -253,7 +253,7 @@ export async function getExactAvailableVersion(packageName: string, versionRange
     const availableVersions = Object.keys(data.versions);
 
     // Find the first version that satisfies the range
-    const satisfyingVersion = availableVersions.find(version => satisfies(version, versionRange));
+    const satisfyingVersion = availableVersions.find((version) => satisfies(version, versionRange));
     return satisfyingVersion || null;
   } catch (error) {
     logger.error(`Failed to fetch exact available version for ${packageName}: ${(error as Error).message}`);
@@ -341,7 +341,7 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
       continue;
     }
     try {
-      const unscopedName = packageName.startsWith('@') ? packageName.split('/')[1] : packageName;
+      const unscopedName = packageName.startsWith("@") ? packageName.split("/")[1] : packageName;
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${unscopedName}-${exactVersion}.tgz`;
       const tarResponse = await fetch(npmTarURL);
       if (!tarResponse.ok || !tarResponse.body) {
@@ -398,7 +398,9 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
 
       await rm(tmpDir, { recursive: true });
     } catch (error) {
-      logger.error(`Failed to build graph for ${packageName} with version ${exactVersion}: ${(error as Error).message}`);
+      logger.error(
+        `Failed to build graph for ${packageName} with version ${exactVersion}: ${(error as Error).message}`
+      );
       graph.set(id, failedNode);
       metadata.costCache[id] = failedCache;
       continue;
@@ -590,7 +592,7 @@ export async function calculateTotalPackageCost(packageName: string, version: st
     return 0;
   } finally {
     packageCostPromisesMap.delete(id);
-    await writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+    await writeFile(metadataPath, JSON.stringify(metadata));
     const end = Date.now();
     logger.info(`Calculated total cost of package ${id} in ${((end - start) / 1000).toFixed(2)} seconds`);
   }
@@ -618,7 +620,7 @@ export const getMetadata = () => {
  * @returns write of file
  */
 export const writeMetadata = () => {
-  return writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+  return writeFile(metadataPath, JSON.stringify(metadata));
 };
 
 /**

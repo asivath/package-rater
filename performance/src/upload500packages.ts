@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import pLimit from "p-limit";
 
 const LOCAL_API_URL = "http://localhost:3000/package";
 const EC2_API_URL = "http://ec2-18-189-102-87.us-east-2.compute.amazonaws.com:3000/package";
@@ -20,38 +21,39 @@ function parsePackageUrlsFromFile(filePath: string): string[] {
   return packageUrls;
 }
 
-async function callApiForPackages(packageUrls: string[]) {
-  const failures: { url: string; error: string }[] = []; // Collect failures
+async function callApiForPackages(packageUrls: string[], concurrency = 10) {
+  const limit = pLimit(concurrency);
+  const failures: { url: string; error: string }[] = [];
 
-  for (const packageUrl of packageUrls) {
-    try {
-      const response = await fetch(LOCAL_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ URL: packageUrl, debloat: false }),
-      });
+  const tasks = packageUrls.map(packageUrl =>
+    limit(async () => {
+      try {
+        const response = await fetch(LOCAL_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ URL: packageUrl, debloat: false }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log(`Success for ${packageUrl}:`, responseData);
+      } catch (error) {
+        console.error(`Error for ${packageUrl}:`, error);
+        failures.push({ url: packageUrl, error: (error as Error).message });
       }
+    })
+  );
 
-      const responseData = await response.json();
-      console.log(`Success for ${packageUrl}:`, responseData);
-    } catch (error) {
-      console.error(`Error for ${packageUrl}:`, error);
-      failures.push({ url: packageUrl, error: error instanceof Error ? error.message : String(error) });
-    }
-  }
+  await Promise.all(tasks);
 
   if (failures.length > 0) {
-    console.log("\nFailures:");
-    failures.forEach(({ url, error }) => {
-      console.log(`- ${url}: ${error}`);
-    });
+    console.log("\nFailures:", failures);
   }
 }
+
 
 async function main() {
   const filePath = path.resolve("./dependencies.txt");
