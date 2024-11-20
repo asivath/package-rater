@@ -820,21 +820,22 @@ describe("calculateTotalPackageCost", () => {
 
   it("should handle circular dependencies gracefully", async () => {
     (global.fetch as Mock)
-    .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        versions: {
-          "1.0.0": {}
-        }
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          versions: {
+            "1.0.0": {}
+          }
+        })
       })
-    }).mockResolvedValueOnce({
-      ok: true,
-      body: new ReadableStream()
-    });
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
     vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
       JSON.stringify({ dependencies: { "recursion-package": "1.0.0", "completed-dep": "1.0.0" } })
     );
-    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false))
+    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
     const metadata = getMetadata();
 
     const result = await calculateTotalPackageCost("recursion-package", "1.0.0");

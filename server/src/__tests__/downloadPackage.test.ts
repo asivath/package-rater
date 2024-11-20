@@ -132,7 +132,6 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
     })
   };
 });
-
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue({
@@ -143,7 +142,6 @@ vi.mock("@aws-sdk/client-s3", () => ({
   })),
   GetObjectCommand: vi.fn()
 }));
-
 vi.mock("fs/promises", () => ({
   readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
   writeFile: vi.fn().mockResolvedValue(undefined),
@@ -151,14 +149,19 @@ vi.mock("fs/promises", () => ({
   readdir: vi.fn(() => Promise.resolve([])),
   mkdir: vi.fn()
 }));
+vi.mock("node-cache", () => ({
+  default: vi.fn().mockImplementation(() => ({
+    get: vi.fn().mockReturnValue(undefined),
+    set: vi.fn().mockReturnValue(true)
+  }))
+}));
 
 describe("downloadPackage", () => {
-  let fastify;
+  const fastify = Fastify();
+  fastify.get("/packages/:id", downloadPackage);
 
   beforeEach(() => {
     process.env.NODE_ENV = "development";
-    fastify = Fastify();
-    fastify.get("/packages/:id", downloadPackage);
     vi.clearAllMocks();
   });
 

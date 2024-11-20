@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 import pLimit from "p-limit";
+import ora from "ora";
+import chalk from "chalk";
 
 const LOCAL_API_URL = "http://localhost:3000/package";
 const EC2_API_URL = "http://ec2-18-189-102-87.us-east-2.compute.amazonaws.com:3000/package";
@@ -25,7 +27,9 @@ async function callApiForPackages(packageUrls: string[], concurrency = 10) {
   const limit = pLimit(concurrency);
   const failures: { url: string; error: string }[] = [];
 
-  const tasks = packageUrls.map(packageUrl =>
+  const spinner = ora(chalk.blue("Processing packages...")).start();
+
+  const tasks = packageUrls.map((packageUrl, index) =>
     limit(async () => {
       try {
         const response = await fetch(LOCAL_API_URL, {
@@ -38,29 +42,43 @@ async function callApiForPackages(packageUrls: string[], concurrency = 10) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const responseData = await response.json();
-        console.log(`Success for ${packageUrl}:`, responseData);
+        spinner.text = chalk.green(`(${index + 1}/${packageUrls.length}) Success: ${packageUrl}`);
       } catch (error) {
-        console.error(`Error for ${packageUrl}:`, error);
+        spinner.text = chalk.red(`(${index + 1}/${packageUrls.length}) Error: ${packageUrl}`);
         failures.push({ url: packageUrl, error: (error as Error).message });
       }
     })
   );
 
   await Promise.all(tasks);
+  spinner.stop();
 
   if (failures.length > 0) {
-    console.log("\nFailures:", failures);
+    console.log(chalk.red("\nFailures:"));
+    failures.forEach(({ url, error }) => {
+      console.log(chalk.yellow(`- ${url}`), chalk.redBright(`Error: ${error}`));
+    });
+  } else {
+    console.log(chalk.green("\nAll packages processed successfully!"));
   }
 }
 
-
 async function main() {
   const filePath = path.resolve("./dependencies.txt");
-  const packageUrls = parsePackageUrlsFromFile(filePath).slice(0, 500);
+  const spinner = ora(chalk.blue("Reading package URLs from file...")).start();
 
-  console.log(`Found ${packageUrls.length} package URLs. Calling API for each...`);
-  await callApiForPackages(packageUrls);
+  try {
+    const packageUrls = parsePackageUrlsFromFile(filePath).slice(0, 500);
+    spinner.succeed(chalk.green(`Found ${packageUrls.length} package URLs.`));
+    console.log(chalk.blue(`Calling API for ${packageUrls.length} packages...\n`));
+
+    await callApiForPackages(packageUrls);
+  } catch (error) {
+    spinner.fail(chalk.red("Failed to read or process packages."));
+    console.error(chalk.redBright("Unexpected error:"), error);
+  }
 }
 
-main().catch((error) => console.error("Unexpected error:", error));
+main().catch((error) =>
+  console.error(chalk.redBright("Unexpected error during execution:"), error)
+);

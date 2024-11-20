@@ -27,6 +27,7 @@
     "esbuild": "^0.24.0",
     "fastify": "^5.0.0",
     "get-folder-size": "^5.0.0",
+    "node-cache": "^5.1.2",
     "p-queue": "^8.0.1",
     "pm2": "^5.4.2",
     "semver": "^7.6.3",

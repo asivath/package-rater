@@ -20,7 +20,7 @@ vi.mock("util", () => ({
     return vi.fn().mockResolvedValue({
       stdout: JSON.stringify({
         JavaScript: { code: 1000 },
-        TypeScript: { code: 500 },
+        TypeScript: { code: 500 }
       })
     });
   })
