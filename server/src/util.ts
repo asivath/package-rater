@@ -212,7 +212,6 @@ export const savePackage = async (
     }
 
     if (process.env.NODE_ENV === "production") {
-      await uploadToS3(escapedPackageName, id, tarBallPath);
       if (!process.env.CLI_API_URL) {
         return { success: false, reason: "CLI API URL not provided" };
       }
@@ -274,6 +273,7 @@ export const savePackage = async (
     );
 
     if (process.env.NODE_ENV === "production") {
+      await uploadToS3(escapedPackageName, id, tarBallPath);
       await cleanupFiles();
     }
 

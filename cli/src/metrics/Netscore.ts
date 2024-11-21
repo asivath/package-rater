@@ -6,6 +6,7 @@ import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { calculatePinnedDependencyFraction } from "./Dependencies.js";
 import { cloneRepo, Ndjson, assertIsNdjson } from "@package-rater/shared";
+import { rm } from "fs/promises";
 
 const logger = getLogger("cli");
 
@@ -106,6 +107,8 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
       Dependencies_Latency: parseFloat(dependencies.time.toFixed(2))
     };
     assertIsNdjson(ndjsonOutput);
+
+    if (repoDir) await rm(repoDir, { recursive: true });
 
     return ndjsonOutput;
   } catch (error) {
