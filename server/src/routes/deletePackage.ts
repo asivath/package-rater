@@ -5,7 +5,7 @@ import path from "path";
 import { getLogger } from "@package-rater/shared";
 import { S3Client, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { rm, readdir } from "fs/promises";
-import { getMetadata, writeMetadata } from "../util.js";
+import { getPackageMetadata, writeMetadata } from "../util.js";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
@@ -25,7 +25,7 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
   const id = request.params.id;
 
   try {
-    const metadataJson = getMetadata();
+    const metadataJson = getPackageMetadata();
 
     if (!metadataJson.byId[id]) {
       logger.info(`Package with ID ${id} does not exist.`);

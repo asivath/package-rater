@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b",
-    "clean": "rm -rf tsconfig.tsbuildinfo coverage node_modules packages",
+    "clean": "rm -rf tsconfig.tsbuildinfo coverage node_modules",
     "dev": "concurrently \"tsc -b -w\" \"nodemon --watch dist dist/index.js\"",
     "lint": "eslint '**/*.{ts,mjs,json}' --fix",
     "restart": "pm2 restart dist/index.js",

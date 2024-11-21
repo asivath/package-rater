@@ -8,7 +8,7 @@ vi.mock("../util.js", async (importOriginal) => {
   const original = await importOriginal<typeof util>();
   return {
     ...original,
-    getMetadata: vi.fn().mockReturnValue({
+    getPackageMetadata: vi.fn().mockReturnValue({
       byId: {
         "completed-ID": {
           packageName: "completed-package",

@@ -1,4 +1,4 @@
-import { SearchBar, NavBar, UploadPackageForm } from "./components";
+import { NavBar, PackageTable } from "./components";
 import { Box } from "@mui/material";
 
 function App() {
@@ -7,10 +7,7 @@ function App() {
       <Box position="sticky" top={0} width="100%" zIndex={1000}>
         <NavBar />
       </Box>
-      <Box display="flex" flexDirection="column" flex="1" alignItems="center" justifyContent="center" width="50%">
-        <SearchBar onSearch={(searchValue) => console.error(searchValue)} />
-        <UploadPackageForm />
-      </Box>
+      <PackageTable />
     </Box>
   );
 }

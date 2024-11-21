@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { readFile } from "fs/promises";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getMetadata } from "../util.js";
+import { getPackageMetadata } from "../util.js";
 import NodeCache from "node-cache";
 
 const logger = getLogger("server");
@@ -48,8 +48,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
     });
     return;
   }
-
-  const metadataJson = getMetadata();
+  const metadataJson = getPackageMetadata();
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);
     reply.code(404).send({ error: "Package does not exist" });

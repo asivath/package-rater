@@ -23,6 +23,43 @@ export type PackageCostResponse = {
   };
 };
 
+export type PackageDisplay = {
+  Name: string;
+  Version: string;
+  ID: string;
+  NetScore?: number | "N/A";
+  StandaloneCost?: number;
+  TotalCost?: number;
+  CostStatus?: string;
+};
+
+export function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
+  if (!o || typeof o !== "object") {
+    throw new Error("Expected PackageDisplay to be an object");
+  }
+  if (typeof o.Name !== "string") {
+    throw new Error(`Expected PackageDisplay.Name to be a string, but got ${typeof o.Name}`);
+  }
+  if (typeof o.Version !== "string") {
+    throw new Error(`Expected PackageDisplay.Version to be a string, but got ${typeof o.Version}`);
+  }
+  if (typeof o.ID !== "string") {
+    throw new Error(`Expected PackageDisplay.ID to be a string, but got ${typeof o.ID}`);
+  }
+  if (o.NetScore !== undefined && typeof o.NetScore !== "number" && o.NetScore !== "N/A") {
+    throw new Error(`Expected PackageDisplay.NetScore to be a number or 'N/A', but got ${typeof o.NetScore}`);
+  }
+  if (o.StandaloneCost !== undefined && typeof o.StandaloneCost !== "number") {
+    throw new Error(`Expected PackageDisplay.StandaloneCost to be a number, but got ${typeof o.StandaloneCost}`);
+  }
+  if (o.TotalCost !== undefined && typeof o.TotalCost !== "number") {
+    throw new Error(`Expected PackageDisplay.TotalCost to be a number, but got ${typeof o.TotalCost}`);
+  }
+  if (o.CostStatus !== undefined && typeof o.CostStatus !== "string") {
+    throw new Error(`Expected PackageDisplay.CostStatus to be a string, but got ${typeof o.CostStatus}`);
+  }
+}
+
 export function assertIsPackageCostResponse(o: any): asserts o is PackageCostResponse {
   if (!o || typeof o !== "object") {
     throw new Error("PackageCostResponse is not an object");

@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { getMetadata, calculateTotalPackageCost, calculatePackageId } from "../util.js";
+import { getPackageMetadata, calculateTotalPackageCost, calculatePackageId } from "../util.js";
 import { assertIsPackageCostResponse, getLogger, PackageCostResponse } from "@package-rater/shared";
 
 const logger = getLogger("server");
@@ -20,7 +20,7 @@ export const getPackageCost = async (
   const { id } = request.params;
   const { dependency = false } = request.query;
 
-  const metadata = getMetadata();
+  const metadata = getPackageMetadata();
   const packageMetadata = metadata.byId[id];
   if (!packageMetadata) {
     reply.code(404).send({ error: "Package not found" });

@@ -85,6 +85,8 @@ export const savePackage = async (
     let packageJson;
     // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
     // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
+    let readmeString: string | undefined;
+
     if (packageFilePath) {
       // Given file path
       const targetUploadFilePath = path.join(packageIdPath, escapedPackageName);
@@ -107,6 +109,46 @@ export const savePackage = async (
       }
 
       url = packageJson.repository.url;
+
+      try {
+        const files = await readdir(targetUploadFilePath);
+        const readmeRegex = /^readme/i;
+
+        for (const file of files) {
+          if (readmeRegex.test(file)) {
+            const readmeFilePath = path.join(targetUploadFilePath, file);
+            readmeString = await readFile(readmeFilePath, "utf-8");
+            logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+            break;
+          }
+        }
+
+        if (!readmeString) {
+          logger.warn(`No README found for package ${packageName} v${version}`);
+        }
+      } catch (error) {
+        logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
+      }
+
+      try {
+        const files = await readdir(targetUploadFilePath);
+        const readmeRegex = /^readme/i;
+
+        for (const file of files) {
+          if (readmeRegex.test(file)) {
+            const readmeFilePath = path.join(targetUploadFilePath, file);
+            readmeString = await readFile(readmeFilePath, "utf-8");
+            logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+            break;
+          }
+        }
+
+        if (!readmeString) {
+          logger.warn(`No README found for package ${packageName} v${version}`);
+        }
+      } catch (error) {
+        logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
+      }
 
       tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
       await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [escapedPackageName]);
@@ -145,6 +187,26 @@ export const savePackage = async (
 
       const packageJsonPath = path.join(extractPath, "package.json");
       packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
+
+      try {
+        const files = await readdir(extractPath);
+        const readmeRegex = /^readme/i;
+
+        for (const file of files) {
+          if (readmeRegex.test(file)) {
+            const readmeFilePath = path.join(extractPath, file);
+            readmeString = await readFile(readmeFilePath, "utf-8");
+            logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+            break;
+          }
+        }
+
+        if (!readmeString) {
+          logger.warn(`No README found for package ${packageName} v${version}`);
+        }
+      } catch (error) {
+        logger.error(`Error reading files in directory ${extractPath}: ${(error as Error).message}`);
+      }
 
       await rm(extractPath, { recursive: true });
     }
@@ -202,7 +264,8 @@ export const savePackage = async (
       dependencies,
       standaloneCost,
       totalCost: 0,
-      costStatus: "pending"
+      costStatus: "pending",
+      readme: readmeString
     };
 
     await writeFile(metadataPath, JSON.stringify(metadata));
@@ -613,7 +676,7 @@ export const checkIfPackageExists = (id: string) => {
  * Gets the metadata object
  * @returns The metadata object
  */
-export const getMetadata = () => {
+export const getPackageMetadata = () => {
   return metadata;
 };
 

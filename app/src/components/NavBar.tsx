@@ -1,6 +1,7 @@
 import { AppBar, Toolbar, Typography, Box, Avatar } from "@mui/material";
 import { ResetButton } from "./ResetButton";
 import { DownloadButton } from "./DownloadButton";
+import { UploadPackageForm } from "./UploadPackage";
 import logo from "../assets/logo.webp";
 
 export const NavBar = () => {
@@ -9,7 +10,7 @@ export const NavBar = () => {
       position="static"
       sx={{ background: "linear-gradient(90deg, rgba(79,111,170,1) 7%, rgba(41,83,134,1) 64%);" }}>
       <Toolbar>
-        <Box display="flex" alignItems="center" width="100%">
+        <Box display="flex" alignItems="center" width="100%" justifyContent="center">
           <Avatar sx={{ display: { md: "flex" }, mr: 1 }}>
             <img
               src={logo}
@@ -25,6 +26,7 @@ export const NavBar = () => {
           </Typography>
           <DownloadButton id="7536041697512265" />
           <ResetButton />
+          <UploadPackageForm />
         </Box>
       </Toolbar>
     </AppBar>

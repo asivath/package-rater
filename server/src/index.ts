@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { uploadPackage } from "./routes/uploadPackage.js";
-import { postPackages } from "./routes/postPackages.js";
+import { retrievePackageInfo, retrievePackageByRegEx } from "./routes/retrievePackages.js";
 import { deletePackage } from "./routes/deletePackage.js";
 import { resetPackages } from "./routes/resetPackages.js";
 import { downloadPackage } from "./routes/downloadPackage.js";
@@ -28,7 +28,8 @@ fastify.register(fastifyStatic, {
 });
 
 fastify.post("/package", uploadPackage);
-fastify.post("/packages", postPackages);
+fastify.post("/packages", retrievePackageInfo);
+fastify.post("/package/byRegEx", retrievePackageByRegEx);
 fastify.get("/package/:id", downloadPackage);
 fastify.delete("/package/:id", deletePackage);
 fastify.delete("/reset", resetPackages);

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
 import * as shared from "@package-rater/shared";
-import { getMetadata } from "../util";
+import { getPackageMetadata } from "../util";
 import { deletePackage } from "../routes/deletePackage";
 import Fastify from "fastify";
 import { S3Client } from "@aws-sdk/client-s3";
@@ -207,7 +207,7 @@ describe("deletePackage", () => {
       url: "/package/initiated-ID"
     });
 
-    const metadata = getMetadata();
+    const metadata = getPackageMetadata();
 
     expect(metadata).toEqual({
       byId: {},

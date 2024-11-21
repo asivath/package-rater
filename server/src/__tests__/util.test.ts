@@ -4,7 +4,7 @@ import {
   checkIfPackageExists,
   getExactAvailableVersion,
   calculateTotalPackageCost,
-  getMetadata,
+  getPackageMetadata,
   calculatePackageId
 } from "../util";
 import * as shared from "@package-rater/shared";
@@ -699,7 +699,7 @@ describe("calculateTotalPackageCost", () => {
   });
 
   it("should calculate and update total cost if costStatus is neither 'completed' nor 'failed'", async () => {
-    const metadata = getMetadata();
+    const metadata = getPackageMetadata();
 
     const result = await calculateTotalPackageCost("pending-package", "1.0.0");
     const packageId = calculatePackageId("pending-package", "1.0.0");
@@ -751,7 +751,7 @@ describe("calculateTotalPackageCost", () => {
         ok: true,
         body: new ReadableStream()
       });
-    const metadata = getMetadata();
+    const metadata = getPackageMetadata();
     metadata.costCache = {
       "2985548229775954": {
         // completed-dep-1.0.0
@@ -807,7 +807,7 @@ describe("calculateTotalPackageCost", () => {
     (global.fetch as Mock).mockResolvedValueOnce({
       ok: false
     });
-    const metadata = getMetadata();
+    const metadata = getPackageMetadata();
 
     const result = await calculateTotalPackageCost("failing-package", "1.0.0");
     const packageId = calculatePackageId("failing-package", "1.0.0");
@@ -841,7 +841,7 @@ describe("calculateTotalPackageCost", () => {
       .mockResolvedValueOnce(createMockStat(true))
       .mockResolvedValueOnce(createMockStat(false))
       .mockResolvedValueOnce(createMockStat(true));
-    const metadata = getMetadata();
+    const metadata = getPackageMetadata();
 
     const result = await calculateTotalPackageCost("recursion-package", "1.0.0");
     const packageId = calculatePackageId("recursion-package", "1.0.0");
