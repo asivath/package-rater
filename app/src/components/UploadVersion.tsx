@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import {
+  Tooltip,
   Box,
   Button,
   TextField,
@@ -112,7 +113,14 @@ export const UploadVersionButton: React.FC<{
   return (
     <Box>
       <IconButton aria-label="perform action" color="primary" onClick={() => setUploadPackageFormOpen(true)}>
-        {uploadedWithContent ? <DriveFolderUploadIcon /> : <CloudUploadIcon />}
+        {uploadedWithContent ? 
+          <Tooltip title="Upload Content Version" arrow>
+            <DriveFolderUploadIcon /> 
+          </Tooltip> : 
+          <Tooltip title="Upload URL Version" arrow>
+            <CloudUploadIcon />
+          </Tooltip>
+        }
       </IconButton>
       <Dialog
         open={uploadPackageFormOpen}
