@@ -39,6 +39,47 @@ export type Metadata = {
   };
 };
 
+export type ByIdTable = {
+  id: string;
+  packageName: string;
+  version: string;
+  ndjson: string;
+  standaloneCost: number;
+  totalCost: number;
+  costStatus: "pending" | "completed" | "failed";
+};
+
+export type ByNameTable = {
+  packageName: string;
+  version: string;
+  id: string;
+  ndjson: string;
+  standaloneCost: number;
+  totalCost: number;
+  costStatus: "pending" | "completed" | "failed";
+  readme: string | null;
+};
+
+export type ByIdDependenciesTable = {
+  id: string;
+  dependency: string;
+  version: string;
+};
+
+export type CostCacheTable = {
+  id: string;
+  standaloneCost: number;
+  totalCost: number;
+  dependencies: string;
+};
+
+export type Database = {
+  byId: ByIdTable;
+  byName: ByNameTable;
+  byIdDependencies: ByIdDependenciesTable;
+  costCache: CostCacheTable;
+};
+
 export function assertIsMetadata(o: any): asserts o is Metadata {
   if (!o || typeof o !== "object") {
     throw new Error("Metadata must be an object");

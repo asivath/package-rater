@@ -7,38 +7,201 @@ import { promisify } from "util";
 import { assertIsNdjson, getLogger } from "@package-rater/shared";
 import { create, extract } from "tar";
 import { pipeline } from "stream/promises";
-import { assertIsMetadata, Metadata } from "./types.js";
+import { assertIsMetadata, Metadata, Database } from "./types.js";
 import { createHash } from "crypto";
 import { tmpdir } from "os";
 import { satisfies } from "semver";
 import esbuild from "esbuild";
 import path from "path";
+import BetterSqlite3 from "better-sqlite3";
+import { Kysely, SqliteDialect } from "kysely";
 import "dotenv/config";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "packages");
-export const metadataPath = path.join(packagesDirPath, "metadata.json");
-try {
-  await access(metadataPath);
-} catch {
-  await mkdir(path.dirname(metadataPath), { recursive: true });
-  await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }));
-}
-
+const metadataPath = path.join(packagesDirPath, "metadata.json");
+const dbOrObjectStore = process.env.DB_OR_OBJECT_STORE;
 let metadata: Metadata;
+let db: Kysely<Database>;
+
 async function loadMetadata(): Promise<void> {
   const metadataFile = JSON.parse(await readFile(metadataPath, "utf-8"));
   assertIsMetadata(metadataFile);
   metadata = metadataFile;
 }
-await loadMetadata();
+
+if (dbOrObjectStore === "sqlite") {
+  db = new Kysely<Database>({
+    dialect: new SqliteDialect({
+      database: new BetterSqlite3(path.join(packagesDirPath, "packages.db"))
+    })
+  });
+
+  await db.schema
+    .createTable("byId")
+    .ifNotExists()
+    .addColumn("id", "text", (col) => col.primaryKey())
+    .addColumn("packageName", "text", (col) => col.notNull())
+    .addColumn("version", "text", (col) => col.notNull())
+    .addColumn("ndjson", "text", (col) => col.notNull())
+    .addColumn("standaloneCost", "real", (col) => col.notNull())
+    .addColumn("totalCost", "real", (col) => col.notNull())
+    .addColumn("costStatus", "text", (col) => col.notNull())
+    .addColumn("readme", "text")
+    .execute();
+
+  await db.schema
+    .createTable("byName")
+    .ifNotExists()
+    .addColumn("packageName", "text", (col) => col.notNull())
+    .addColumn("version", "text", (col) => col.notNull())
+    .addColumn("id", "text", (col) => col.notNull().references("byId.id"))
+    .addColumn("ndjson", "text", (col) => col.notNull())
+    .addColumn("standaloneCost", "real", (col) => col.notNull())
+    .addColumn("totalCost", "real", (col) => col.notNull())
+    .addColumn("costStatus", "text", (col) => col.notNull())
+    .addColumn("readme", "text")
+    .addPrimaryKeyConstraint("byName_pk", ["packageName", "version"])
+    .execute();
+
+  await db.schema
+    .createTable("byIdDependencies")
+    .ifNotExists()
+    .addColumn("id", "text", (col) => col.notNull().references("byId.id"))
+    .addColumn("dependency", "text", (col) => col.notNull())
+    .addColumn("version", "text", (col) => col.notNull())
+    .addPrimaryKeyConstraint("byIdDependencies_pk", ["id", "dependency"])
+    .execute();
+
+  await db.schema
+    .createTable("costCache")
+    .ifNotExists()
+    .addColumn("id", "text", (col) => col.primaryKey())
+    .addColumn("standaloneCost", "real", (col) => col.notNull())
+    .addColumn("totalCost", "real", (col) => col.notNull())
+    .addColumn("dependencies", "text", (col) => col.notNull())
+    .execute();
+} else {
+  try {
+    await access(metadataPath);
+  } catch {
+    await mkdir(path.dirname(metadataPath), { recursive: true });
+    await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }));
+  }
+  await loadMetadata();
+}
 
 const packageCostPromisesMap = new Map<string, Promise<number>>();
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
+
+export const checkIfPackageExists = async (id: string): Promise<boolean> => {
+  if (dbOrObjectStore === "sqlite") {
+    const result = await db.selectFrom("byId").select("id").where("id", "=", id).executeTakeFirst();
+    return !!result;
+  }
+
+  return !!metadata.byId[id];
+};
+
+/**
+ * Writes the metadata object to the metadata file
+ * @returns write of file
+ */
+export const writeMetadata = () => {
+  if (dbOrObjectStore === "sqlite") {
+    return Promise.resolve();
+  }
+  return writeFile(metadataPath, JSON.stringify(metadata));
+};
+
+/**
+ * Clears the metadata object
+ */
+export const clearMetadata = async () => {
+  try {
+    if (dbOrObjectStore === "sqlite") {
+      await db.deleteFrom("byId").execute();
+      await db.deleteFrom("byName").execute();
+      await db.deleteFrom("byIdDependencies").execute();
+      await db.deleteFrom("costCache").execute();
+      return;
+    }
+
+    await writeFile(metadataPath, JSON.stringify({ byName: {}, byId: {}, costCache: {} }));
+  } catch (error) {
+    logger.error(`Failed to clear metadata: ${(error as Error).message}`);
+  }
+  loadMetadata();
+};
+
+/**
+ * Updates the cost cache (if not using SQLite will not actually update the file)
+ * @param id 
+ * @param totalCost 
+ * @param dependencies 
+ */
+const updateCostCache = async (id: string, totalCost: number, dependencies: string[]) => {
+  if (dbOrObjectStore === "sqlite") {
+    await db
+      .insertInto("costCache")
+      .values({
+        id,
+        standaloneCost: metadata.byId[id].standaloneCost,
+        totalCost,
+        dependencies: JSON.stringify(dependencies)
+      })
+      .execute();
+  } else {
+    metadata.costCache[id] = {
+      standaloneCost: metadata.byId[id].standaloneCost,
+      totalCost,
+      dependencies
+    };
+  }
+}
+
+/**
+ * Gets the cost cache for a package if it exists
+ * @param id 
+ * @returns 
+ */
+const getCostCache = async (id: string) => {
+  if (dbOrObjectStore === "sqlite") {
+    const result = await db.selectFrom("costCache").select("standaloneCost").select("totalCost").select("dependencies").where("id", "=", id).executeTakeFirst();
+    if (!result) {
+      return null;
+    }
+    return { standaloneCost: result.standaloneCost, totalCost: result.totalCost, dependencies: JSON.parse(result.dependencies) };
+  }
+  return metadata.costCache[id] || null;
+}
+
+export const getMetadataForPackage = async (id: string) => {
+  if (dbOrObjectStore === "sqlite") {
+    const result = await db.selectFrom("byId").selectAll().where("id", "=", id).executeTakeFirst();
+    const dependencies = await db.selectFrom("byIdDependencies").select("dependency").select("version").where("id", "=", id).execute();
+    if (!result) {
+      return null;
+    }
+    return {
+      packageName: result.packageName,
+      version: result.version,
+      ndjson: assertIsNdjson(JSON.parse(result.ndjson)),
+      dependencies: dependencies.reduce((acc, dep) => {
+        acc[dep.dependency] = dep.version;
+        return acc;
+      }, {} as { [dependency: string]: string }),
+      standaloneCost: result.standaloneCost,
+      totalCost: result.totalCost,
+      costStatus: result.costStatus
+    };
+  }
+  return metadata.byId[id] || null;
+}
 
 /**
  * Moves a package to the packages directory and saves its metadata
@@ -243,31 +406,71 @@ export const savePackage = async (
     dependencies = packageJson.dependencies || {};
     standaloneCost = (await stat(tarBallPath)).size / (1024 * 1000);
 
-    metadata.byId[id] = {
-      packageName,
-      version,
-      ndjson,
-      dependencies,
-      standaloneCost,
-      totalCost: 0,
-      costStatus: "pending"
-    };
+    if (dbOrObjectStore === "sqlite") {
+      await db
+        .insertInto("byId")
+        .values({
+          id,
+          packageName,
+          version,
+          ndjson: JSON.stringify(ndjson),
+          standaloneCost,
+          totalCost: 0,
+          costStatus: "pending"
+        })
+        .execute();
 
-    if (!metadata.byName[packageName]) {
-      metadata.byName[packageName] = {};
+      await db
+        .insertInto("byName")
+        .values({
+          packageName,
+          version,
+          id,
+          ndjson: JSON.stringify(ndjson),
+          standaloneCost,
+          totalCost: 0,
+          costStatus: "pending",
+          readme: readmeString ?? null
+        })
+        .execute();
+
+      for (const dependency in dependencies) {
+        await db
+          .insertInto("byIdDependencies")
+          .values({
+            id,
+            dependency,
+            version: dependencies[dependency]
+          })
+          .execute();
+      }
+    } else {
+      metadata.byId[id] = {
+        packageName,
+        version,
+        ndjson,
+        dependencies,
+        standaloneCost,
+        totalCost: 0,
+        costStatus: "pending"
+      };
+
+      if (!metadata.byName[packageName]) {
+        metadata.byName[packageName] = {};
+      }
+
+      metadata.byName[packageName][version] = {
+        id,
+        ndjson,
+        dependencies,
+        standaloneCost,
+        totalCost: 0,
+        costStatus: "pending",
+        readme: readmeString
+      };
     }
 
-    metadata.byName[packageName][version] = {
-      id,
-      ndjson,
-      dependencies,
-      standaloneCost,
-      totalCost: 0,
-      costStatus: "pending",
-      readme: readmeString
-    };
-
-    await writeFile(metadataPath, JSON.stringify(metadata));
+    await writeMetadata();
     logger.info(
       `Saved package ${packageName} v${version} with ID ${id} and standalone cost ${standaloneCost.toFixed(2)} MB`
     );
@@ -349,13 +552,14 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
     const id = calculatePackageId(packageName, version);
     if (graph.has(id)) continue;
 
-    if (metadata.costCache[id]) {
+    const costCache = await getCostCache(id);
+    if (costCache) {
       const node: PackageNode = {
         id,
         packageName,
         version,
-        standaloneCost: metadata.costCache[id].standaloneCost,
-        totalCost: metadata.costCache[id].totalCost,
+        standaloneCost: costCache.standaloneCost,
+        totalCost: costCache.totalCost,
         dependencies: [] // Not filled in since totalCost is already calculated
       };
       graph.set(id, node);
@@ -376,6 +580,7 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
       for (const dependency of Object.entries(metadata.byId[id].dependencies)) {
         stack.push({ packageName: dependency[0], version: dependency[1] });
       }
+      await updateCostCache(id, metadata.byId[id].totalCost, dependencies);
       metadata.costCache[id] = {
         standaloneCost: metadata.byId[id].standaloneCost,
         totalCost: metadata.byId[id].totalCost,
@@ -662,44 +867,6 @@ export async function calculateTotalPackageCost(packageName: string, version: st
     logger.info(`Calculated total cost of package ${id} in ${((end - start) / 1000).toFixed(2)} seconds`);
   }
 }
-
-/**
- * Checks if the package exists
- * @param id The package ID
- * @returns Whether the package exists
- */
-export const checkIfPackageExists = (id: string) => {
-  return metadata.byId[id] ? true : false;
-};
-
-/**
- * Gets the metadata object
- * @returns The metadata object
- */
-export const getPackageMetadata = () => {
-  return metadata;
-};
-
-/**
- * Writes the metadata object to the metadata file
- * @returns write of file
- */
-export const writeMetadata = () => {
-  return writeFile(metadataPath, JSON.stringify(metadata));
-};
-
-/**
- * Deletes a package from the server
- * @param id The ID of the package
- */
-export const clearMetadata = async () => {
-  try {
-    await writeFile(metadataPath, JSON.stringify({ byName: {}, byId: {}, costCache: {} }));
-  } catch (error) {
-    logger.error(`Failed to clear file ${metadataPath}: ${(error as Error).message}`);
-  }
-  loadMetadata();
-};
 
 /**
  * Uploads a package to the S3 bucket

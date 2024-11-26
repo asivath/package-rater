@@ -27,7 +27,8 @@
     "test": "yarn workspaces foreach -A --parallel run test",
     "test:ci": "yarn workspaces foreach -A --parallel run test:ci",
     "test:coverage": "yarn workspaces foreach -A --parallel run test:coverage",
-    "test:coverage-ci": "yarn workspaces foreach -A --parallel run test:coverage-ci"
+    "test:coverage-ci": "yarn workspaces foreach -A --parallel run test:coverage-ci",
+    "test:e2e": "[ -d server/packages ] && cp -r server/packages /tmp/packages || true && yarn workspace @package-rater/server run start && yarn workspace @package-rater/app && yarn workspace @package-rater/server run stop && [ -d /tmp/packages ] && mv /tmp/packages server/packages || true"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
