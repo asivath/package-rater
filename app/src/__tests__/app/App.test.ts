@@ -1,4 +1,4 @@
-import { test, expect } from "./baseFixtures";
+import { test, expect } from "../baseFixtures";
 
 test.describe("Main Page Tests", () => {
   test("should load the main page and display the navbar with title and logo", async ({ page }) => {

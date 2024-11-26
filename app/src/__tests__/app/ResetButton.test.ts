@@ -1,4 +1,4 @@
-import { test, expect } from "./baseFixtures";
+import { test, expect } from "../baseFixtures";
 
 test.describe("ResetButton", () => {
   test.beforeEach(async ({ page }) => {
