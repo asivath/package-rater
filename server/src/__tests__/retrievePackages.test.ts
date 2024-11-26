@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { retrievePackageInfo, satisfiesCarat, satisfiesTilde, satisfiesRange } from "../routes/retrievePackages.js";
 import Fastify from "fastify";
 
+vi.stubEnv("NODE_TEST", "true");
+
 const mockMetadataJson = vi.hoisted(() => ({
   byId: {
     id1: {
@@ -82,77 +84,80 @@ const mockMetadataJson = vi.hoisted(() => ({
   },
   byName: {
     express: {
-      "1.0.0": {
-        id: "id1",
-        ndjson: {
-          URL: "string",
-          NetScore: 1,
-          NetScore_Latency: 1,
-          RampUp: 1,
-          RampUp_Latency: 1,
-          Correctness: 1,
-          Correctness_Latency: 1,
-          BusFactor: 1,
-          BusFactor_Latency: 1,
-          ResponsiveMaintainer: 1,
-          ResponsiveMaintainer_Latency: 1,
-          License: 1,
-          License_Latency: 1,
-          Dependencies: 1,
-          Dependencies_Latency: 1
+      uploadedWithContent: false,
+      versions: {
+        "1.0.0": {
+          id: "id1",
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
+          dependencies: {},
+          standaloneCost: 0,
+          totalCost: 0,
+          costStatus: "completed"
         },
-        dependencies: {},
-        standaloneCost: 0,
-        totalCost: 0,
-        costStatus: "completed"
-      },
-      "2.0.0": {
-        id: "id2",
-        ndjson: {
-          URL: "string",
-          NetScore: 1,
-          NetScore_Latency: 1,
-          RampUp: 1,
-          RampUp_Latency: 1,
-          Correctness: 1,
-          Correctness_Latency: 1,
-          BusFactor: 1,
-          BusFactor_Latency: 1,
-          ResponsiveMaintainer: 1,
-          ResponsiveMaintainer_Latency: 1,
-          License: 1,
-          License_Latency: 1,
-          Dependencies: 1,
-          Dependencies_Latency: 1
+        "2.0.0": {
+          id: "id2",
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
+          dependencies: {},
+          standaloneCost: 0,
+          totalCost: 0,
+          costStatus: "completed"
         },
-        dependencies: {},
-        standaloneCost: 0,
-        totalCost: 0,
-        costStatus: "completed"
-      },
-      "2.5.0": {
-        id: "id3",
-        ndjson: {
-          URL: "string",
-          NetScore: 1,
-          NetScore_Latency: 1,
-          RampUp: 1,
-          RampUp_Latency: 1,
-          Correctness: 1,
-          Correctness_Latency: 1,
-          BusFactor: 1,
-          BusFactor_Latency: 1,
-          ResponsiveMaintainer: 1,
-          ResponsiveMaintainer_Latency: 1,
-          License: 1,
-          License_Latency: 1,
-          Dependencies: 1,
-          Dependencies_Latency: 1
-        },
-        dependencies: {},
-        standaloneCost: 0,
-        totalCost: 0,
-        costStatus: "completed"
+        "2.5.0": {
+          id: "id3",
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
+          dependencies: {},
+          standaloneCost: 0,
+          totalCost: 0,
+          costStatus: "completed"
+        }
       }
     }
   },

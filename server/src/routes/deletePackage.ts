@@ -56,10 +56,10 @@ export const deletePackage = async (request: FastifyRequest<{ Params: { id: stri
       }
     }
     delete metadataJson.byId[id];
-    delete metadataJson.byName[name][version];
+    delete metadataJson.byName[name].versions[version];
     delete metadataJson.costCache[id];
 
-    if (Object.keys(metadataJson.byName[name]).length === 0) {
+    if (Object.keys(metadataJson.byName[name].versions).length === 0) {
       delete metadataJson.byName[name];
     }
 

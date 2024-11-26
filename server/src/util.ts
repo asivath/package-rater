@@ -19,21 +19,23 @@ const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "packages");
-export const metadataPath = path.join(packagesDirPath, "metadata.json");
-try {
-  await access(metadataPath);
-} catch {
-  await mkdir(path.dirname(metadataPath), { recursive: true });
-  await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }));
-}
-
+const metadataPath = path.join(packagesDirPath, "metadata.json");
 let metadata: Metadata;
+
 async function loadMetadata(): Promise<void> {
   const metadataFile = JSON.parse(await readFile(metadataPath, "utf-8"));
   assertIsMetadata(metadataFile);
   metadata = metadataFile;
 }
-await loadMetadata();
+if (process.env.NODE_TEST != "true") {
+  try {
+    await access(metadataPath);
+  } catch {
+    await mkdir(path.dirname(metadataPath), { recursive: true });
+    await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }));
+  }
+  await loadMetadata();
+}
 
 const packageCostPromisesMap = new Map<string, Promise<number>>();
 
@@ -83,11 +85,14 @@ export const savePackage = async (
     let ndjson;
     let tarBallPath;
     let packageJson;
+    let uploadedWithContent;
     // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
     // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
     let readmeString: string | undefined;
 
     if (packageFilePath) {
+      uploadedWithContent = true;
+
       // Given file path
       const targetUploadFilePath = path.join(packageIdPath, escapedPackageName);
       await cp(packageFilePath, targetUploadFilePath, { recursive: true });
@@ -154,6 +159,8 @@ export const savePackage = async (
       await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [escapedPackageName]);
       await rm(targetUploadFilePath, { recursive: true });
     } else {
+      uploadedWithContent = false;
+
       // Given a url
       const unscopedName = packageName.startsWith("@") ? packageName.split("/")[1] : packageName;
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${unscopedName}-${version}.tgz`;
@@ -243,6 +250,7 @@ export const savePackage = async (
     dependencies = packageJson.dependencies || {};
     standaloneCost = (await stat(tarBallPath)).size / (1024 * 1000);
 
+    //Add info based on ID
     metadata.byId[id] = {
       packageName,
       version,
@@ -253,11 +261,16 @@ export const savePackage = async (
       costStatus: "pending"
     };
 
+    //Initialize new package with empty versions and whether it was uploaded with content or URL
     if (!metadata.byName[packageName]) {
-      metadata.byName[packageName] = {};
+      metadata.byName[packageName] = {
+        uploadedWithContent: uploadedWithContent,
+        versions: {}
+      };
     }
 
-    metadata.byName[packageName][version] = {
+    //Add info based on name
+    metadata.byName[packageName].versions[version] = {
       id,
       ndjson,
       dependencies,
@@ -639,8 +652,8 @@ export async function calculateTotalPackageCost(packageName: string, version: st
     const totalCost = await calculateTotalCost(graph);
     packageDataById.totalCost = totalCost;
     packageDataById.costStatus = "completed";
-    metadata.byName[packageName][version].totalCost = totalCost;
-    metadata.byName[packageName][version].costStatus = "completed";
+    metadata.byName[packageName].versions[version].totalCost = totalCost;
+    metadata.byName[packageName].versions[version].costStatus = "completed";
 
     return totalCost;
   };
@@ -653,7 +666,7 @@ export async function calculateTotalPackageCost(packageName: string, version: st
   } catch (error) {
     logger.error(`Failed to calculate total cost of package ${id}: ${(error as Error).message}`);
     packageDataById.costStatus = "failed";
-    metadata.byName[packageName][version].costStatus = "failed";
+    metadata.byName[packageName].versions[version].costStatus = "failed";
     return 0;
   } finally {
     packageCostPromisesMap.delete(id);
@@ -668,8 +681,27 @@ export async function calculateTotalPackageCost(packageName: string, version: st
  * @param id The package ID
  * @returns Whether the package exists
  */
-export const checkIfPackageExists = (id: string) => {
+export const checkIfPackageExists = (name: string) => {
+  const metadata = getPackageMetadata();
+  return metadata.byName[name] ? true : false;
+};
+
+export const checkIfPackageVersionExists = (id: string) => {
+  const metadata = getPackageMetadata();
   return metadata.byId[id] ? true : false;
+};
+
+export const checkIfContentPatchValid = (availablePackageVersions: string[], newVersion: string) => {
+  const [newMajor, newMinor, newPatch] = newVersion.split(".").map(Number);
+  for (const curVersion of availablePackageVersions) {
+    const [major, minor, patch] = curVersion.split(".").map(Number);
+    if (newMajor === major && newMinor === minor) {
+      if (newPatch < patch) {
+        return false;
+      }
+    }
+  }
+  return true;
 };
 
 /**

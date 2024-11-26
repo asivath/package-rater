@@ -47,7 +47,7 @@ export const retrievePackageInfo = async (
 
       for (let offsetCount = offset; offsetCount < offset + limit && offsetCount < allPackages.length; offsetCount++) {
         const [name, versions] = allPackages[offsetCount];
-        for (const [version, details] of Object.entries(versions)) {
+        for (const [version, details] of Object.entries(versions.versions)) {
           if (allFlagHeader) {
             packages.push({
               Version: version,
@@ -79,10 +79,11 @@ export const retrievePackageInfo = async (
         return;
       }
 
-      const packageByName = metadataJson.byName[Name];
-      if (!packageByName) {
+      if (!metadataJson.byName[Name]) {
         continue; // Skip to the next package if not found
       }
+
+      const packageByName = metadataJson.byName[Name].versions;
 
       // Filter by version type and check for duplicates
       for (const [version, details] of Object.entries(packageByName)) {
@@ -111,6 +112,7 @@ export const retrievePackageInfo = async (
     }
   } catch (error) {
     logger.error(`Error fetching packages:  ${error}`);
+    console.error(error);
     reply.code(500).send({ error: "Server error occurred while fetching packages" });
     return;
   }
@@ -159,7 +161,7 @@ export const retrievePackageByRegEx = async (
     const metadataJson = getPackageMetadata();
     const regex = new RegExp(RegEx);
 
-    for (const [name, versions] of Object.entries(metadataJson.byName)) {
+    for (const [name, versions] of Object.entries(metadataJson.byName.versions)) {
       for (const [version, details] of Object.entries(versions)) {
         if (regex.test(name) || (details.readme && regex.test(details.readme))) {
           if (allFlagHeader) {

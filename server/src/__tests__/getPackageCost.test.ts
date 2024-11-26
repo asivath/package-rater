@@ -1,10 +1,11 @@
 import { vi, describe, it, expect } from "vitest";
 import Fastify from "fastify";
 import { getPackageCost } from "../routes/getPackageCost";
-import * as util from "../util.js";
+import * as util from "../util";
 import * as shared from "@package-rater/shared";
 
 vi.mock("../util.js", async (importOriginal) => {
+  vi.stubEnv("NODE_TEST", "true");
   const original = await importOriginal<typeof util>();
   return {
     ...original,
@@ -31,23 +32,29 @@ vi.mock("../util.js", async (importOriginal) => {
       },
       byName: {
         "completed-package": {
-          "1.0.0": {
-            id: "completed-ID",
-            ndjson: null,
-            dependencies: {},
-            standaloneCost: 0.5,
-            totalCost: 0.5,
-            costStatus: "completed"
+          uploadedWithContent: false,
+          versions: {
+            "1.0.0": {
+              id: "completed-ID",
+              ndjson: null,
+              dependencies: {},
+              standaloneCost: 0.5,
+              totalCost: 0.5,
+              costStatus: "completed"
+            }
           }
         },
         "initiated-package": {
-          "1.0.0": {
-            id: "initiated-ID",
-            ndjson: null,
-            dependencies: {},
-            standaloneCost: 0.5,
-            totalCost: 0,
-            costStatus: "initiated"
+          uploadedWithContent: false,
+          versions: {
+            "1.0.0": {
+              id: "initiated-ID",
+              ndjson: null,
+              dependencies: {},
+              standaloneCost: 0.5,
+              totalCost: 0,
+              costStatus: "initiated"
+            }
           }
         }
       },
