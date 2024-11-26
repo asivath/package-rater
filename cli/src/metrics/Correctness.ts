@@ -1,7 +1,5 @@
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
-import { promisify } from "util";
-import { exec } from "child_process";
 
 const logger = getLogger("cli");
 

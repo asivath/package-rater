@@ -43,6 +43,10 @@ vi.mock("../metrics/Dependencies", () => ({
   calculatePinnedDependencyFraction: vi.fn().mockResolvedValue(0.8)
 }));
 
+vi.mock("../metrics/FracCodePR", () => ({
+  calculateFracPRReview: vi.fn().mockResolvedValue(0.8)
+}));
+
 vi.mock("util", () => ({
   promisify: vi.fn(() => {
     return vi.fn().mockResolvedValue({
@@ -65,13 +69,13 @@ describe("calculateMetrics", () => {
     vi.spyOn(sharedModule, "getGithubRepo").mockResolvedValueOnce("https://github.com/owner/repo");
 
     const result = await calculateMetrics("https://github.com/owner/repo");
-    expect(result.URL).toBe("https://github.com/owner/repo");
     expect(result.Correctness).toBe(0.8);
     expect(result.License).toBe(0.8);
     expect(result.RampUp).toBe(0.8);
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
-    expect(result.Dependencies).toBe(0.8);
+    expect(result.GoodPinningPractice).toBe(0.8);
+    expect(result.PullRequest).toBe(0.8);
     expect(result.NetScore).toBe(0.8);
   });
 
@@ -80,14 +84,14 @@ describe("calculateMetrics", () => {
 
     const result = await calculateMetrics("invalid-url");
 
-    expect(result.URL).toBe("invalid-url");
     expect(result.NetScore).toBe(0);
     expect(result.Correctness).toBe(0);
     expect(result.License).toBe(0);
     expect(result.RampUp).toBe(0);
     expect(result.ResponsiveMaintainer).toBe(0);
     expect(result.BusFactor).toBe(0);
-    expect(result.Dependencies).toBe(0);
+    expect(result.GoodPinningPractice).toBe(0);
+    expect(result.PullRequest).toBe(0);
 
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining("Unable to retrieve repository information for URL: invalid-url")
@@ -99,14 +103,14 @@ describe("calculateMetrics", () => {
 
     const result = await calculateMetrics("https://github.com/owner/repo");
 
-    expect(result.URL).toBe("https://github.com/owner/repo");
     expect(result.NetScore).toBe(0.8);
     expect(result.Correctness).toBe(0.8);
     expect(result.License).toBe(0.8);
     expect(result.RampUp).toBe(0.8);
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
-    expect(result.Dependencies).toBe(0.8);
+    expect(result.GoodPinningPractice).toBe(0.8);
+    expect(result.PullRequest).toBe(0.8);
 
     expect(logger.error).not.toHaveBeenCalled();
   });
@@ -116,14 +120,14 @@ describe("calculateMetrics", () => {
 
     const result = await calculateMetrics("https://github.com/owner/repo");
 
-    expect(result.URL).toBe("https://github.com/owner/repo");
     expect(result.NetScore).toBe(0);
     expect(result.Correctness).toBe(0);
     expect(result.License).toBe(0);
     expect(result.RampUp).toBe(0);
     expect(result.ResponsiveMaintainer).toBe(0);
     expect(result.BusFactor).toBe(0);
-    expect(result.Dependencies).toBe(0);
+    expect(result.GoodPinningPractice).toBe(0);
+    expect(result.PullRequest).toBe(0);
 
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Error calculating metrics"));
   });

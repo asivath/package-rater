@@ -9,6 +9,7 @@ import { cloneRepo, Ndjson, assertIsNdjson } from "@package-rater/shared";
 import { rm } from "fs/promises";
 import { promisify } from "util";
 import { exec } from "child_process";
+import { calculateFracPRReview } from "./FracCodePR.js";
 
 const logger = getLogger("cli");
 
@@ -92,65 +93,70 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
       throw new Error(`Repository directory is undefined for URL: ${url}`);
     }
     const totalLinesOfCode = await calculateLOC(repoDir);
-    const [correctness, licenseCompatibility, responsiveness, busFactor, rampUp, dependencies] = await Promise.all([
+    const [correctness, licenseCompatibility, responsiveness, busFactor, rampUp, dependencies, fracPR ] = await Promise.all([
       latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
       latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
       latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
       latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
       latencyWrapper(() => calculateRampup(repoOwner, repoName)),
-      latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir))
+      latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
+      latencyWrapper(() => calculateFracPRReview(repoOwner, repoName, totalLinesOfCode))
     ]);
 
     const netscore =
-      0.15 * busFactor.result +
-      0.24 * correctness.result +
-      0.15 * rampUp.result +
-      0.2 * responsiveness.result +
-      0.26 * licenseCompatibility.result;
+      0.1 * busFactor.result +
+      0.2 * correctness.result +
+      0.1 * rampUp.result +
+      0.15 * responsiveness.result +
+      0.2 * licenseCompatibility.result +
+      0.1 * dependencies.result +
+      0.15 * fracPR.result;
+
     logger.info(`Calculated NetScore for ${repoOwner}/${repoName}: ${netscore}`);
 
     const ndjsonOutput: Ndjson = {
-      URL: url,
-      NetScore: parseFloat(netscore.toFixed(2)),
-      NetScore_Latency: parseFloat(
-        (correctness.time + licenseCompatibility.time + rampUp.time + responsiveness.time + busFactor.time).toFixed(2)
-      ),
-      RampUp: parseFloat(rampUp.result.toFixed(2)),
-      RampUp_Latency: parseFloat(rampUp.time.toFixed(2)),
-      Correctness: parseFloat(correctness.result.toFixed(2)),
-      Correctness_Latency: parseFloat(correctness.time.toFixed(2)),
       BusFactor: parseFloat(busFactor.result.toFixed(2)),
       BusFactor_Latency: parseFloat(busFactor.time.toFixed(2)),
+      Correctness: parseFloat(correctness.result.toFixed(2)),
+      Correctness_Latency: parseFloat(correctness.time.toFixed(2)),
+      RampUp: parseFloat(rampUp.result.toFixed(2)),
+      RampUp_Latency: parseFloat(rampUp.time.toFixed(2)),
       ResponsiveMaintainer: parseFloat(responsiveness.result.toFixed(2)),
       ResponsiveMaintainer_Latency: parseFloat(responsiveness.time.toFixed(2)),
       License: parseFloat(licenseCompatibility.result.toFixed(2)),
       License_Latency: parseFloat(licenseCompatibility.time.toFixed(2)),
-      Dependencies: parseFloat(dependencies.result.toFixed(2)),
-      Dependencies_Latency: parseFloat(dependencies.time.toFixed(2))
+      GoodPinningPractice: parseFloat(dependencies.result.toFixed(2)),
+      GoodPinningPracticeLatency: parseFloat(dependencies.time.toFixed(2)),
+      PullRequest: parseFloat(fracPR.result.toFixed(2)),
+      PullRequest_Latency: parseFloat(fracPR.time.toFixed(2)),
+      NetScore: parseFloat(netscore.toFixed(2)),
+      NetScore_Latency: parseFloat(
+        (correctness.time + licenseCompatibility.time + rampUp.time + responsiveness.time + busFactor.time + dependencies.time + fracPR.time).toFixed(2)
+      )
     };
     assertIsNdjson(ndjsonOutput);
-
     if (repoDir) await rm(repoDir, { recursive: true });
 
     return ndjsonOutput;
   } catch (error) {
     logger.error(`Error calculating metrics: ${error}`);
     const ndjson: Ndjson = {
-      URL: url,
-      NetScore: 0,
-      NetScore_Latency: 0,
-      RampUp: 0,
-      RampUp_Latency: 0,
-      Correctness: 0,
-      Correctness_Latency: 0,
       BusFactor: 0,
       BusFactor_Latency: 0,
+      Correctness: 0,
+      Correctness_Latency: 0,
+      RampUp: 0,
+      RampUp_Latency: 0,
       ResponsiveMaintainer: 0,
       ResponsiveMaintainer_Latency: 0,
       License: 0,
       License_Latency: 0,
-      Dependencies: 0,
-      Dependencies_Latency: 0
+      GoodPinningPractice: 0,
+      GoodPinningPracticeLatency: 0,
+      PullRequest: 0,
+      PullRequest_Latency: 0,
+      NetScore: 0,
+      NetScore_Latency: 0
     };
     assertIsNdjson(ndjson);
     return ndjson;
