@@ -50,36 +50,32 @@ async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
   }
 }
 
-async function calculateLOC(repoDir: string): Promise<number> {
-  try {
-    const execAsync = promisify(exec);
-    const { stdout } = await execAsync(`npx cloc --json ${repoDir}`);
-    const clocData = JSON.parse(stdout);
-    const jsLines = clocData.JavaScript?.code || 0;
-    const tsLines = clocData.TypeScript?.code || 0;
-    const totalLines = jsLines + tsLines;
-    logger.info(`Calculated LOC for ${repoDir}: ${totalLines}`);
-    return totalLines;
-  } catch (error) {
-    logger.error(`Error calculating LOC for ${repoDir}: ${(error as Error).message}`);
-    return 0;
-  }
-}
+// async function calculateLOC(repoDir: string): Promise<number> {
+//   try {
+//     const execAsync = promisify(exec);
+//     const { stdout } = await execAsync(`npx cloc --json ${repoDir}`);
+//     const clocData = JSON.parse(stdout);
+//     const jsLines = clocData.JavaScript?.code || 0;
+//     const tsLines = clocData.TypeScript?.code || 0;
+//     const totalLines = jsLines + tsLines;
+//     logger.info(`Calculated LOC for ${repoDir}: ${totalLines}`);
+//     return totalLines;
+//   } catch (error) {
+//     logger.error(`Error calculating LOC for ${repoDir}: ${(error as Error).message}`);
+//     return 0;
+//   }
+// }
 
 /**
  * Calculate the correctness of a repository based on resolved issues and bugs
  * @param owner
  * @param repo
+ * @param totalLinesOfCode
  * @param repoDir
  * @returns
  */
-export async function calculateCorrectness(owner: string, repo: string, repoDir?: string): Promise<number> {
-  if (!repoDir) {
-    logger.error("Repository directory is not defined");
-    return 0;
-  }
+export async function calculateCorrectness(owner: string, repo: string, totalLinesOfCode: number): Promise<number> {
   const issuesData = await fetchIssues(owner, repo);
-  const totalLinesOfCode = await calculateLOC(repoDir);
   const totalIssues = issuesData.data.repository.issues.totalCount;
   const resolvedIssues = issuesData.data.repository.closedIssues.totalCount;
   const totalBugs = issuesData.data.repository.bugIssues.totalCount;

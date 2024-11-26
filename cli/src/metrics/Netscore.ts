@@ -7,6 +7,8 @@ import { calculateBusFactor } from "./BusFactor.js";
 import { calculatePinnedDependencyFraction } from "./Dependencies.js";
 import { cloneRepo, Ndjson, assertIsNdjson } from "@package-rater/shared";
 import { rm } from "fs/promises";
+import { promisify } from "util";
+import { exec } from "child_process";
 
 const logger = getLogger("cli");
 
@@ -57,6 +59,22 @@ async function getRepoOwner(url: string): Promise<[string, string, string] | nul
   return null;
 }
 
+export async function calculateLOC(repoDir: string): Promise<number> {
+  try {
+    const execAsync = promisify(exec);
+    const { stdout } = await execAsync(`npx cloc --json ${repoDir}`);
+    const clocData = JSON.parse(stdout);
+    const jsLines = clocData.JavaScript?.code || 0;
+    const tsLines = clocData.TypeScript?.code || 0;
+    const totalLines = jsLines + tsLines;
+    logger.info(`Calculated LOC for ${repoDir}: ${totalLines}`);
+    return totalLines;
+  } catch (error) {
+    logger.error(`Error calculating LOC for ${repoDir}: ${(error as Error).message}`);
+    return 0;
+  }
+}
+
 /**
  * Calculate the metrics for a package or repository
  * @param url The original URL of the package
@@ -70,11 +88,15 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
     }
     const [repoName, repoOwner, gitUrl] = repoInfo;
     const repoDir = await cloneRepo(gitUrl, repoName);
-    const [correctness, licenseCompatibility, rampUp, responsiveness, busFactor, dependencies] = await Promise.all([
-      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, repoDir)),
+    if (!repoDir) {
+      throw new Error(`Repository directory is undefined for URL: ${url}`);
+    }
+    const totalLinesOfCode = await calculateLOC(repoDir);
+    const [correctness, licenseCompatibility, responsiveness, busFactor, rampUp, dependencies] = await Promise.all([
+      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
       latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
-      latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
       latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
+      latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
       latencyWrapper(() => calculateRampup(repoOwner, repoName)),
       latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir))
     ]);

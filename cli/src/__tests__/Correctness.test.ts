@@ -2,7 +2,6 @@ import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql";
 import { calculateCorrectness } from "../metrics/Correctness";
-import * as util from "util";
 
 vi.mock("@package-rater/shared", () => {
   return {
@@ -14,16 +13,6 @@ vi.mock("@package-rater/shared", () => {
 });
 vi.mock("../graphql", () => ({
   getGitHubData: vi.fn()
-}));
-vi.mock("util", () => ({
-  promisify: vi.fn(() => {
-    return vi.fn().mockResolvedValue({
-      stdout: JSON.stringify({
-        JavaScript: { code: 1000 },
-        TypeScript: { code: 500 }
-      })
-    });
-  })
 }));
 
 describe("calculateCorrectness", () => {
@@ -45,7 +34,7 @@ describe("calculateCorrectness", () => {
     };
     (getGitHubData as Mock).mockResolvedValueOnce(mockIssuesData);
 
-    const correctness = await calculateCorrectness("owner", "repo", "repoDir");
+    const correctness = await calculateCorrectness("owner", "repo", 1500);
 
     expect(correctness).toBeCloseTo(0.7 * (7 / 10) + 0.3 * (1 - 3 / 1500));
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("Correctness for owner/repo"));
@@ -62,36 +51,10 @@ describe("calculateCorrectness", () => {
       }
     };
     (getGitHubData as Mock).mockResolvedValueOnce(mockIssuesData);
-    vi.mocked(util.promisify).mockImplementationOnce(() => {
-      return vi.fn().mockResolvedValue({
-        stdout: JSON.stringify({})
-      });
-    });
 
-    const correctness = await calculateCorrectness("owner", "repo", "repoDir");
+    const correctness = await calculateCorrectness("owner", "repo", 0);
 
     expect(correctness).toBe(0);
     expect(logger.info).toHaveBeenCalledWith("No LOC found for owner/repo");
-  });
-
-  it("should return 0 for errors in calculating LOC", async () => {
-    const mockIssuesData = {
-      data: {
-        repository: {
-          issues: { totalCount: 1 },
-          closedIssues: { totalCount: 1 },
-          bugIssues: { totalCount: 1 }
-        }
-      }
-    };
-    (getGitHubData as Mock).mockResolvedValueOnce(mockIssuesData);
-    vi.mocked(util.promisify).mockImplementationOnce(() => {
-      return vi.fn().mockRejectedValue(new Error("Network Error"));
-    });
-
-    const correctness = await calculateCorrectness("owner", "repo", "repoDir");
-
-    expect(correctness).toBe(0);
-    expect(logger.error).toHaveBeenCalledWith("Error calculating LOC for repoDir: Network Error");
   });
 });

@@ -10,7 +10,8 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),
       info: vi.fn()
-    })
+    }),
+    cloneRepo: vi.fn().mockResolvedValue("repoDir")
   };
 });
 
@@ -42,15 +43,15 @@ vi.mock("../metrics/Dependencies", () => ({
   calculatePinnedDependencyFraction: vi.fn().mockResolvedValue(0.8)
 }));
 
-vi.mock("../logger", () => ({
-  getLogger: vi.fn().mockReturnValue({
-    error: vi.fn(),
-    info: vi.fn()
+vi.mock("util", () => ({
+  promisify: vi.fn(() => {
+    return vi.fn().mockResolvedValue({
+      stdout: JSON.stringify({
+        JavaScript: { code: 1000 },
+        TypeScript: { code: 500 }
+      })
+    });
   })
-}));
-
-vi.mock("../util", () => ({
-  cloneRepo: vi.fn().mockResolvedValue("repoDir")
 }));
 
 describe("calculateMetrics", () => {
@@ -64,15 +65,14 @@ describe("calculateMetrics", () => {
     vi.spyOn(sharedModule, "getGithubRepo").mockResolvedValueOnce("https://github.com/owner/repo");
 
     const result = await calculateMetrics("https://github.com/owner/repo");
-
     expect(result.URL).toBe("https://github.com/owner/repo");
-    expect(result.NetScore).toBe(0.8);
     expect(result.Correctness).toBe(0.8);
     expect(result.License).toBe(0.8);
     expect(result.RampUp).toBe(0.8);
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
     expect(result.Dependencies).toBe(0.8);
+    expect(result.NetScore).toBe(0.8);
   });
 
   it("should return zero scores when repo information is invalid", async () => {
@@ -128,3 +128,4 @@ describe("calculateMetrics", () => {
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Error calculating metrics"));
   });
 });
+
