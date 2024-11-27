@@ -28,11 +28,16 @@ vi.mock("crypto", async (importOriginal) => {
     })
   };
 });
-vi.mock("../util.js", () => ({
-  checkIfPackageExists: vi.fn().mockReturnValue(false),
-  savePackage: vi.fn().mockResolvedValue({ success: true }),
-  calculatePackageId: vi.fn().mockReturnValue("mocked-hash-id")
-}));
+vi.mock("../util.js", async (importOriginal) => {
+  vi.stubEnv("NODE_TEST", "true");
+  const original = await importOriginal<typeof util>();
+  return {
+    ...original,
+    checkIfPackageExists: vi.fn().mockReturnValue(false),
+    savePackage: vi.fn().mockResolvedValue({ success: true }),
+    calculatePackageId: vi.fn().mockReturnValue("mocked-hash-id")
+  };
+});
 vi.mock("fs/promises", () => ({
   writeFile: vi.fn(),
   mkdir: vi.fn(),
