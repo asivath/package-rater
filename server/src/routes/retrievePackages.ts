@@ -55,8 +55,9 @@ export const retrievePackageInfo = async (
               ID: details.id,
               StandaloneCost: details.standaloneCost,
               TotalCost: details.totalCost,
-              NetScore: details.ndjson?.NetScore || "N/A",
-              CostStatus: details.costStatus
+              NetScore: details.ndjson.NetScore,
+              CostStatus: details.costStatus,
+              UploadedWithContent: versions.uploadedWithContent
             });
           } else {
             packages.push({
@@ -97,7 +98,8 @@ export const retrievePackageInfo = async (
                 ID: details.id,
                 StandaloneCost: details.standaloneCost,
                 TotalCost: details.totalCost,
-                NetScore: details.ndjson?.NetScore || "N/A"
+                NetScore: details.ndjson.NetScore,
+                UploadedWithContent: metadataJson.byName[Name].uploadedWithContent
               });
             } else {
               packages.push({
@@ -161,8 +163,8 @@ export const retrievePackageByRegEx = async (
     const metadataJson = getPackageMetadata();
     const regex = new RegExp(RegEx);
 
-    for (const [name, versions] of Object.entries(metadataJson.byName.versions)) {
-      for (const [version, details] of Object.entries(versions)) {
+    for (const [name, versions] of Object.entries(metadataJson.byName)) {
+      for (const [version, details] of Object.entries(versions.versions)) {
         if (regex.test(name) || (details.readme && regex.test(details.readme))) {
           if (allFlagHeader) {
             packages.push({
@@ -171,8 +173,9 @@ export const retrievePackageByRegEx = async (
               ID: details.id,
               StandaloneCost: details.standaloneCost,
               TotalCost: details.totalCost,
-              NetScore: details.ndjson?.NetScore || "N/A",
-              CostStatus: details.costStatus
+              NetScore: details.ndjson?.NetScore,
+              CostStatus: details.costStatus,
+              UploadedWithContent: versions.uploadedWithContent
             });
           } else {
             packages.push({

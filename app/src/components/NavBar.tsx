@@ -26,7 +26,7 @@ export const NavBar = () => {
           </Typography>
           <DownloadButton id="7536041697512265" />
           <ResetButton />
-          <UploadPackageForm />
+          <UploadPackageForm uploadVersion={false} />
         </Box>
       </Toolbar>
     </AppBar>

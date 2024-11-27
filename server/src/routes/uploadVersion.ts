@@ -1,9 +1,15 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { getLogger, cloneRepo } from "@package-rater/shared";
-import { calculatePackageId, checkIfPackageVersionExists, checkIfContentPatchValid, savePackage } from "../util.js";
-import { writeFile, readFile, rm, mkdir } from "fs/promises";
-import { getPackageMetadata } from "../util.js";
+import { getLogger } from "@package-rater/shared";
+import {
+  calculatePackageId,
+  checkIfPackageVersionExists,
+  checkIfContentPatchValid,
+  getPackageMetadata,
+  savePackage
+} from "../util.js";
+import { writeFile, rm, mkdir } from "fs/promises";
 import { tmpdir } from "os";
+import { getNpmPackageDetails, getGithubDetails } from "../util.js";
 import path from "path";
 import unzipper from "unzipper";
 
@@ -176,85 +182,3 @@ export const uploadVersion = async (
   logger.info(`Package ${packageName} with version ${version} uploaded successfully`);
   reply.code(201).send({ metadata: { Name: packageName, Version: version, ID: id }, data: request.body });
 };
-
-/**
- * Gets the details of a package from a github URL
- * @param url The URL of the github repository
- * @returns The package name and version
- */
-const getGithubDetails = async (url: string) => {
-  let packageName: string | undefined;
-  let version: string | undefined;
-  const repoDir = await cloneRepo(url, "repo");
-  if (repoDir) {
-    try {
-      const packageJsonFile = await readFile(`${repoDir}/package.json`);
-      const packageJson = JSON.parse(packageJsonFile.toString());
-      packageName = packageJson.name;
-      version = packageJson.version;
-    } catch (error) {
-      logger.warn("Error reading package.json or it doesn't exist:", error);
-    } finally {
-      await rm(repoDir, { recursive: true });
-    }
-  } else {
-    logger.error("Error cloning the repository");
-  }
-  if (!packageName) {
-    logger.warn("No package.json or package name found, falling back to GitHub repo name.");
-    const githubRegex = /github\.com\/(?<owner>[^/]+)\/(?<repo>[^/]+)/;
-    const match = url.match(githubRegex);
-    if (match?.groups) {
-      packageName = match.groups.repo;
-      try {
-        const npmPackageDetails = await getNpmPackageDetails(packageName);
-        if (npmPackageDetails) {
-          logger.info(
-            `Found package in npm registry: ${npmPackageDetails.packageName}, version: ${npmPackageDetails.version}`
-          );
-          version = version || npmPackageDetails.version;
-        } else {
-          logger.error("Invalid npm package name or package not found in npm registry.");
-        }
-      } catch (error) {
-        logger.error(`Error fetching package details from npm registry: ${(error as Error).message}`);
-      }
-    } else {
-      logger.error("Invalid GitHub URL format.");
-    }
-  }
-  if (!packageName) {
-    logger.error("Could not find valid package name.");
-    return null;
-  }
-  if (!version) {
-    logger.warn("No version found, falling back to version 1.0.0");
-    version = "1.0.0";
-  }
-  return { packageName, version };
-};
-
-/**
- * Get package details from npm registry API
- * @param packageName The npm package name
- * @returns Object containing packageName and version
- */
-async function getNpmPackageDetails(
-  packageName: string
-): Promise<{ packageName: string; version: string; dependencies: { [dependency: string]: string } } | null> {
-  try {
-    const npmUrl = `https://registry.npmjs.org/${packageName}`;
-    const response = await fetch(npmUrl);
-    if (!response.ok) return null;
-    const data = await response.json();
-    const dependencies = data.versions[data["dist-tags"].latest].dependencies || {};
-    return {
-      packageName: data.name,
-      version: data["dist-tags"].latest,
-      dependencies: dependencies
-    };
-  } catch (error) {
-    logger.error(`Error fetching npm package details for ${packageName}: ${(error as Error).message}`);
-    return null;
-  }
-}

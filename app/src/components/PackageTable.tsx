@@ -20,13 +20,13 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { fetcher } from "../util";
 import { SearchBar } from "./SearchBar";
-import { UploadVersionButton } from "./UploadVersion";
+import { UploadPackageForm } from "./UploadPackage";
 
 type PackageDisplay = {
   Name: string;
   Version: string;
   ID: string;
-  NetScore?: number | "N/A";
+  NetScore: number;
   StandaloneCost?: number;
   TotalCost?: number;
   CostStatus?: string;
@@ -47,8 +47,8 @@ function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   if (typeof o.ID !== "string") {
     throw new Error(`Expected PackageDisplay.ID to be a string, but got ${typeof o.ID}`);
   }
-  if (o.NetScore !== undefined && typeof o.NetScore !== "number" && o.NetScore !== "N/A") {
-    throw new Error(`Expected PackageDisplay.NetScore to be a number or 'N/A', but got ${typeof o.NetScore}`);
+  if (o.NetScore !== undefined && typeof o.NetScore !== "number") {
+    throw new Error(`Expected PackageDisplay.NetScore to be a number, but got ${typeof o.NetScore}`);
   }
   if (o.StandaloneCost !== undefined && typeof o.StandaloneCost !== "number") {
     throw new Error(`Expected PackageDisplay.StandaloneCost to be a number, but got ${typeof o.StandaloneCost}`);
@@ -58,6 +58,11 @@ function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   }
   if (o.CostStatus !== undefined && typeof o.CostStatus !== "string") {
     throw new Error(`Expected PackageDisplay.CostStatus to be a string, but got ${typeof o.CostStatus}`);
+  }
+  if (o.UploadedWithContent !== undefined && typeof o.UploadedWithContent !== "boolean") {
+    throw new Error(
+      `Expected PackageDisplay.UploadedWithContent to be a boolean, but got ${typeof o.UploadedWithContent}`
+    );
   }
 }
 
@@ -76,7 +81,8 @@ function Row(props: { row: PackageDisplay[] }) {
         <TableCell component="th" scope="row" sx={{ fontWeight: "bold", fontSize: "1.1rem" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {row[0].Name}
-            <UploadVersionButton
+            <UploadPackageForm
+              uploadVersion={true}
               id={row[0].ID}
               name={row[0].Name}
               version={row[0].Version}
@@ -156,19 +162,6 @@ export function PackageTable() {
     setSnackbarOpen(true);
   }
 
-  const fetechUploadType = async (name: string) => {
-    try {
-      const response = await fetcher(`/content/${name}`, {
-        method: "GET"
-      });
-      const data = await response.json();
-      return data.uploadedWithContent;
-    } catch (error) {
-      console.error("Error fetching upload type:", error);
-      setSnackBar("Error fetching upload type.", "error");
-    }
-  };
-
   const fetchViaName = async (searchValue: string, version?: string, fetchOffset = 0) => {
     try {
       version = version || "0.0.0-999999.999999.999999";
@@ -180,23 +173,13 @@ export function PackageTable() {
       const data = await response.json();
       const groupedData: Record<string, PackageDisplay[]> = {};
 
-      // Fetch all uploadedWithContent statuses in parallel
-      const enrichedData = await Promise.all(
-        data.map(async (pkg: PackageDisplay) => {
-          assertIsPackageDisplay(pkg);
-          const uploadedWithContent = await fetechUploadType(pkg.Name);
-          return { ...pkg, UploadedWithContent: uploadedWithContent };
-        })
-      );
-
-      // Group the data after enriching
-      enrichedData.forEach((pkg) => {
+      data.forEach((pkg: PackageDisplay) => {
+        assertIsPackageDisplay(pkg);
         if (!groupedData[pkg.Name]) {
           groupedData[pkg.Name] = [];
         }
         groupedData[pkg.Name].push(pkg);
       });
-
       if (Object.keys(groupedData).length === 0 && fetchOffset === 0) {
         setSnackBar("No packages found for the given search term.", "warning");
         setRows({});
@@ -204,13 +187,15 @@ export function PackageTable() {
         return;
       }
 
+      // Sort each package's versions in descending order by Version number
       Object.keys(groupedData).forEach((packageName) => {
         groupedData[packageName].sort((a, b) => parseFloat(b.Version) - parseFloat(a.Version));
       });
-
       if (fetchOffset === 0) {
+        // First load
         setRows(groupedData);
       } else {
+        // Append to existing rows
         setRows((prevRows) => {
           const updatedRows = { ...prevRows };
           Object.keys(groupedData).forEach((packageName) => {
@@ -222,7 +207,6 @@ export function PackageTable() {
           return updatedRows;
         });
       }
-
       if (data.length < 15) {
         setHasMore(false);
       }
@@ -250,29 +234,17 @@ export function PackageTable() {
         setHasMore(false);
         return;
       }
-
       const groupedData: Record<string, PackageDisplay[]> = {};
-
-      // Fetch uploadedWithContent in parallel
-      const packagesWithContent = await Promise.all(
-        data.map(async (pkg: PackageDisplay) => {
-          assertIsPackageDisplay(pkg);
-          const uploadedWithContent = await fetechUploadType(pkg.Name);
-          return { ...pkg, UploadedWithContent: uploadedWithContent };
-        })
-      );
-
-      packagesWithContent.forEach((pkg) => {
+      data.forEach((pkg: PackageDisplay) => {
+        assertIsPackageDisplay(pkg);
         if (!groupedData[pkg.Name]) {
           groupedData[pkg.Name] = [];
         }
         groupedData[pkg.Name].push(pkg);
       });
-
       Object.keys(groupedData).forEach((packageName) => {
         groupedData[packageName].sort((a, b) => parseFloat(b.Version) - parseFloat(a.Version));
       });
-
       if (fetchOffset === 0) {
         setRows(groupedData);
       } else {
@@ -287,7 +259,6 @@ export function PackageTable() {
           return updatedRows;
         });
       }
-
       if (data.length < 15) {
         setHasMore(false);
       }
