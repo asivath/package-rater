@@ -27,6 +27,7 @@ export type PackageDisplay = {
   Name: string;
   Version: string;
   ID: string;
+  UploadedWithContent?: boolean;
   NetScore?: number | "N/A";
   StandaloneCost?: number;
   TotalCost?: number;
@@ -57,6 +58,11 @@ export function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   }
   if (o.CostStatus !== undefined && typeof o.CostStatus !== "string") {
     throw new Error(`Expected PackageDisplay.CostStatus to be a string, but got ${typeof o.CostStatus}`);
+  }
+  if (typeof o.UploadedWithContent !== "boolean") {
+    throw new Error(
+      `Expected PackageDisplay.UploadedWithContent to be a boolean, but got ${typeof o.UploadedWithContent}`
+    );
   }
 }
 

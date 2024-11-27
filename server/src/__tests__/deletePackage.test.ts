@@ -62,55 +62,61 @@ const mockMetadataJson = vi.hoisted(() => ({
   },
   byName: {
     "completed-package": {
-      "1.0.0": {
-        id: "completed-ID",
-        ndjson: {
-          URL: "string",
-          NetScore: 1,
-          NetScore_Latency: 1,
-          RampUp: 1,
-          RampUp_Latency: 1,
-          Correctness: 1,
-          Correctness_Latency: 1,
-          BusFactor: 1,
-          BusFactor_Latency: 1,
-          ResponsiveMaintainer: 1,
-          ResponsiveMaintainer_Latency: 1,
-          License: 1,
-          License_Latency: 1,
-          Dependencies: 1,
-          Dependencies_Latency: 1
-        },
-        dependencies: {},
-        standaloneCost: 0.5,
-        totalCost: 0.5,
-        costStatus: "completed" // Ensuring costStatus is "completed"
+      uploadedWithContent: false,
+      versions: {
+        "1.0.0": {
+          id: "completed-ID",
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
+          dependencies: {},
+          standaloneCost: 0.5,
+          totalCost: 0.5,
+          costStatus: "completed" // Ensuring costStatus is "completed"
+        }
       }
     },
     "initiated-package": {
-      "1.0.0": {
-        id: "initiated-ID",
-        ndjson: {
-          URL: "string",
-          NetScore: 1,
-          NetScore_Latency: 1,
-          RampUp: 1,
-          RampUp_Latency: 1,
-          Correctness: 1,
-          Correctness_Latency: 1,
-          BusFactor: 1,
-          BusFactor_Latency: 1,
-          ResponsiveMaintainer: 1,
-          ResponsiveMaintainer_Latency: 1,
-          License: 1,
-          License_Latency: 1,
-          Dependencies: 1,
-          Dependencies_Latency: 1
-        },
-        dependencies: {},
-        standaloneCost: 0.5,
-        totalCost: 0,
-        costStatus: "pending" // Changed to "pending" from "initiated"
+      uploadedWithContent: false,
+      versions: {
+        "1.0.0": {
+          id: "initiated-ID",
+          ndjson: {
+            URL: "string",
+            NetScore: 1,
+            NetScore_Latency: 1,
+            RampUp: 1,
+            RampUp_Latency: 1,
+            Correctness: 1,
+            Correctness_Latency: 1,
+            BusFactor: 1,
+            BusFactor_Latency: 1,
+            ResponsiveMaintainer: 1,
+            ResponsiveMaintainer_Latency: 1,
+            License: 1,
+            License_Latency: 1,
+            Dependencies: 1,
+            Dependencies_Latency: 1
+          },
+          dependencies: {},
+          standaloneCost: 0.5,
+          totalCost: 0,
+          costStatus: "pending" // Changed to "pending" from "initiated"
+        }
       }
     }
   },

@@ -6,6 +6,8 @@ import { resetPackages } from "../routes/resetPackages";
 import { S3Client } from "@aws-sdk/client-s3";
 import { getLogger } from "@package-rater/shared";
 
+vi.stubEnv("NODE_TEST", "true");
+
 vi.mock("../util", () => ({
   clearMetadata: vi.fn().mockResolvedValue(undefined)
 }));

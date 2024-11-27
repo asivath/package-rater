@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import {
   savePackage,
   checkIfPackageExists,
+  checkIfPackageVersionExists,
+  checkIfContentPatchValid,
   getExactAvailableVersion,
   calculateTotalPackageCost,
   getPackageMetadata,
@@ -156,142 +158,157 @@ vi.mock("fs/promises", () => ({
       },
       byName: {
         "completed-package": {
-          "1.0.0": {
-            id: "completed-ID",
-            ndjson: {
-              URL: "string",
-              NetScore: 1,
-              NetScore_Latency: 1,
-              RampUp: 1,
-              RampUp_Latency: 1,
-              Correctness: 1,
-              Correctness_Latency: 1,
-              BusFactor: 1,
-              BusFactor_Latency: 1,
-              ResponsiveMaintainer: 1,
-              ResponsiveMaintainer_Latency: 1,
-              License: 1,
-              License_Latency: 1,
-              Dependencies: 1,
-              Dependencies_Latency: 1
-            },
-            dependencies: {},
-            standaloneCost: 0.5,
-            totalCost: 0.5,
-            costStatus: "completed"
+          uploadedWithContent: false,
+          versions: {
+            "1.0.0": {
+              id: "completed-ID",
+              ndjson: {
+                URL: "string",
+                NetScore: 1,
+                NetScore_Latency: 1,
+                RampUp: 1,
+                RampUp_Latency: 1,
+                Correctness: 1,
+                Correctness_Latency: 1,
+                BusFactor: 1,
+                BusFactor_Latency: 1,
+                ResponsiveMaintainer: 1,
+                ResponsiveMaintainer_Latency: 1,
+                License: 1,
+                License_Latency: 1,
+                Dependencies: 1,
+                Dependencies_Latency: 1
+              },
+              dependencies: {},
+              standaloneCost: 0.5,
+              totalCost: 0.5,
+              costStatus: "completed"
+            }
           }
         },
         "pending-package": {
-          "1.0.0": {
-            id: "6023484092574754",
-            ndjson: {
-              URL: "string",
-              NetScore: 1,
-              NetScore_Latency: 1,
-              RampUp: 1,
-              RampUp_Latency: 1,
-              Correctness: 1,
-              Correctness_Latency: 1,
-              BusFactor: 1,
-              BusFactor_Latency: 1,
-              ResponsiveMaintainer: 1,
-              ResponsiveMaintainer_Latency: 1,
-              License: 1,
-              License_Latency: 1,
-              Dependencies: 1,
-              Dependencies_Latency: 1
-            },
-            dependencies: {
-              "completed-dep": "1.0.0"
-            },
-            standaloneCost: 0.75,
-            totalCost: 0,
-            costStatus: "pending"
+          uploadedWithContent: false,
+          versions: {
+            "1.0.0": {
+              id: "6023484092574754",
+              ndjson: {
+                URL: "string",
+                NetScore: 1,
+                NetScore_Latency: 1,
+                RampUp: 1,
+                RampUp_Latency: 1,
+                Correctness: 1,
+                Correctness_Latency: 1,
+                BusFactor: 1,
+                BusFactor_Latency: 1,
+                ResponsiveMaintainer: 1,
+                ResponsiveMaintainer_Latency: 1,
+                License: 1,
+                License_Latency: 1,
+                Dependencies: 1,
+                Dependencies_Latency: 1
+              },
+              dependencies: {
+                "completed-dep": "1.0.0"
+              },
+              standaloneCost: 0.75,
+              totalCost: 0,
+              costStatus: "pending"
+            }
           }
         },
         "failing-package": {
-          "1.0.0": {
-            id: "failing-ID",
-            ndjson: {
-              URL: "string",
-              NetScore: 1,
-              NetScore_Latency: 1,
-              RampUp: 1,
-              RampUp_Latency: 1,
-              Correctness: 1,
-              Correctness_Latency: 1,
-              BusFactor: 1,
-              BusFactor_Latency: 1,
-              ResponsiveMaintainer: 1,
-              ResponsiveMaintainer_Latency: 1,
-              License: 1,
-              License_Latency: 1,
-              Dependencies: 1,
-              Dependencies_Latency: 1
-            },
-            dependencies: {
-              "incompleted-dep": "1.0.0"
-            },
-            standaloneCost: 0.5,
-            totalCost: 0,
-            costStatus: "pending"
+          uploadedWithContent: false,
+          versions: {
+            "1.0.0": {
+              id: "failing-ID",
+              ndjson: {
+                URL: "string",
+                NetScore: 1,
+                NetScore_Latency: 1,
+                RampUp: 1,
+                RampUp_Latency: 1,
+                Correctness: 1,
+                Correctness_Latency: 1,
+                BusFactor: 1,
+                BusFactor_Latency: 1,
+                ResponsiveMaintainer: 1,
+                ResponsiveMaintainer_Latency: 1,
+                License: 1,
+                License_Latency: 1,
+                Dependencies: 1,
+                Dependencies_Latency: 1
+              },
+              dependencies: {
+                "incompleted-dep": "1.0.0"
+              },
+              standaloneCost: 0.5,
+              totalCost: 0,
+              costStatus: "pending"
+            }
           }
         },
         "parent-package": {
-          "1.0.0": {
-            id: "parent-ID",
-            ndjson: {
-              URL: "string",
-              NetScore: 1,
-              NetScore_Latency: 1,
-              RampUp: 1,
-              RampUp_Latency: 1,
-              Correctness: 1,
-              Correctness_Latency: 1,
-              BusFactor: 1,
-              BusFactor_Latency: 1,
-              ResponsiveMaintainer: 1,
-              ResponsiveMaintainer_Latency: 1,
-              License: 1,
-              License_Latency: 1,
-              Dependencies: 1,
-              Dependencies_Latency: 1
-            },
-            dependencies: {
-              "child-package": "1.0.0"
-            },
-            standaloneCost: 0.75,
-            totalCost: 0,
-            costStatus: "pending"
+          uploadedWithContent: false,
+          versions: {
+            "1.0.0": {
+              id: "parent-ID",
+              ndjson: {
+                URL: "string",
+                NetScore: 1,
+                NetScore_Latency: 1,
+                RampUp: 1,
+                RampUp_Latency: 1,
+                Correctness: 1,
+                Correctness_Latency: 1,
+                BusFactor: 1,
+                BusFactor_Latency: 1,
+                ResponsiveMaintainer: 1,
+                ResponsiveMaintainer_Latency: 1,
+                License: 1,
+                License_Latency: 1,
+                Dependencies: 1,
+                Dependencies_Latency: 1
+              },
+              dependencies: {
+                "child-package": "1.0.0"
+              },
+              standaloneCost: 0.75,
+              totalCost: 0,
+              costStatus: "pending"
+            }
           }
         },
         "recursion-package": {
-          "1.0.0": {
-            id: "5555118188997178",
-            ndjson: {
-              URL: "string",
-              NetScore: 1,
-              NetScore_Latency: 1,
-              RampUp: 1,
-              RampUp_Latency: 1,
-              Correctness: 1,
-              Correctness_Latency: 1,
-              BusFactor: 1,
-              BusFactor_Latency: 1,
-              ResponsiveMaintainer: 1,
-              ResponsiveMaintainer_Latency: 1,
-              License: 1,
-              License_Latency: 1,
-              Dependencies: 1,
-              Dependencies_Latency: 1
-            },
-            dependencies: {
-              "recursion-package-2": "1.0.0",
-              "completed-dep": "1.0.0"
-            },
-            standaloneCost: 0.75,
-            totalCost: 0,
-            costStatus: "pending"
+          uploadedWithContent: false,
+          versions: {
+            "1.0.0": {
+              id: "5555118188997178",
+              ndjson: {
+                URL: "string",
+                NetScore: 1,
+                NetScore_Latency: 1,
+                RampUp: 1,
+                RampUp_Latency: 1,
+                Correctness: 1,
+                Correctness_Latency: 1,
+                BusFactor: 1,
+                BusFactor_Latency: 1,
+                ResponsiveMaintainer: 1,
+                ResponsiveMaintainer_Latency: 1,
+                License: 1,
+                License_Latency: 1,
+                Dependencies: 1,
+                Dependencies_Latency: 1
+              },
+              dependencies: {
+                "recursion-package-2": "1.0.0",
+                "completed-dep": "1.0.0"
+              },
+              standaloneCost: 0.75,
+              totalCost: 0,
+              costStatus: "pending"
+            }
           }
         }
       },
@@ -620,15 +637,85 @@ describe("savePackage", () => {
 
 describe("checkIfPackageExists", () => {
   it("should return true if package exists", async () => {
-    const result = checkIfPackageExists("8949875233423535");
+    const result = checkIfPackageExists("completed-package");
 
     expect(result).toBe(true);
   });
 
   it("should return false if package does not exist", async () => {
-    const result = checkIfPackageExists("non-existing-ID");
+    const result = checkIfPackageExists("non-existing-package");
 
     expect(result).toBe(false);
+  });
+});
+
+describe("checkIfPackageVersionExists", () => {
+  it("should return true if package version exists", async () => {
+    const result = checkIfPackageVersionExists("6023484092574754");
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false if package version does not exist", async () => {
+    const result = checkIfPackageVersionExists("non-existing-ID");
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("checkIfContentPatchValid", () => {
+  it("should return true if new version patch is greater than existing patches", () => {
+    const availableVersions = ["1.0.0", "1.0.1", "1.0.2"];
+    const newVersion = "1.0.3";
+
+    const result = checkIfContentPatchValid(availableVersions, newVersion);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false if new version patch is not greater than existing patches", () => {
+    const availableVersions = ["1.0.0", "1.0.1", "1.0.2"];
+    const newVersion = "1.0.1";
+
+    const result = checkIfContentPatchValid(availableVersions, newVersion);
+
+    expect(result).toBe(false);
+  });
+
+  it("should return true if new version minor is greater than existing minors", () => {
+    const availableVersions = ["1.0.0", "1.0.1", "1.0.2"];
+    const newVersion = "1.1.0";
+
+    const result = checkIfContentPatchValid(availableVersions, newVersion);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return true if new version major is greater than existing majors", () => {
+    const availableVersions = ["1.0.0", "1.0.1", "1.0.2"];
+    const newVersion = "2.0.0";
+
+    const result = checkIfContentPatchValid(availableVersions, newVersion);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return false if new version is lower than existing versions", () => {
+    const availableVersions = ["1.0.0", "1.0.1", "1.0.2"];
+    const newVersion = "0.9.9";
+
+    const result = checkIfContentPatchValid(availableVersions, newVersion);
+
+    expect(result).toBe(true);
+  });
+
+  it("should return true if no available versions", () => {
+    const availableVersions: string[] = [];
+    const newVersion = "1.0.0";
+
+    const result = checkIfContentPatchValid(availableVersions, newVersion);
+
+    expect(result).toBe(true);
   });
 });
 

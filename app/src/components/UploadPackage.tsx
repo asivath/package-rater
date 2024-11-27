@@ -16,8 +16,18 @@ import {
   Fade
 } from "@mui/material";
 import { fetcher } from "../util";
+import { IconButton } from "@mui/material";
+import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import { Tooltip } from "@mui/material";
 
-export const UploadPackageForm: React.FC = () => {
+export const UploadPackageForm: React.FC<{
+  uploadVersion: boolean;
+  id?: string;
+  name?: string;
+  version?: string;
+  uploadedWithContent?: boolean;
+}> = ({ uploadVersion, id, name, version, uploadedWithContent }) => {
   const [file, setFile] = useState<File | null>(null);
   const [packageUrl, setPackageUrl] = useState("");
   const [uploadPackageFormOpen, setUploadPackageFormOpen] = useState(false);
@@ -48,23 +58,61 @@ export const UploadPackageForm: React.FC = () => {
       setLoading(false);
       return;
     }
-    const body: { Content?: string; URL?: string; debloat: boolean } = { debloat: debloat };
+    let body;
+    let endpoint;
+    if (!uploadVersion) {
+      body = { debloat: debloat } as { Content?: string; URL?: string; debloat: boolean };
+    } else {
+      body = {
+        metadata: { Name: name, Version: version, ID: id },
+        data: { debloat: debloat }
+      };
+    }
     try {
-      if (file) {
-        body.Content = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            const base64String = result.split(",")[1];
-            resolve(base64String);
-          };
-          reader.onerror = () => reject("Error reading file");
-          reader.readAsDataURL(file);
-        });
-      } else if (packageUrl) {
-        body.URL = packageUrl;
+      if (!uploadVersion) {
+        endpoint = "/package";
+        if (file) {
+          (body as { Content?: string }).Content = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              const base64String = result.split(",")[1];
+              resolve(base64String);
+            };
+            reader.onerror = () => reject("Error reading file");
+            reader.readAsDataURL(file);
+          });
+        } else if (packageUrl) {
+          (body as { URL?: string }).URL = packageUrl;
+        }
+      } else {
+        endpoint = `/package/${id}`;
+        if (file) {
+          (
+            body as {
+              metadata: { Name: string; Version: string; ID: string };
+              data: { debloat: boolean; Content?: string };
+            }
+          ).data.Content = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              const base64String = result.split(",")[1];
+              resolve(base64String);
+            };
+            reader.onerror = () => reject("Error reading file");
+            reader.readAsDataURL(file);
+          });
+        } else if (packageUrl) {
+          (
+            body as {
+              metadata: { Name: string; Version: string; ID: string };
+              data: { debloat: boolean; URL?: string };
+            }
+          ).data.URL = packageUrl;
+        }
       }
-      const response = await fetcher("/package", {
+      const response = await fetcher(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -106,14 +154,28 @@ export const UploadPackageForm: React.FC = () => {
 
   return (
     <Box>
-      <Button
-        variant="contained"
-        color="secondary"
-        component="label"
-        sx={{ marginLeft: "auto" }}
-        onClick={() => setUploadPackageFormOpen(true)}>
-        Upload Package
-      </Button>
+      {uploadVersion ? (
+        <IconButton aria-label="perform action" color="primary" onClick={() => setUploadPackageFormOpen(true)}>
+          {uploadedWithContent ? (
+            <Tooltip title="Upload Content Version" arrow>
+              <DriveFolderUploadIcon />
+            </Tooltip>
+          ) : (
+            <Tooltip title="Upload URL Version" arrow>
+              <CloudUploadIcon />
+            </Tooltip>
+          )}
+        </IconButton>
+      ) : (
+        <Button
+          variant="contained"
+          color="secondary"
+          component="label"
+          sx={{ marginLeft: "auto" }}
+          onClick={() => setUploadPackageFormOpen(true)}>
+          Upload Package
+        </Button>
+      )}
       <Dialog
         open={uploadPackageFormOpen}
         onClose={() => setUploadPackageFormOpen(false)}
@@ -144,40 +206,54 @@ export const UploadPackageForm: React.FC = () => {
             Package uploaded successfully
           </Alert>
         )}
-        <DialogTitle>Upload Package</DialogTitle>
+        {!uploadVersion ? <DialogTitle>Upload Package</DialogTitle> : <DialogTitle>Upload {name} Version</DialogTitle>}
         <DialogContent>
           <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2} width="400px">
-            <Button variant="outlined" component="label">
-              Upload ZIP File
-              <input hidden type="file" accept=".zip" ref={fileInputRef} onChange={handleFileUpload} />
-            </Button>
-            {file && (
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Typography variant="body2" noWrap>
-                  Selected file: {file.name}
-                </Typography>
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    setFile(null);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                  color="secondary">
-                  Clear File
+            {uploadedWithContent || !uploadVersion ? (
+              <>
+                <Button variant="outlined" component="label">
+                  Upload ZIP File
+                  <input hidden type="file" accept=".zip" ref={fileInputRef} onChange={handleFileUpload} />
                 </Button>
-              </Box>
+                {file && (
+                  <Box display="flex" alignItems="center" justifyContent="space-between">
+                    <Typography variant="body2" noWrap>
+                      Selected file: {file.name}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={() => {
+                        setFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = "";
+                        }
+                      }}
+                      color="secondary">
+                      Clear File
+                    </Button>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <></>
             )}
-            <Divider>OR</Divider>
-            <TextField
-              label="GitHub / npm URL"
-              variant="outlined"
-              fullWidth
-              placeholder="Enter URL to GitHub or npm package"
-              value={packageUrl}
-              onChange={(e) => setPackageUrl(e.target.value)}
-            />
+
+            {!uploadVersion ? <Divider>OR</Divider> : <></>}
+
+            {!uploadedWithContent || !uploadVersion ? (
+              <>
+                <TextField
+                  label="GitHub / npm URL"
+                  variant="outlined"
+                  fullWidth
+                  placeholder="Enter URL to GitHub or npm package"
+                  value={packageUrl}
+                  onChange={(e) => setPackageUrl(e.target.value)}
+                />
+              </>
+            ) : (
+              <></>
+            )}
             <FormControlLabel
               control={
                 <Checkbox

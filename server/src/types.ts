@@ -16,16 +16,19 @@ export type Metadata = {
   };
   byName: {
     [packageName: string]: {
-      [version: string]: {
-        id: string;
-        ndjson: Ndjson;
-        dependencies: {
-          [dependency: string]: string;
+      uploadedWithContent: boolean;
+      versions: {
+        [version: string]: {
+          id: string;
+          ndjson: Ndjson;
+          dependencies: {
+            [dependency: string]: string;
+          };
+          standaloneCost: number;
+          totalCost: number;
+          costStatus: "pending" | "completed" | "failed";
+          readme?: string;
         };
-        standaloneCost: number;
-        totalCost: number;
-        costStatus: "pending" | "completed" | "failed";
-        readme?: string;
       };
     };
   };
@@ -84,8 +87,14 @@ export function assertIsMetadata(o: any): asserts o is Metadata {
     if (typeof v !== "object") {
       throw new Error("Metadata.byName values must be objects");
     }
-    for (const version in v) {
-      const vv = v[version];
+    if (typeof v.uploadedWithContent !== "boolean") {
+      throw new Error("Metadata.byName values.uploadedWithContent must be a boolean");
+    }
+    if (typeof v.versions !== "object") {
+      throw new Error("Metadata.byName values.versions must be an object");
+    }
+    for (const version in v.versions) {
+      const vv = v.versions[version];
       if (typeof vv !== "object") {
         throw new Error("Metadata.byName values values must be objects");
       }

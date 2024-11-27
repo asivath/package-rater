@@ -2,13 +2,14 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { getLogger } from "@package-rater/shared";
 import {
   calculatePackageId,
-  checkIfPackageExists,
-  savePackage,
-  getNpmPackageDetails,
-  getGithubDetails
+  checkIfPackageVersionExists,
+  checkIfContentPatchValid,
+  getPackageMetadata,
+  savePackage
 } from "../util.js";
 import { writeFile, rm, mkdir } from "fs/promises";
 import { tmpdir } from "os";
+import { getNpmPackageDetails, getGithubDetails } from "../util.js";
 import path from "path";
 import unzipper from "unzipper";
 
@@ -20,11 +21,21 @@ const logger = getLogger("server");
  * @param reply
  * @returns
  */
-export const uploadPackage = async (
-  request: FastifyRequest<{ Body: { Content: string; URL: string; debloat: boolean } }>,
+export const uploadVersion = async (
+  request: FastifyRequest<{
+    Body: {
+      metadata: { Name: string; Version: string; ID: string };
+      data: { Name: string; Content: string; URL: string; debloat: boolean };
+    };
+    Params: { id: string };
+  }>,
   reply: FastifyReply
 ) => {
-  const { Content, URL, debloat } = request.body;
+  const { metadata, data } = request.body;
+  const oldID = request.params.id; //ID of the package
+  const { Content, URL, debloat } = data; //Actual content of the package, URL to download the package, and whether to debloat the package
+  const { Name, Version, ID } = metadata; //Name of the package, version of the package, and the new ID of the package
+
   if ((!Content && !URL) || (Content && URL)) {
     reply.code(400).send({
       error:
@@ -32,10 +43,21 @@ export const uploadPackage = async (
     });
     return;
   }
+
   let packageName = "";
   let version = "";
   let id = "";
   try {
+    //Checks for versioning and package naming conflicts
+    const metadataJson = await getPackageMetadata();
+
+    if (Name !== metadataJson.byId[oldID].packageName || Version !== metadataJson.byId[oldID].version || oldID !== ID) {
+      logger.error(`Incorrect packageName or Version given for ${packageName}`);
+      reply
+        .code(400)
+        .send({ error: "There is missing field(s) in the PackageID or it is formed improperly, or is invalid." });
+      return;
+    }
     if (Content) {
       const buffer = Buffer.from(Content, "base64");
       const files = await unzipper.Open.buffer(buffer);
@@ -52,8 +74,15 @@ export const uploadPackage = async (
       const packageJson = JSON.parse(packageData.toString());
       packageName = packageJson.name || files.files[0].path.split("/")[0];
       version = packageJson.version || "1.0.0";
+
+      const availablePackageVersions = metadataJson.byName[Name].versions;
+      if (!checkIfContentPatchValid(Object.keys(availablePackageVersions), version)) {
+        logger.error(`Package ${packageName} with version ${Version} already exists`);
+        reply.code(409).send({ error: "Package already exists" });
+        return;
+      }
       id = calculatePackageId(packageName, version);
-      if (checkIfPackageExists(packageName)) {
+      if (checkIfPackageVersionExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
@@ -69,6 +98,12 @@ export const uploadPackage = async (
         }
       }
       const uploadedTempDirPath = path.join(tempPath, files.files[0].path);
+
+      if (metadataJson.byName[packageName].uploadedWithContent === false) {
+        logger.error(`Error saving the package ${packageName}: package must be uploaded with URL`);
+        reply.code(400).send({ error: "package upload types cannot be mixed" });
+      }
+
       const result = await savePackage(packageName, version, id, debloat, uploadedTempDirPath);
       if (result.success === false) {
         logger.error(`Error saving the package ${packageName}: ${result.reason}`);
@@ -78,14 +113,17 @@ export const uploadPackage = async (
       await rm(uploadedTempDirPath, { recursive: true });
     } else {
       const normalizedURL = URL.replace("www.npmjs.org", "www.npmjs.com");
+
       if (normalizedURL.includes("npmjs.com")) {
         const pathParts = normalizedURL.split("/");
         const packageIndex = pathParts.indexOf("package");
+
         if (packageIndex === -1) {
           logger.error(`Invalid npm URL: ${normalizedURL}`);
           reply.code(400).send({ error: "Invalid npm URL" });
           return;
         }
+
         let npmPackageName = decodeURIComponent(pathParts[packageIndex + 1]);
         if (npmPackageName.startsWith("@")) {
           npmPackageName += `/${decodeURIComponent(pathParts[packageIndex + 2])}`;
@@ -114,10 +152,15 @@ export const uploadPackage = async (
         version = details.version;
       }
       id = calculatePackageId(packageName, version);
-      if (checkIfPackageExists(packageName)) {
+      if (checkIfPackageVersionExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists`);
         reply.code(409).send({ error: "Package already exists" });
         return;
+      }
+
+      if (metadataJson.byName[packageName].uploadedWithContent === true) {
+        logger.error(`Error saving the package ${packageName}: package must be uploaded via URL`);
+        reply.code(400).send({ error: "package upload types cannot be mixed" });
       }
       const result = await savePackage(packageName, version, id, debloat, undefined, normalizedURL);
       if (result.success === false) {
@@ -132,7 +175,6 @@ export const uploadPackage = async (
       }
     }
   } catch (error) {
-    console.log(error);
     logger.error(`Error uploading the package ${packageName}:`, error);
     reply.code(500).send({ error: "Error uploading the package" });
     return;

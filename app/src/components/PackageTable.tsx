@@ -20,15 +20,17 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { fetcher } from "../util";
 import { SearchBar } from "./SearchBar";
+import { UploadPackageForm } from "./UploadPackage";
 
 type PackageDisplay = {
   Name: string;
   Version: string;
   ID: string;
-  NetScore?: number | "N/A";
+  NetScore: number;
   StandaloneCost?: number;
   TotalCost?: number;
   CostStatus?: string;
+  UploadedWithContent: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,8 +47,8 @@ function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   if (typeof o.ID !== "string") {
     throw new Error(`Expected PackageDisplay.ID to be a string, but got ${typeof o.ID}`);
   }
-  if (o.NetScore !== undefined && typeof o.NetScore !== "number" && o.NetScore !== "N/A") {
-    throw new Error(`Expected PackageDisplay.NetScore to be a number or 'N/A', but got ${typeof o.NetScore}`);
+  if (o.NetScore !== undefined && typeof o.NetScore !== "number") {
+    throw new Error(`Expected PackageDisplay.NetScore to be a number, but got ${typeof o.NetScore}`);
   }
   if (o.StandaloneCost !== undefined && typeof o.StandaloneCost !== "number") {
     throw new Error(`Expected PackageDisplay.StandaloneCost to be a number, but got ${typeof o.StandaloneCost}`);
@@ -56,6 +58,11 @@ function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   }
   if (o.CostStatus !== undefined && typeof o.CostStatus !== "string") {
     throw new Error(`Expected PackageDisplay.CostStatus to be a string, but got ${typeof o.CostStatus}`);
+  }
+  if (o.UploadedWithContent !== undefined && typeof o.UploadedWithContent !== "boolean") {
+    throw new Error(
+      `Expected PackageDisplay.UploadedWithContent to be a boolean, but got ${typeof o.UploadedWithContent}`
+    );
   }
 }
 
@@ -72,7 +79,16 @@ function Row(props: { row: PackageDisplay[] }) {
           </IconButton>
         </TableCell>
         <TableCell component="th" scope="row" sx={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-          {row[0].Name}
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {row[0].Name}
+            <UploadPackageForm
+              uploadVersion={true}
+              id={row[0].ID}
+              name={row[0].Name}
+              version={row[0].Version}
+              uploadedWithContent={row[0].UploadedWithContent}
+            />
+          </Box>
         </TableCell>
       </TableRow>
       <TableRow>

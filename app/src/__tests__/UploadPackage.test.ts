@@ -84,6 +84,193 @@ test.describe("UploadPackageForm", () => {
     await expect(page.locator("text=Package uploaded successfully")).toBeVisible();
   });
 
+  test("should display packages in the table when fetched and show details when expanded and show correct version button icons", async ({
+    page
+  }) => {
+    await page.goto("http://localhost:5173");
+
+    const contentPackageName = "TestPackage";
+    const URLPackageName = "URLPackage";
+    const mockVersion = "1.0.0";
+    const contentMockId = "12345";
+    const URLMockId = "54321";
+    const mockNetScore = 0.9;
+
+    const searchBar = page.locator('input[placeholder="Type package name..."]');
+    await searchBar.fill("");
+
+    await page.route("**/packages", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            Name: contentPackageName,
+            Version: mockVersion,
+            ID: contentMockId,
+            NetScore: mockNetScore,
+            UploadedWithContent: true
+          },
+          {
+            Name: URLPackageName,
+            Version: mockVersion,
+            ID: URLMockId,
+            NetScore: mockNetScore,
+            UploadedWithContent: false
+          }
+        ])
+      });
+    });
+
+    await page.locator('role=button[name="Search"]').click();
+
+    const tableRow = page.locator(`text=${contentPackageName}`);
+    await expect(tableRow).toBeVisible();
+
+    const newVersion = tableRow.locator('[data-testid="DriveFolderUploadIcon"]');
+    await newVersion.click();
+
+    page.locator(`text=Upload ${contentPackageName} Version`).isVisible();
+  });
+
+  test("should display packages in the table when fetched and show details when expanded and show only file using content", async ({
+    page
+  }) => {
+    await page.goto("http://localhost:5173");
+
+    const contentPackageName = "TestPackage";
+    const URLPackageName = "URLPackage";
+    const mockVersion = "1.0.0";
+    const contentMockId = "12345";
+    const URLMockId = "54321";
+    const mockNetScore = 0.9;
+
+    const searchBar = page.locator('input[placeholder="Type package name..."]');
+    await searchBar.fill("");
+
+    await page.route("**/packages", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            Name: contentPackageName,
+            Version: mockVersion,
+            ID: contentMockId,
+            NetScore: mockNetScore,
+            UploadedWithContent: true
+          },
+          {
+            Name: URLPackageName,
+            Version: mockVersion,
+            ID: URLMockId,
+            NetScore: mockNetScore,
+            UploadedWithContent: false
+          }
+        ])
+      });
+    });
+
+    await page.locator('role=button[name="Search"]').click();
+
+    const tableRow = page.locator(`text=${contentPackageName}`);
+    await expect(tableRow).toBeVisible();
+
+    const newVersion = tableRow.locator('[data-testid="DriveFolderUploadIcon"]');
+    await newVersion.click();
+
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(path.join(__dirname, "__files__", "test.zip"));
+
+    await page.route("**/package", async (route) => {
+      const request = route.request();
+      const postData = await request.postDataJSON();
+
+      expect(postData).not.toHaveProperty("URL");
+      expect(postData).toHaveProperty("Content");
+      expect(postData.Content).toMatch(/^.+$/);
+      expect(postData).toHaveProperty("debloat", false);
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true })
+      });
+    });
+
+    await page.click('button:has-text("Submit")');
+
+    await expect(page.locator("text=test.zip")).toBeVisible();
+  });
+
+  test("should display packages in the table when fetched and show details when expanded and url upload version works", async ({
+    page
+  }) => {
+    await page.goto("http://localhost:5173");
+
+    const contentPackageName = "TestPackage";
+    const URLPackageName = "URLPackage";
+    const mockVersion = "1.0.0";
+    const contentMockId = "12345";
+    const URLMockId = "54321";
+    const mockNetScore = 0.9;
+
+    const searchBar = page.locator('input[placeholder="Type package name..."]');
+    await searchBar.fill("");
+
+    await page.route("**/packages", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            Name: contentPackageName,
+            Version: mockVersion,
+            ID: contentMockId,
+            NetScore: mockNetScore,
+            UploadedWithContent: true
+          },
+          {
+            Name: URLPackageName,
+            Version: mockVersion,
+            ID: URLMockId,
+            NetScore: mockNetScore,
+            UploadedWithContent: false
+          }
+        ])
+      });
+    });
+
+    await page.locator('role=button[name="Search"]').click();
+
+    const tableRow = page.locator(`text=${URLPackageName}`);
+    await expect(tableRow).toBeVisible();
+
+    const newVersion = tableRow.locator('[data-testid="CloudUploadIcon"]');
+    await newVersion.click();
+
+    await page.fill('input[placeholder="Enter URL to GitHub or npm package"]', "https://github.com/sample/repo");
+    const debloatCheckbox = page.locator('input[name="debloat"]');
+    await debloatCheckbox.check();
+
+    await page.route("**/package", async (route) => {
+      const request = route.request();
+      const postData = await request.postDataJSON();
+
+      expect(postData).not.toHaveProperty("Content");
+      expect(postData).toHaveProperty("URL", "https://github.com/sample/repo");
+      expect(postData).toHaveProperty("debloat", true);
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true })
+      });
+    });
+
+    await page.click('button:has-text("Submit")');
+  });
+
   const errorScenarios = [
     { status: 409, message: "Package already exists" },
     { status: 424, message: "Package is not uploaded due to the disqualified rating" },

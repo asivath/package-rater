@@ -4,7 +4,7 @@ import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { assertIsNdjson, getLogger } from "@package-rater/shared";
+import { assertIsNdjson, getLogger, cloneRepo } from "@package-rater/shared";
 import { create, extract } from "tar";
 import { pipeline } from "stream/promises";
 import { assertIsMetadata, Metadata } from "./types.js";
@@ -19,21 +19,23 @@ const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "packages");
-export const metadataPath = path.join(packagesDirPath, "metadata.json");
-try {
-  await access(metadataPath);
-} catch {
-  await mkdir(path.dirname(metadataPath), { recursive: true });
-  await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }));
-}
-
+const metadataPath = path.join(packagesDirPath, "metadata.json");
 let metadata: Metadata;
+
 async function loadMetadata(): Promise<void> {
   const metadataFile = JSON.parse(await readFile(metadataPath, "utf-8"));
   assertIsMetadata(metadataFile);
   metadata = metadataFile;
 }
-await loadMetadata();
+if (process.env.NODE_TEST != "true") {
+  try {
+    await access(metadataPath);
+  } catch {
+    await mkdir(path.dirname(metadataPath), { recursive: true });
+    await writeFile(metadataPath, JSON.stringify({ byId: {}, byName: {}, costCache: {} }));
+  }
+  await loadMetadata();
+}
 
 const packageCostPromisesMap = new Map<string, Promise<number>>();
 
@@ -83,11 +85,14 @@ export const savePackage = async (
     let ndjson;
     let tarBallPath;
     let packageJson;
+    let uploadedWithContent;
     // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
     // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
     let readmeString: string | undefined;
 
     if (packageFilePath) {
+      uploadedWithContent = true;
+
       // Given file path
       const targetUploadFilePath = path.join(packageIdPath, escapedPackageName);
       await cp(packageFilePath, targetUploadFilePath, { recursive: true });
@@ -154,6 +159,8 @@ export const savePackage = async (
       await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [escapedPackageName]);
       await rm(targetUploadFilePath, { recursive: true });
     } else {
+      uploadedWithContent = false;
+
       // Given a url
       const unscopedName = packageName.startsWith("@") ? packageName.split("/")[1] : packageName;
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${unscopedName}-${version}.tgz`;
@@ -243,6 +250,7 @@ export const savePackage = async (
     dependencies = packageJson.dependencies || {};
     standaloneCost = (await stat(tarBallPath)).size / (1024 * 1000);
 
+    //Add info based on ID
     metadata.byId[id] = {
       packageName,
       version,
@@ -253,11 +261,16 @@ export const savePackage = async (
       costStatus: "pending"
     };
 
+    //Initialize new package with empty versions and whether it was uploaded with content or URL
     if (!metadata.byName[packageName]) {
-      metadata.byName[packageName] = {};
+      metadata.byName[packageName] = {
+        uploadedWithContent: uploadedWithContent,
+        versions: {}
+      };
     }
 
-    metadata.byName[packageName][version] = {
+    //Add info based on name
+    metadata.byName[packageName].versions[version] = {
       id,
       ndjson,
       dependencies,
@@ -639,8 +652,8 @@ export async function calculateTotalPackageCost(packageName: string, version: st
     const totalCost = await calculateTotalCost(graph);
     packageDataById.totalCost = totalCost;
     packageDataById.costStatus = "completed";
-    metadata.byName[packageName][version].totalCost = totalCost;
-    metadata.byName[packageName][version].costStatus = "completed";
+    metadata.byName[packageName].versions[version].totalCost = totalCost;
+    metadata.byName[packageName].versions[version].costStatus = "completed";
 
     return totalCost;
   };
@@ -653,7 +666,7 @@ export async function calculateTotalPackageCost(packageName: string, version: st
   } catch (error) {
     logger.error(`Failed to calculate total cost of package ${id}: ${(error as Error).message}`);
     packageDataById.costStatus = "failed";
-    metadata.byName[packageName][version].costStatus = "failed";
+    metadata.byName[packageName].versions[version].costStatus = "failed";
     return 0;
   } finally {
     packageCostPromisesMap.delete(id);
@@ -668,8 +681,27 @@ export async function calculateTotalPackageCost(packageName: string, version: st
  * @param id The package ID
  * @returns Whether the package exists
  */
-export const checkIfPackageExists = (id: string) => {
+export const checkIfPackageExists = (name: string) => {
+  const metadata = getPackageMetadata();
+  return metadata.byName[name] ? true : false;
+};
+
+export const checkIfPackageVersionExists = (id: string) => {
+  const metadata = getPackageMetadata();
   return metadata.byId[id] ? true : false;
+};
+
+export const checkIfContentPatchValid = (availablePackageVersions: string[], newVersion: string) => {
+  const [newMajor, newMinor, newPatch] = newVersion.split(".").map(Number);
+  for (const curVersion of availablePackageVersions) {
+    const [major, minor, patch] = curVersion.split(".").map(Number);
+    if (newMajor === major && newMinor === minor) {
+      if (newPatch < patch) {
+        return false;
+      }
+    }
+  }
+  return true;
 };
 
 /**
@@ -774,4 +806,86 @@ export function calculatePackageId(packageName: string, version: string): string
   return BigInt("0x" + hash)
     .toString()
     .slice(0, 16);
+}
+
+/**
+ * Gets the details of a package from a github URL
+ * @param url The URL of the github repository
+ * @returns The package name and version
+ */
+export const getGithubDetails = async (url: string) => {
+  let packageName: string | undefined;
+  let version: string | undefined;
+  const repoDir = await cloneRepo(url, "repo");
+  if (repoDir) {
+    try {
+      const packageJsonFile = await readFile(`${repoDir}/package.json`);
+      const packageJson = JSON.parse(packageJsonFile.toString());
+      packageName = packageJson.name;
+      version = packageJson.version;
+    } catch (error) {
+      logger.warn("Error reading package.json or it doesn't exist:", error);
+    } finally {
+      await rm(repoDir, { recursive: true });
+    }
+  } else {
+    logger.error("Error cloning the repository");
+  }
+  if (!packageName) {
+    logger.warn("No package.json or package name found, falling back to GitHub repo name.");
+    const githubRegex = /github\.com\/(?<owner>[^/]+)\/(?<repo>[^/]+)/;
+    const match = url.match(githubRegex);
+    if (match?.groups) {
+      packageName = match.groups.repo;
+      try {
+        const npmPackageDetails = await getNpmPackageDetails(packageName);
+        if (npmPackageDetails) {
+          logger.info(
+            `Found package in npm registry: ${npmPackageDetails.packageName}, version: ${npmPackageDetails.version}`
+          );
+          version = version || npmPackageDetails.version;
+        } else {
+          logger.error("Invalid npm package name or package not found in npm registry.");
+        }
+      } catch (error) {
+        logger.error(`Error fetching package details from npm registry: ${(error as Error).message}`);
+      }
+    } else {
+      logger.error("Invalid GitHub URL format.");
+    }
+  }
+  if (!packageName) {
+    logger.error("Could not find valid package name.");
+    return null;
+  }
+  if (!version) {
+    logger.warn("No version found, falling back to version 1.0.0");
+    version = "1.0.0";
+  }
+  return { packageName, version };
+};
+
+/**
+ * Get package details from npm registry API
+ * @param packageName The npm package name
+ * @returns Object containing packageName and version
+ */
+export async function getNpmPackageDetails(
+  packageName: string
+): Promise<{ packageName: string; version: string; dependencies: { [dependency: string]: string } } | null> {
+  try {
+    const npmUrl = `https://registry.npmjs.org/${packageName}`;
+    const response = await fetch(npmUrl);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const dependencies = data.versions[data["dist-tags"].latest].dependencies || {};
+    return {
+      packageName: data.name,
+      version: data["dist-tags"].latest,
+      dependencies: dependencies
+    };
+  } catch (error) {
+    logger.error(`Error fetching npm package details for ${packageName}: ${(error as Error).message}`);
+    return null;
+  }
 }

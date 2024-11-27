@@ -7,6 +7,7 @@ import { deletePackage } from "./routes/deletePackage.js";
 import { resetPackages } from "./routes/resetPackages.js";
 import { downloadPackage } from "./routes/downloadPackage.js";
 import { getPackageCost } from "./routes/getPackageCost.js";
+import { uploadVersion } from "./routes/uploadVersion.js";
 import { getLogger } from "@package-rater/shared";
 import "dotenv/config";
 
@@ -34,6 +35,7 @@ fastify.get("/package/:id", downloadPackage);
 fastify.delete("/package/:id", deletePackage);
 fastify.delete("/reset", resetPackages);
 fastify.get("/package/:id/cost", getPackageCost);
+fastify.post("/package/:id", uploadVersion);
 
 const start = async () => {
   try {

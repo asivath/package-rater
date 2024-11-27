@@ -33,8 +33,8 @@ export const ResetButton: React.FC = () => {
         <DialogContent>
           <Typography>
             {isProd
-              ? "Are you sure you want to reset the local packages? This cannot be undone."
-              : "Are you sure you want to reset the S3 bucket? This cannot be undone."}
+              ? "Are you sure you want to reset the S3 bucket? This cannot be undone."
+              : "Are you sure you want to reset the local packages? This cannot be undone."}
           </Typography>
         </DialogContent>
         <DialogActions>
