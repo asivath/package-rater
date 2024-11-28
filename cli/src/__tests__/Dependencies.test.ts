@@ -1,18 +1,21 @@
-import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "fs/promises";
 import path from "path";
 import { isPinnedToMajorMinor, findPackageJsonFiles, calculatePinnedDependencyFraction } from "../metrics/Dependencies";
+import * as shared from "@package-rater/shared";
+import { Dirent } from "fs";
 
-// Mocking the logger
-vi.mock("../src/logger", () => ({
-  getLogger: () => ({
-    error: vi.fn(),
-    info: vi.fn()
-  })
-}));
-
-// Mocking fs module
-vi.mock("fs/promises");
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
+  return {
+    ...original,
+    getLogger: vi.fn().mockReturnValue({
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn()
+    })
+  };
+});
 
 describe("isPinnedToMajorMinor", () => {
   it("should return false for version starting with caret (^)", () => {
@@ -31,6 +34,7 @@ describe("isPinnedToMajorMinor", () => {
 });
 
 describe("findPackageJsonFiles", () => {
+  const readdir = vi.spyOn(fs, "readdir");
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -40,9 +44,7 @@ describe("findPackageJsonFiles", () => {
       { name: "dir1", isDirectory: () => true, isFile: () => false },
       { name: "package.json", isDirectory: () => false, isFile: () => true }
     ];
-
-    // Mock readdir and stat
-    (fs.readdir as Mock).mockResolvedValueOnce(mockFiles);
+    readdir.mockResolvedValueOnce(mockFiles as Dirent[]).mockResolvedValueOnce([]);
 
     const packageJsonFiles = await findPackageJsonFiles("/fake-dir");
     expect(packageJsonFiles).toEqual([path.join("/fake-dir", "package.json")]);
@@ -53,8 +55,7 @@ describe("findPackageJsonFiles", () => {
       { name: "dir1", isDirectory: () => true, isFile: () => false },
       { name: "file.txt", isDirectory: () => false, isFile: () => true }
     ];
-
-    (fs.readdir as Mock).mockResolvedValueOnce(mockFiles);
+    readdir.mockResolvedValueOnce(mockFiles as Dirent[]).mockResolvedValueOnce([]);
 
     const packageJsonFiles = await findPackageJsonFiles("/fake-dir");
     expect(packageJsonFiles).toEqual([]);
@@ -62,6 +63,8 @@ describe("findPackageJsonFiles", () => {
 });
 
 describe("calculatePinnedDependencyFraction", () => {
+  const readdir = vi.spyOn(fs, "readdir");
+  const readFile = vi.spyOn(fs, "readFile");
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -82,10 +85,8 @@ describe("calculatePinnedDependencyFraction", () => {
       }
     });
 
-    (fs.readdir as Mock).mockResolvedValueOnce([
-      { name: "package.json", isDirectory: () => false, isFile: () => true }
-    ]);
-    (fs.readFile as Mock).mockResolvedValueOnce(mockPackageJson);
+    readdir.mockResolvedValueOnce([{ name: "package.json", isDirectory: () => false, isFile: () => true } as Dirent]);
+    readFile.mockResolvedValueOnce(mockPackageJson);
 
     const fraction = await calculatePinnedDependencyFraction("owner", "repo", "/fake-dir");
     expect(fraction).toBe(1 / 3); // One out of three dependencies is pinned
@@ -97,10 +98,8 @@ describe("calculatePinnedDependencyFraction", () => {
       devDependencies: {}
     });
 
-    (fs.readdir as Mock).mockResolvedValueOnce([
-      { name: "package.json", isDirectory: () => false, isFile: () => true }
-    ]);
-    (fs.readFile as Mock).mockResolvedValueOnce(mockPackageJson);
+    readdir.mockResolvedValueOnce([{ name: "package.json", isDirectory: () => false, isFile: () => true } as Dirent]);
+    readFile.mockResolvedValueOnce(mockPackageJson);
 
     const fraction = await calculatePinnedDependencyFraction("owner", "repo", "/fake-dir");
     expect(fraction).toBe(1.0); // No dependencies found

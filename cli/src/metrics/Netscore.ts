@@ -1,11 +1,10 @@
-import { getLogger, getGithubRepo } from "@package-rater/shared";
+import { getLogger, getGithubRepo, cloneRepo, Ndjson, assertIsNdjson } from "@package-rater/shared";
 import { calculateCorrectness } from "./Correctness.js";
 import { calculateLicense } from "./License.js";
 import { calculateRampup } from "./RampUp.js";
 import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { calculatePinnedDependencyFraction } from "./Dependencies.js";
-import { cloneRepo, Ndjson, assertIsNdjson } from "@package-rater/shared";
 import { rm } from "fs/promises";
 import { promisify } from "util";
 import { exec } from "child_process";

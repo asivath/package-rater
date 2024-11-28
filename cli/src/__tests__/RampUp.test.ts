@@ -1,24 +1,25 @@
 import { describe, it, expect, vi, Mock } from "vitest";
 import { calculateRampup } from "../metrics/RampUp";
 import { getGitHubData } from "../graphql";
-import { getLogger } from "@package-rater/shared";
+import * as shared from "@package-rater/shared";
 
-// Mock getGitHubData and logger
 vi.mock("../graphql", () => ({
   getGitHubData: vi.fn()
 }));
-
-vi.mock("@package-rater/shared", () => {
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
   return {
+    ...original,
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),
-      info: vi.fn()
+      info: vi.fn(),
+      warn: vi.fn()
     })
   };
 });
 
 describe("calculateRampup", () => {
-  const logger = getLogger("test");
+  const logger = shared.getLogger("test");
 
   it("should calculate the ramp-up score correctly when pull requests exist", async () => {
     const mockPRResponse = {
@@ -59,7 +60,7 @@ describe("calculateRampup", () => {
     expect(result).toBeGreaterThan(0);
     expect(result).toBeLessThan(1);
 
-    const logger = getLogger("test");
+    const logger = shared.getLogger("test");
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringMatching(/^Ramp-up score for test-owner\/test-repo: \d+(\.\d+)?$/)
     );
@@ -145,7 +146,7 @@ describe("calculateRampup", () => {
     expect(result).toBeGreaterThan(0);
     expect(result).toBeLessThan(1);
 
-    const logger = getLogger("test");
+    const logger = shared.getLogger("test");
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringMatching(/^Ramp-up score for test-owner\/test-repo: \d+(\.\d+)?$/)
     );
@@ -155,7 +156,7 @@ describe("calculateRampup", () => {
     const mockError = new Error("GitHub API failed");
     (getGitHubData as Mock).mockRejectedValueOnce(mockError);
 
-    const logger = getLogger("test");
+    const logger = shared.getLogger("test");
 
     await expect(calculateRampup("test-owner", "test-repo")).rejects.toThrow("GitHub API failed");
 

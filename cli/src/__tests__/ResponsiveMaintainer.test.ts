@@ -1,24 +1,25 @@
 import { describe, it, expect, vi, Mock } from "vitest";
 import { calculateResponsiveMaintainer } from "../metrics/ResponsiveMaintainer";
 import { getGitHubData } from "../graphql";
-import { getLogger } from "@package-rater/shared";
+import * as shared from "@package-rater/shared";
 
-// Mock getGitHubData and logger
 vi.mock("../graphql", () => ({
   getGitHubData: vi.fn()
 }));
-
-vi.mock("@package-rater/shared", () => {
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
   return {
+    ...original,
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),
-      info: vi.fn()
+      info: vi.fn(),
+      warn: vi.fn()
     })
   };
 });
 
 describe("calculateResponsiveMaintainer", () => {
-  const logger = getLogger("test");
+  const logger = shared.getLogger("test");
   it("should calculate responsiveness correctly when issues exist", async () => {
     const mockRepoResponse = {
       data: {
@@ -92,7 +93,7 @@ describe("calculateResponsiveMaintainer", () => {
 
     expect(result).toBe(0.5);
 
-    const logger = getLogger("test");
+    const logger = shared.getLogger("test");
     expect(logger.info).toHaveBeenCalledWith("No issues found");
   });
 
@@ -100,7 +101,7 @@ describe("calculateResponsiveMaintainer", () => {
     const mockError = new Error("GitHub API failed");
     (getGitHubData as Mock).mockRejectedValueOnce(mockError);
 
-    const logger = getLogger("test");
+    const logger = shared.getLogger("test");
 
     await expect(calculateResponsiveMaintainer("test-owner", "test-repo")).rejects.toThrow("GitHub API failed");
 

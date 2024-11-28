@@ -15,7 +15,7 @@ test.describe("Upload Lodash Tests", () => {
     await page.click('role=button[name="Upload Package"]');
 
     const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "lodash-main.zip"));
+    await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "is-even-main.zip"));
 
     await page.click('button:has-text("Submit")');
 
@@ -30,7 +30,10 @@ test.describe("Upload Lodash Tests", () => {
     let response: Package[] = [];
     let ID = "";
     for (let i = 0; i < maxRetries; i++) {
-      const apiRequest = await apiContext.get("http://localhost:3000/packages");
+      const apiRequest = await apiContext.post(
+        "http://localhost:3000/packages",
+        { data: [{ Name: "lodash", Version: "4.17.21" }] }
+      );
       response = await apiRequest.json();
       console.log(response);
       if (response.some((pkg) => pkg.Name === "lodash" && pkg.Version === "4.17.21")) {

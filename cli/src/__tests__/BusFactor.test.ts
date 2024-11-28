@@ -1,18 +1,28 @@
 import { describe, it, expect, vi, Mock, afterEach } from "vitest";
-import { calculateBusFactor } from "../metrics/BusFactor"; // Update with the correct path
-import { getGitHubData } from "../graphql"; // Ensure this path is correct
+import { calculateBusFactor } from "../metrics/BusFactor";
+import { getGitHubData } from "../graphql";
+import * as shared from "@package-rater/shared";
 
-// Mocking the getGitHubData function
 vi.mock("../graphql", () => ({
   getGitHubData: vi.fn()
 }));
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
+  return {
+    ...original,
+    getLogger: vi.fn().mockReturnValue({
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn()
+    })
+  };
+});
 
 describe("calculateBusFactor", () => {
-  const owner = "ownerName"; // Replace with a test owner
-  const name = "repoName"; // Replace with a test repository name
+  const owner = "ownerName";
+  const name = "repoName";
 
   afterEach(() => {
-    // Clear the mock after each test
     vi.clearAllMocks();
   });
 
@@ -57,7 +67,6 @@ describe("calculateBusFactor", () => {
       }
     };
 
-    // Mock the response for getGitHubData
     (getGitHubData as Mock).mockResolvedValueOnce(mockData);
 
     const busFactor = await calculateBusFactor(owner, name);
@@ -84,10 +93,7 @@ describe("calculateBusFactor", () => {
         }
       }
     };
-
-    // Mock the response for getGitHubData
     (getGitHubData as Mock).mockResolvedValueOnce(mockData);
-
     const busFactor = await calculateBusFactor(owner, name);
 
     // If there are no commits, bus factor should be 0
@@ -95,7 +101,6 @@ describe("calculateBusFactor", () => {
   });
 
   it("logs an error if fetching data fails", async () => {
-    // Mock the response for getGitHubData to throw an error
     (getGitHubData as Mock).mockRejectedValue(new Error("Network Error"));
 
     const busFactor = await calculateBusFactor(owner, name);

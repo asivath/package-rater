@@ -132,7 +132,6 @@ export const uploadPackage = async (
       }
     }
   } catch (error) {
-    console.log(error);
     logger.error(`Error uploading the package ${packageName}:`, error);
     reply.code(500).send({ error: "Error uploading the package" });
     return;

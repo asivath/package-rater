@@ -1,37 +1,57 @@
-import { describe, it, expect, Mock, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import fs from "fs/promises";
 import { calculateLicense } from "../metrics/License";
+import * as shared from "@package-rater/shared";
+
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
+  return {
+    ...original,
+    getLogger: vi.fn().mockReturnValue({
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn()
+    })
+  };
+});
 
 vi.mock("fs/promises");
 describe("calculateLicense", () => {
   const owner = "ownerName";
   const repo = "repoName";
   const repoDir = "/path/to/cloned-repo";
+  const readFile = vi.spyOn(fs, "readFile");
 
   it("should return the correct score for a valid license in package.json", async () => {
-    // Mocking fs.readFile to return a package.json with a specific license
     const mockPackageJson = JSON.stringify({ license: "MIT" });
-    (fs.readFile as Mock).mockResolvedValueOnce(mockPackageJson);
+    readFile.mockResolvedValueOnce(mockPackageJson);
 
     const score = await calculateLicense(owner, repo, repoDir);
     expect(score).toBe(1);
   });
 
   it("should return the correct score for a valid license in LICENSE file", async () => {
-    // Mocking fs.readFile for package.json to return undefined license
-    (fs.readFile as Mock).mockResolvedValueOnce("{}");
+    readFile.mockResolvedValueOnce("{}");
+    readFile.mockResolvedValueOnce("This project is licensed under the MIT License.");
 
-    // Mocking fs.readFile for LICENSE file
-    (fs.readFile as Mock).mockResolvedValueOnce("This project is licensed under the MIT License.");
+    const score = await calculateLicense(owner, repo, repoDir);
+    expect(score).toBe(1);
+  });
+
+  it("should return the correct score for a valid license in README.md", async () => {
+    readFile.mockResolvedValueOnce("{}");
+    readFile.mockResolvedValueOnce("LMAO");
+    readFile.mockResolvedValueOnce("This project is licensed under the MIT License.");
 
     const score = await calculateLicense(owner, repo, repoDir);
     expect(score).toBe(1);
   });
 
   it("should return 0 if no license is found", async () => {
-    // Mocking fs.readFile to throw an error indicating no license found
-    // Simulate missing package.json and license
-    (fs.readFile as Mock).mockRejectedValueOnce(new Error("ENOENT")).mockRejectedValueOnce(new Error("ENOENT"));
+    readFile.mockRejectedValueOnce(new Error("ENOENT")); // Simulate missing package.json
+    readFile.mockRejectedValueOnce(new Error("ENOENT")); // Simulate missing LICENSE file
+    readFile.mockRejectedValueOnce(new Error("ENOENT")); // Simulate missing README.md
+
     const score = await calculateLicense(owner, repo, repoDir);
     expect(score).toBe(0);
   });
