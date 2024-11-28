@@ -21,6 +21,8 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { fetcher } from "../util";
 import { SearchBar } from "./SearchBar";
 import { UploadPackageForm } from "./UploadPackage";
+import { DownloadButton } from "./DownloadButton";
+import { Link } from "react-router-dom";
 
 type PackageDisplay = {
   Name: string;
@@ -130,9 +132,15 @@ function Row(props: { row: PackageDisplay[] }) {
                 <TableBody>
                   {row.map((version) => (
                     <TableRow key={version.ID} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-                      <TableCell align="center">{version.Version}</TableCell>
+                      {/* Make Version Number Clickable */}
+                      <TableCell align="center">
+                        <Link to={`/v/${version.ID}`} style={{ textDecoration: 'none', color: 'blue' }}>
+                          {version.Version}
+                        </Link>
+                      </TableCell>
                       <TableCell align="center">{version.ID}</TableCell>
                       <TableCell align="center">{version.NetScore}</TableCell>
+                      <TableCell align="center">{<DownloadButton id={version.ID}/>}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -306,14 +314,12 @@ export function PackageTable() {
         </Alert>
       </Snackbar>
       <SearchBar onSearch={onSearch} />
-      <Collapse in={hasSearched && Object.keys(rows).length > 0} timeout={600} sx={{ width: "70%" }}>
+
+      <Collapse in={hasSearched && Object.keys(rows).length > 0} timeout={600} sx={{ width: "100%" }}>
         <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 2, outline: "1px solid gray" }}>
           <Table aria-label="collapsible table">
             <TableHead>
-              <TableRow sx={{ backgroundColor: "primary.main" }}>
-                <TableCell sx={{ width: "40px" }} />
-                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1.2rem" }}>Package Name</TableCell>
-              </TableRow>
+             
             </TableHead>
             <TableBody>
               {Object.keys(rows).map((packageName) => (

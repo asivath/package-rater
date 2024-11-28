@@ -1,6 +1,7 @@
 import React from "react";
 import { fetcher } from "../util";
-import { Button } from "@mui/material";
+import { IconButton, Tooltip } from "@mui/material";
+import DownloadIcon from '@mui/icons-material/Download';
 
 interface DownloadButtonProps {
   id: string; // Accepts the id as a parameter
@@ -18,12 +19,12 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
       const streamToString = responseJson.data.Content;
       const byteArray = Uint8Array.from(atob(streamToString), (c) => c.charCodeAt(0));
 
-      const blob = new Blob([byteArray], { type: "application/x-gtar-compressed" });
+      const blob = new Blob([byteArray], { type: "application/zip" });
 
       const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `${name}-${version}.tgz`;
+      link.download = `${name}-${version}.zip`;
 
       document.body.appendChild(link);
       link.click();
@@ -35,8 +36,10 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
   };
 
   return (
-    <Button color="inherit" sx={{ marginLeft: "auto" }} onClick={handleDownload}>
-      Download
-    </Button>
+    <Tooltip title="Download Zip" arrow>
+        <IconButton onClick={handleDownload}>
+          <DownloadIcon />
+        </IconButton>
+    </Tooltip>
   );
 };

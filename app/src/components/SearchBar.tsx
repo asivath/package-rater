@@ -26,10 +26,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   const theme = useTheme();
 
   return (
-    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" width="50%" m={5}>
-      <Typography variant="h4" mb={2}>
-        Search for a package
-      </Typography>
+    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" width="50%" m={0}>
       <Typography variant="h4" mb={2}></Typography>
       <Box display="flex" flexDirection="row" justifyContent="center" alignItems="center" width="100%">
         <TextField
