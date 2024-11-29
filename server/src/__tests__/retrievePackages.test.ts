@@ -10,7 +10,6 @@ const mockMetadataJson = vi.hoisted(() => ({
       packageName: "express",
       version: "1.0.0",
       ndjson: {
-        URL: "string",
         NetScore: 1,
         NetScore_Latency: 1,
         RampUp: 1,
@@ -23,8 +22,10 @@ const mockMetadataJson = vi.hoisted(() => ({
         ResponsiveMaintainer_Latency: 1,
         License: 1,
         License_Latency: 1,
-        Dependencies: 1,
-        Dependencies_Latency: 1
+        GoodPinningPractice: 1,
+        GoodPinningPracticeLatency: 1,
+        PullRequest: 1,
+        PullRequest_Latency: 1
       },
       dependencies: {},
       standaloneCost: 0,
@@ -35,7 +36,6 @@ const mockMetadataJson = vi.hoisted(() => ({
       packageName: "new-package-1",
       version: "2.0.0",
       ndjson: {
-        URL: "string",
         NetScore: 1,
         NetScore_Latency: 1,
         RampUp: 1,
@@ -48,8 +48,10 @@ const mockMetadataJson = vi.hoisted(() => ({
         ResponsiveMaintainer_Latency: 1,
         License: 1,
         License_Latency: 1,
-        Dependencies: 1,
-        Dependencies_Latency: 1
+        GoodPinningPractice: 1,
+        GoodPinningPracticeLatency: 1,
+        PullRequest: 1,
+        PullRequest_Latency: 1
       },
       dependencies: {},
       standaloneCost: 0,
@@ -60,7 +62,6 @@ const mockMetadataJson = vi.hoisted(() => ({
       packageName: "new-package-1",
       version: "2.5.0",
       ndjson: {
-        URL: "string",
         NetScore: 1,
         NetScore_Latency: 1,
         RampUp: 1,
@@ -73,8 +74,10 @@ const mockMetadataJson = vi.hoisted(() => ({
         ResponsiveMaintainer_Latency: 1,
         License: 1,
         License_Latency: 1,
-        Dependencies: 1,
-        Dependencies_Latency: 1
+        GoodPinningPractice: 1,
+        GoodPinningPracticeLatency: 1,
+        PullRequest: 1,
+        PullRequest_Latency: 1
       },
       dependencies: {},
       standaloneCost: 0,
@@ -89,7 +92,6 @@ const mockMetadataJson = vi.hoisted(() => ({
         "1.0.0": {
           id: "id1",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -102,8 +104,10 @@ const mockMetadataJson = vi.hoisted(() => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {},
           standaloneCost: 0,
@@ -113,7 +117,6 @@ const mockMetadataJson = vi.hoisted(() => ({
         "2.0.0": {
           id: "id2",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -126,8 +129,10 @@ const mockMetadataJson = vi.hoisted(() => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {},
           standaloneCost: 0,
@@ -137,7 +142,6 @@ const mockMetadataJson = vi.hoisted(() => ({
         "2.5.0": {
           id: "id3",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -150,8 +154,10 @@ const mockMetadataJson = vi.hoisted(() => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {},
           standaloneCost: 0,

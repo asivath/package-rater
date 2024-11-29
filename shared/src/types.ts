@@ -1,19 +1,20 @@
 export type Ndjson = {
-  URL: string;
-  NetScore: number;
-  NetScore_Latency: number;
-  RampUp: number;
-  RampUp_Latency: number;
-  Correctness: number;
-  Correctness_Latency: number;
   BusFactor: number;
   BusFactor_Latency: number;
+  Correctness: number;
+  Correctness_Latency: number;
+  RampUp: number;
+  RampUp_Latency: number;
   ResponsiveMaintainer: number;
   ResponsiveMaintainer_Latency: number;
   License: number;
   License_Latency: number;
-  Dependencies: number;
-  Dependencies_Latency: number;
+  GoodPinningPractice: number;
+  GoodPinningPracticeLatency: number;
+  PullRequest: number;
+  PullRequest_Latency: number;
+  NetScore: number;
+  NetScore_Latency: number;
 };
 
 export type PackageCostResponse = {
@@ -91,9 +92,6 @@ export function assertIsNdjson(o: any): asserts o is Ndjson {
   if (!o || typeof o !== "object") {
     throw new Error("Ndjson is not an object");
   }
-  if (typeof o.URL !== "string") {
-    throw new Error("Ndjson.URL is not a string");
-  }
   if (typeof o.NetScore !== "number") {
     throw new Error("Ndjson.NetScore is not a number");
   }
@@ -130,10 +128,16 @@ export function assertIsNdjson(o: any): asserts o is Ndjson {
   if (typeof o.License_Latency !== "number") {
     throw new Error("Ndjson.License_Latency is not a number");
   }
-  if (typeof o.Dependencies !== "number") {
-    throw new Error("Ndjson.Dependencies is not a number");
+  if (typeof o.PullRequest !== "number") {
+    throw new Error("Ndjson.PullRequest is not a number");
   }
-  if (typeof o.Dependencies_Latency !== "number") {
-    throw new Error("Ndjson.Dependencies_Latency is not a number");
+  if (typeof o.PullRequest_Latency !== "number") {
+    throw new Error("Ndjson.PullRequest_Latency is not a number");
+  }
+  if (typeof o.GoodPinningPractice !== "number") {
+    throw new Error("Ndjson.GoodPinningPractice is not a number");
+  }
+  if (typeof o.GoodPinningPracticeLatency !== "number") {
+    throw new Error("Ndjson.GoodPinningPracticeLatency is not a number");
   }
 }

@@ -25,7 +25,6 @@ vi.mock("fs/promises", () => ({
           packageName: "completed-package",
           version: "1.0.0",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -38,8 +37,10 @@ vi.mock("fs/promises", () => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {},
           standaloneCost: 0.5,
@@ -50,7 +51,6 @@ vi.mock("fs/promises", () => ({
           packageName: "pending-package",
           version: "1.0.0",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -63,8 +63,10 @@ vi.mock("fs/promises", () => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {
             "completed-dep": "1.0.0"
@@ -77,7 +79,6 @@ vi.mock("fs/promises", () => ({
           packageName: "failing-package",
           version: "1.0.0",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -90,8 +91,10 @@ vi.mock("fs/promises", () => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {
             "incompleted-dep": "1.0.0"
@@ -104,7 +107,6 @@ vi.mock("fs/promises", () => ({
           packageName: "parent-package",
           version: "1.0.0",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -117,8 +119,10 @@ vi.mock("fs/promises", () => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {
             "child-package": "1.0.0"
@@ -131,7 +135,6 @@ vi.mock("fs/promises", () => ({
           packageName: "recursion-package",
           version: "1.0.0",
           ndjson: {
-            URL: "string",
             NetScore: 1,
             NetScore_Latency: 1,
             RampUp: 1,
@@ -144,8 +147,10 @@ vi.mock("fs/promises", () => ({
             ResponsiveMaintainer_Latency: 1,
             License: 1,
             License_Latency: 1,
-            Dependencies: 1,
-            Dependencies_Latency: 1
+            GoodPinningPractice: 1,
+            GoodPinningPracticeLatency: 1,
+            PullRequest: 1,
+            PullRequest_Latency: 1
           },
           dependencies: {
             "recursion-package-2": "1.0.0",
@@ -163,7 +168,6 @@ vi.mock("fs/promises", () => ({
             "1.0.0": {
               id: "completed-ID",
               ndjson: {
-                URL: "string",
                 NetScore: 1,
                 NetScore_Latency: 1,
                 RampUp: 1,
@@ -176,8 +180,10 @@ vi.mock("fs/promises", () => ({
                 ResponsiveMaintainer_Latency: 1,
                 License: 1,
                 License_Latency: 1,
-                Dependencies: 1,
-                Dependencies_Latency: 1
+                GoodPinningPractice: 1,
+                GoodPinningPracticeLatency: 1,
+                PullRequest: 1,
+                PullRequest_Latency: 1
               },
               dependencies: {},
               standaloneCost: 0.5,
@@ -192,7 +198,6 @@ vi.mock("fs/promises", () => ({
             "1.0.0": {
               id: "6023484092574754",
               ndjson: {
-                URL: "string",
                 NetScore: 1,
                 NetScore_Latency: 1,
                 RampUp: 1,
@@ -205,8 +210,10 @@ vi.mock("fs/promises", () => ({
                 ResponsiveMaintainer_Latency: 1,
                 License: 1,
                 License_Latency: 1,
-                Dependencies: 1,
-                Dependencies_Latency: 1
+                GoodPinningPractice: 1,
+                GoodPinningPracticeLatency: 1,
+                PullRequest: 1,
+                PullRequest_Latency: 1
               },
               dependencies: {
                 "completed-dep": "1.0.0"
@@ -223,7 +230,6 @@ vi.mock("fs/promises", () => ({
             "1.0.0": {
               id: "failing-ID",
               ndjson: {
-                URL: "string",
                 NetScore: 1,
                 NetScore_Latency: 1,
                 RampUp: 1,
@@ -236,8 +242,10 @@ vi.mock("fs/promises", () => ({
                 ResponsiveMaintainer_Latency: 1,
                 License: 1,
                 License_Latency: 1,
-                Dependencies: 1,
-                Dependencies_Latency: 1
+                GoodPinningPractice: 1,
+                GoodPinningPracticeLatency: 1,
+                PullRequest: 1,
+                PullRequest_Latency: 1
               },
               dependencies: {
                 "incompleted-dep": "1.0.0"
@@ -254,7 +262,6 @@ vi.mock("fs/promises", () => ({
             "1.0.0": {
               id: "parent-ID",
               ndjson: {
-                URL: "string",
                 NetScore: 1,
                 NetScore_Latency: 1,
                 RampUp: 1,
@@ -267,8 +274,10 @@ vi.mock("fs/promises", () => ({
                 ResponsiveMaintainer_Latency: 1,
                 License: 1,
                 License_Latency: 1,
-                Dependencies: 1,
-                Dependencies_Latency: 1
+                GoodPinningPractice: 1,
+                GoodPinningPracticeLatency: 1,
+                PullRequest: 1,
+                PullRequest_Latency: 1
               },
               dependencies: {
                 "child-package": "1.0.0"
@@ -285,7 +294,6 @@ vi.mock("fs/promises", () => ({
             "1.0.0": {
               id: "5555118188997178",
               ndjson: {
-                URL: "string",
                 NetScore: 1,
                 NetScore_Latency: 1,
                 RampUp: 1,
@@ -298,8 +306,10 @@ vi.mock("fs/promises", () => ({
                 ResponsiveMaintainer_Latency: 1,
                 License: 1,
                 License_Latency: 1,
-                Dependencies: 1,
-                Dependencies_Latency: 1
+                GoodPinningPractice: 1,
+                GoodPinningPracticeLatency: 1,
+                PullRequest: 1,
+                PullRequest_Latency: 1
               },
               dependencies: {
                 "recursion-package-2": "1.0.0",
@@ -390,7 +400,6 @@ vi.mock("esbuild", async (importOriginal) => {
 });
 
 const mockNdJson: shared.Ndjson = {
-  URL: "https://www.npmjs.com/package/express",
   NetScore: 0.8,
   NetScore_Latency: 0.1,
   RampUp: 0.8,
@@ -403,8 +412,10 @@ const mockNdJson: shared.Ndjson = {
   ResponsiveMaintainer_Latency: 0.1,
   License: 0.8,
   License_Latency: 0.1,
-  Dependencies: 0.8,
-  Dependencies_Latency: 0.1
+  GoodPinningPractice: 1,
+  GoodPinningPracticeLatency: 1,
+  PullRequest: 1,
+  PullRequest_Latency: 1
 };
 
 function createMockStat(isDirectory: boolean) {
