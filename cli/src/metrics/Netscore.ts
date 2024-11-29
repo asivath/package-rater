@@ -93,15 +93,16 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
       throw new Error(`Repository directory is undefined for URL: ${url}`);
     }
     const totalLinesOfCode = await calculateLOC(repoDir);
-    const [correctness, licenseCompatibility, responsiveness, busFactor, rampUp, dependencies, fracPR ] = await Promise.all([
-      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
-      latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
-      latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
-      latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
-      latencyWrapper(() => calculateRampup(repoOwner, repoName)),
-      latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
-      latencyWrapper(() => calculateFracPRReview(repoOwner, repoName, totalLinesOfCode))
-    ]);
+    const [correctness, licenseCompatibility, responsiveness, busFactor, rampUp, dependencies, fracPR] =
+      await Promise.all([
+        latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
+        latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
+        latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
+        latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
+        latencyWrapper(() => calculateRampup(repoOwner, repoName)),
+        latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
+        latencyWrapper(() => calculateFracPRReview(repoOwner, repoName, totalLinesOfCode))
+      ]);
 
     const netscore =
       0.1 * busFactor.result +
@@ -131,7 +132,15 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
       PullRequest_Latency: parseFloat(fracPR.time.toFixed(2)),
       NetScore: parseFloat(netscore.toFixed(2)),
       NetScore_Latency: parseFloat(
-        (correctness.time + licenseCompatibility.time + rampUp.time + responsiveness.time + busFactor.time + dependencies.time + fracPR.time).toFixed(2)
+        (
+          correctness.time +
+          licenseCompatibility.time +
+          rampUp.time +
+          responsiveness.time +
+          busFactor.time +
+          dependencies.time +
+          fracPR.time
+        ).toFixed(2)
       )
     };
     assertIsNdjson(ndjsonOutput);

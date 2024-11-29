@@ -132,4 +132,3 @@ describe("calculateMetrics", () => {
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Error calculating metrics"));
   });
 });
-

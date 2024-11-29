@@ -67,7 +67,7 @@ describe("calculatePinnedDependencyFraction", () => {
   });
 
   it("should return 0 and log an error if repoDir is not provided", async () => {
-    const fraction = await calculatePinnedDependencyFraction("owner", "repo", null);
+    const fraction = await calculatePinnedDependencyFraction("owner", "repo");
     expect(fraction).toBe(0);
   });
 

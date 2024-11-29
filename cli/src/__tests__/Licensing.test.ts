@@ -1,6 +1,6 @@
 import { describe, it, expect, Mock, vi } from "vitest";
 import fs from "fs/promises";
-import { calculateLicense } from "../metrics/License"; // Update with the actual path
+import { calculateLicense } from "../metrics/License";
 
 vi.mock("fs/promises");
 describe("calculateLicense", () => {
@@ -30,17 +30,14 @@ describe("calculateLicense", () => {
 
   it("should return 0 if no license is found", async () => {
     // Mocking fs.readFile to throw an error indicating no license found
-    (fs.readFile as Mock).mockRejectedValueOnce(new Error("ENOENT")); // Simulate missing package.json
-    (fs.readFile as Mock).mockRejectedValueOnce(new Error("ENOENT")); // Simulate missing LICENSE file
-
+    // Simulate missing package.json and license
+    (fs.readFile as Mock).mockRejectedValueOnce(new Error("ENOENT")).mockRejectedValueOnce(new Error("ENOENT"));
     const score = await calculateLicense(owner, repo, repoDir);
     expect(score).toBe(0);
   });
 
   it("should handle errors from cloneRepository gracefully", async () => {
-    const failedRepoDir = null; // Simulate an invalid directory
-
-    const score = await calculateLicense(owner, repo, failedRepoDir);
+    const score = await calculateLicense(owner, repo);
     expect(score).toBe(0);
   });
 });

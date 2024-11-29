@@ -1,5 +1,4 @@
 import { getLogger } from "@package-rater/shared";
-import * as fs from "fs";
 import { getGitHubData } from "../graphql.js";
 
 const logger = getLogger("cli");
@@ -52,8 +51,6 @@ async function fetchMergedPRs(owner: string, repo: string, baseRef: string): Pro
     }
   `;
 
-  logger.debug(`Fetching merged PRs for ${repo} on branch ${baseRef}`);
-
   const results: PRNode[] = [];
   let hasNextPage = true;
   let after: string | null = null;
@@ -94,12 +91,13 @@ export async function calculateFracPRReview(owner: string, repo: string, tocMain
     // Fetch merged PRs from both 'main' and 'master' branches
     const mergedPRs = await fetchAllMergedPRs(owner, repo);
 
-    // Filter PRs that have either a non-null reviewDecision OR at least 1 comment AND deletion is not 1.5x greater than addition to deal wtih weird edge cases
-    // where 1000000 lines are deleted and 1000 line is added
+    // Filter PRs that have either a non-null reviewDecision OR at least 1 comment AND
+    // the amount of code deleted is not more than added by 1.5x to deal with weird edge cases
+    // where 1000000 lines are deleted and 1000 line is added, aka readME changes
     const validPRs = mergedPRs.filter(
-      (pr) => (pr.reviewDecision !== null || pr.comments.totalCount > 0) && pr.additions > 1.25 * pr.deletions
+      (pr) => (pr.reviewDecision !== null || pr.comments.totalCount > 0) && pr.deletions <= 1.5 * pr.additions
     );
-    writeMergedPRs(mergedPRs, repo);
+    // writeMergedPRs(mergedPRs, repo);
     // Calculate the total LOC impact from valid PRs
     const prLOC = validPRs.reduce((total, pr) => total + (pr.additions - pr.deletions), 0);
 
@@ -114,15 +112,15 @@ export async function calculateFracPRReview(owner: string, repo: string, tocMain
   }
 }
 
-async function writeMergedPRs(mergedPRs: PRNode[], repo: string) {
-  const prData = mergedPRs.map((pr) => ({
-    number: pr.number,
-    additions: pr.additions,
-    deletions: pr.deletions,
-    reviewDecision: pr.reviewDecision,
-    comments: pr.comments.totalCount
-  }));
-  const fileName = `./${repo}-merged-prs.json`;
-  fs.writeFileSync(fileName, JSON.stringify(prData, null, 2));
-  logger.info(`Merged PRs written to ${fileName}`);
-}
+// async function writeMergedPRs(mergedPRs: PRNode[], repo: string) {
+//   const prData = mergedPRs.map((pr) => ({
+//     number: pr.number,
+//     additions: pr.additions,
+//     deletions: pr.deletions,
+//     reviewDecision: pr.reviewDecision,
+//     comments: pr.comments.totalCount
+//   }));
+//   const fileName = `./${repo}-merged-prs.json`;
+//   fs.writeFileSync(fileName, JSON.stringify(prData, null, 2));
+//   logger.info(`Merged PRs written to ${fileName}`);
+// }
