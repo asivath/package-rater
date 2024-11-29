@@ -25,7 +25,7 @@ export const ResetButton: React.FC = () => {
 
   return (
     <>
-      <Button color="inherit" sx={{ marginLeft: "auto" }} onClick={handleClickOpen}>
+      <Button color="error" sx={{ marginLeft: "auto", mr: 3 }} onClick={handleClickOpen}>
         Reset
       </Button>
       <Dialog open={open} onClose={handleClose}>

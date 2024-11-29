@@ -21,6 +21,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { fetcher } from "../util";
 import { SearchBar } from "./SearchBar";
 import { UploadPackageForm } from "./UploadPackage";
+import { DownloadButton } from "./DownloadButton";
 
 type PackageDisplay = {
   Name: string;
@@ -72,14 +73,32 @@ function Row(props: { row: PackageDisplay[] }) {
 
   return (
     <>
-      <TableRow sx={{ "& > *": { borderBottom: "1px solid gray" } }}>
-        <TableCell sx={{ width: "40px", padding: "8px" }}>
+      <TableRow
+        sx={{
+          "& > *": {},
+          "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" }
+        }}
+        onClick={() => setOpen(!open)}>
+        <TableCell sx={{ width: "40px", padding: 1 }}>
           <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        <TableCell component="th" scope="row" sx={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+        <TableCell
+          component="th"
+          scope="row"
+          sx={{
+            fontWeight: "bold",
+            fontSize: "1.1rem",
+            padding: "8px 16px"
+          }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
             {row[0].Name}
             <UploadPackageForm
               uploadVersion={true}
@@ -91,48 +110,68 @@ function Row(props: { row: PackageDisplay[] }) {
           </Box>
         </TableCell>
       </TableRow>
+
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0, borderBottom: "1px solid gray" }} colSpan={3}>
+        <TableCell
+          sx={{
+            paddingBottom: 0,
+            paddingTop: 0,
+            borderBottom: "1px solid gray"
+          }}
+          colSpan={3}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: "12px 16px" }}>
+            <Box
+              sx={{
+                margin: "12px 16px",
+                padding: 2,
+                boxShadow: 2,
+                borderRadius: 2,
+                backgroundColor: "#f9f9f9"
+              }}>
               <Table size="small" aria-label="versions" sx={{ borderCollapse: "collapse" }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        borderBottom: "1px solid gray"
-                      }}>
-                      Version Number
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        borderBottom: "1px solid gray"
-                      }}>
-                      Package ID
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: "bold",
-                        fontSize: "1rem",
-                        borderBottom: "1px solid gray"
-                      }}>
-                      Net Score
-                    </TableCell>
+                    {[
+                      "Version Number",
+                      "Package ID",
+                      "Net Score",
+                      ...(row.some((version) => version.CostStatus === "completed") ? ["Cost"] : []),
+                      "Download"
+                    ].map((header) => (
+                      <TableCell
+                        key={header}
+                        align="center"
+                        sx={{
+                          fontWeight: "bold",
+                          fontSize: "1rem",
+                          borderBottom: "1px solid gray"
+                        }}>
+                        {header}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {row.map((version) => (
-                    <TableRow key={version.ID} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+                    <TableRow
+                      key={version.ID}
+                      sx={{
+                        "&:last-child td, &:last-child th": { border: 0 },
+                        "&:hover": {
+                          backgroundColor: "rgba(0, 0, 0, 0.04)"
+                        }
+                      }}>
                       <TableCell align="center">{version.Version}</TableCell>
                       <TableCell align="center">{version.ID}</TableCell>
                       <TableCell align="center">{version.NetScore}</TableCell>
+                      {version.CostStatus == "completed" ? (
+                        <TableCell align="center">{version.TotalCost}</TableCell>
+                      ) : (
+                        <></>
+                      )}
+                      <TableCell align="center">
+                        <DownloadButton id={version.ID} />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -306,15 +345,11 @@ export function PackageTable() {
         </Alert>
       </Snackbar>
       <SearchBar onSearch={onSearch} />
-      <Collapse in={hasSearched && Object.keys(rows).length > 0} timeout={600} sx={{ width: "70%" }}>
-        <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 2, outline: "1px solid gray" }}>
+
+      <Collapse in={hasSearched && Object.keys(rows).length > 0} timeout={600} sx={{ width: "95%" }}>
+        <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 0, outline: "1px solid gray" }}>
           <Table aria-label="collapsible table">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: "primary.main" }}>
-                <TableCell sx={{ width: "40px" }} />
-                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1.2rem" }}>Package Name</TableCell>
-              </TableRow>
-            </TableHead>
+            <TableHead></TableHead>
             <TableBody>
               {Object.keys(rows).map((packageName) => (
                 <Row key={packageName} row={rows[packageName]} />

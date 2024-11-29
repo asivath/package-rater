@@ -26,10 +26,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   const theme = useTheme();
 
   return (
-    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" width="50%" m={5}>
-      <Typography variant="h4" mb={2}>
-        Search for a package
-      </Typography>
+    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" width="50%" m={0}>
       <Typography variant="h4" mb={2}></Typography>
       <Box display="flex" flexDirection="row" justifyContent="center" alignItems="center" width="100%">
         <TextField
@@ -44,11 +41,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
           }}
           placeholder="Type package name..."
           sx={{
-            borderRadius: 2,
+            borderRadius: 0,
             boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
             "& .MuiOutlinedInput-root": {
-              borderRadius: 3,
-              paddingRight: 1
+              borderRadius: 0,
+              paddingRight: 1,
+              backgroundColor: "#f5f3f4"
             },
             "& .MuiInputAdornment-root": {
               marginRight: "8px"

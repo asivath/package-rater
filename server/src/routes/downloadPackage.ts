@@ -44,7 +44,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
   if (cachedData) {
     reply.code(200).send({
       metadata: { Name: cachedData.Name, Version: cachedData.Version, ID: cachedData.ID },
-      data: { Content: cachedData }
+      data: { Content: cachedData.Content }
     });
     return;
   }
