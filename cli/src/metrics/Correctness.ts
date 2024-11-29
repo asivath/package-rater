@@ -48,22 +48,6 @@ async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
   }
 }
 
-// async function calculateLOC(repoDir: string): Promise<number> {
-//   try {
-//     const execAsync = promisify(exec);
-//     const { stdout } = await execAsync(`npx cloc --json ${repoDir}`);
-//     const clocData = JSON.parse(stdout);
-//     const jsLines = clocData.JavaScript?.code || 0;
-//     const tsLines = clocData.TypeScript?.code || 0;
-//     const totalLines = jsLines + tsLines;
-//     logger.info(`Calculated LOC for ${repoDir}: ${totalLines}`);
-//     return totalLines;
-//   } catch (error) {
-//     logger.error(`Error calculating LOC for ${repoDir}: ${(error as Error).message}`);
-//     return 0;
-//   }
-// }
-
 /**
  * Calculate the correctness of a repository based on resolved issues and bugs
  * @param owner

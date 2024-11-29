@@ -97,7 +97,7 @@ export async function calculateFracPRReview(owner: string, repo: string, tocMain
     const validPRs = mergedPRs.filter(
       (pr) => (pr.reviewDecision !== null || pr.comments.totalCount > 0) && pr.deletions <= 1.5 * pr.additions
     );
-    // writeMergedPRs(mergedPRs, repo);
+
     // Calculate the total LOC impact from valid PRs
     const prLOC = validPRs.reduce((total, pr) => total + (pr.additions - pr.deletions), 0);
 
@@ -111,16 +111,3 @@ export async function calculateFracPRReview(owner: string, repo: string, tocMain
     return 0;
   }
 }
-
-// async function writeMergedPRs(mergedPRs: PRNode[], repo: string) {
-//   const prData = mergedPRs.map((pr) => ({
-//     number: pr.number,
-//     additions: pr.additions,
-//     deletions: pr.deletions,
-//     reviewDecision: pr.reviewDecision,
-//     comments: pr.comments.totalCount
-//   }));
-//   const fileName = `./${repo}-merged-prs.json`;
-//   fs.writeFileSync(fileName, JSON.stringify(prData, null, 2));
-//   logger.info(`Merged PRs written to ${fileName}`);
-// }
