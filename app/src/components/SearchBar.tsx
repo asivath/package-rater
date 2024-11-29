@@ -41,11 +41,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
           }}
           placeholder="Type package name..."
           sx={{
-            borderRadius: 2,
+            borderRadius: 0,
             boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
             "& .MuiOutlinedInput-root": {
-              borderRadius: 3,
-              paddingRight: 1
+              borderRadius: 0,
+              paddingRight: 1,
+              backgroundColor: "#f5f3f4"
             },
             "& .MuiInputAdornment-root": {
               marginRight: "8px"

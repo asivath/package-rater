@@ -13,13 +13,14 @@ import {
   Checkbox,
   CircularProgress,
   Alert,
-  Fade
+  Fade,
+  IconButton,
+  Icon,
+  Tooltip
 } from "@mui/material";
 import { fetcher } from "../util";
-import { IconButton } from "@mui/material";
 import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import { Tooltip } from "@mui/material";
 
 export const UploadPackageForm: React.FC<{
   uploadVersion: boolean;
@@ -162,7 +163,11 @@ export const UploadPackageForm: React.FC<{
             </Tooltip>
           ) : (
             <Tooltip title="Upload URL Version" arrow>
-              <CloudUploadIcon />
+              <Box>
+                <Icon fontSize="large">
+                  <CloudUploadIcon />
+                </Icon>
+              </Box>
             </Tooltip>
           )}
         </IconButton>
@@ -246,18 +251,18 @@ export const UploadPackageForm: React.FC<{
             {!uploadVersion ? <Divider>OR</Divider> : <></>}
 
             {!uploadedWithContent || !uploadVersion ? (
-                <>
+              <>
                 <Box mt={2}>
                   <TextField
-                  label="GitHub / npm URL"
-                  variant="outlined"
-                  fullWidth
-                  placeholder="Enter URL to GitHub or npm package"
-                  value={packageUrl}
-                  onChange={(e) => setPackageUrl(e.target.value)}
+                    label="GitHub / npm URL"
+                    variant="outlined"
+                    fullWidth
+                    placeholder="Enter URL to GitHub or npm package"
+                    value={packageUrl}
+                    onChange={(e) => setPackageUrl(e.target.value)}
                   />
                 </Box>
-                </>
+              </>
             ) : (
               <></>
             )}

@@ -1,10 +1,10 @@
 import React from "react";
 import { fetcher } from "../util";
 import { IconButton, Tooltip } from "@mui/material";
-import DownloadIcon from '@mui/icons-material/Download';
+import DownloadIcon from "@mui/icons-material/Download";
 
 interface DownloadButtonProps {
-  id: string; // Accepts the id as a parameter
+  id: string;
 }
 
 export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
@@ -12,6 +12,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
     try {
       // Use the id parameter to fetch the package
       const response = await fetcher(`/package/${id}`, { method: "GET" });
+
       const responseJson = await response.json();
 
       const { Name: name, Version: version } = responseJson.metadata;
@@ -37,9 +38,9 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
 
   return (
     <Tooltip title="Download Zip" arrow>
-        <IconButton onClick={handleDownload}>
-          <DownloadIcon />
-        </IconButton>
+      <IconButton onClick={handleDownload}>
+        <DownloadIcon />
+      </IconButton>
     </Tooltip>
   );
 };

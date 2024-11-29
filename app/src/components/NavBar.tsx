@@ -5,9 +5,7 @@ import logo from "../assets/logo.webp";
 
 export const NavBar = () => {
   return (
-    <AppBar
-      position="static"
-      >
+    <AppBar position="static">
       <Toolbar>
         <Box display="flex" alignItems="center" width="100%" justifyContent="center">
           <Avatar sx={{ display: { md: "flex" }, mr: 1 }}>
@@ -29,11 +27,10 @@ export const NavBar = () => {
       </Toolbar>
       <Box
         sx={{
-          height: "5px", // Set height for the thin line
+          height: "5px",
           background: "linear-gradient(90deg, rgba(131,58,180,1) 0%, rgba(253,29,29,1) 50%, rgba(252,176,69,1) 100%)"
         }}
       />
     </AppBar>
-    
   );
 };
