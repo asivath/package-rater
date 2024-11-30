@@ -8,6 +8,7 @@ import { resetPackages } from "./routes/resetPackages.js";
 import { downloadPackage } from "./routes/downloadPackage.js";
 import { getPackageCost } from "./routes/getPackageCost.js";
 import { uploadVersion } from "./routes/uploadVersion.js";
+import { retrievePackageNetscore } from "./routes/retrievePackageNetscore.js";
 import { getLogger } from "@package-rater/shared";
 import "dotenv/config";
 
@@ -36,6 +37,19 @@ fastify.delete("/package/:id", deletePackage);
 fastify.delete("/reset", resetPackages);
 fastify.get("/package/:id/cost", getPackageCost);
 fastify.post("/package/:id", uploadVersion);
+fastify.get("/package/:id/rate", retrievePackageNetscore);
+fastify.get("/tracks", async (_, reply) => {
+  try {
+    reply.send({
+      "plannedTracks": [
+        "Performance track"
+      ]
+    });
+  } catch (err) {
+    logger.error(err);
+    reply.code(500).send({ error: "The system encountered an error while retrieving the student's track information." });
+  }
+});
 
 const start = async () => {
   try {

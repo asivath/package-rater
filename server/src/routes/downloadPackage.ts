@@ -2,10 +2,14 @@ import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { readFile } from "fs/promises";
+import { cp, writeFile, readdir, stat } from "fs/promises";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getPackageMetadata } from "../util.js";
 import NodeCache from "node-cache";
+import { tmpdir } from "os";
+import { extract } from "tar";
+import path from "path";
+import admZip from "adm-zip";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
@@ -60,6 +64,8 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
 
   let streamToString = "";
   try {
+    const tarBallDir = join(tmpdir(), `${name}-${version}`);
+    const tarBallPath = join(tarBallDir, `${name}-${version}.tar`);
     if (process.env.NODE_ENV === "production") {
       const params = {
         Bucket: bucketName,
@@ -72,16 +78,31 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
         reply.code(404).send({ error: "Package does not exist" });
         return;
       }
-
+      const tgzData = await data.Body.transformToByteArray();
+      await writeFile(tarBallPath, tgzData);
       streamToString = await data.Body.transformToString("base64");
     } else {
       const packagePath = join(packagesDirPath, name, id, `${name}.tgz`);
-      const data = await readFile(packagePath);
-      streamToString = data.toString("base64");
+      await cp(packagePath, tarBallPath);
     }
+    await extract({ file: tarBallPath, cwd: tarBallDir });
+    const extractedContents = await readdir(tarBallDir);
+    const topLevelDirs = await Promise.all(
+      extractedContents.map(async (content) => {
+        const contentPath = path.join(tarBallDir, content);
+        const stats = await stat(contentPath);
+        return stats.isDirectory() && path.extname(contentPath) !== ".tgz" ? content : null;
+      })
+    );
+
+    const validDirs = topLevelDirs.filter((dir) => dir !== null);
+    const extractPath = path.join(tarBallDir, validDirs[0]);
+    const zip = new admZip();
+    zip.addLocalFolder(extractPath);
+    console.log(extractPath);
+    streamToString = zip.toBuffer().toString("base64");
 
     cache.set(cacheKey, { Name: name, Version: version, ID: id, Content: streamToString });
-
     reply.code(200).send({
       metadata: {
         Name: name,
@@ -92,8 +113,10 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
         Content: streamToString
       }
     });
+    return;
   } catch (error) {
     logger.error(`Error downloading package ${name} with version ${version}: ${error}`);
     reply.code(500).send({ error: "Internal server error" });
+    return;
   }
 };
