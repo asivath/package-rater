@@ -40,14 +40,14 @@ fastify.post("/package/:id", uploadVersion);
 fastify.get("/package/:id/rate", retrievePackageNetscore);
 fastify.get("/tracks", async (_, reply) => {
   try {
-    reply.send({
-      "plannedTracks": [
-        "Performance track"
-      ]
+    reply.code(200).send({
+      plannedTracks: ["Performance track"]
     });
   } catch (err) {
     logger.error(err);
-    reply.code(500).send({ error: "The system encountered an error while retrieving the student's track information." });
+    reply
+      .code(500)
+      .send({ error: "The system encountered an error while retrieving the student's track information." });
   }
 });
 

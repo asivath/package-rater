@@ -99,7 +99,6 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
     const extractPath = path.join(tarBallDir, validDirs[0]);
     const zip = new admZip();
     zip.addLocalFolder(extractPath);
-    console.log(extractPath);
     streamToString = zip.toBuffer().toString("base64");
 
     cache.set(cacheKey, { Name: name, Version: version, ID: id, Content: streamToString });

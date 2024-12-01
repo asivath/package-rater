@@ -1,10 +1,6 @@
-import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
-import * as shared from "@package-rater/shared";
-import { getPackageMetadata } from "../util";
-import { deletePackage } from "../routes/deletePackage";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { retrievePackageNetscore } from "../routes/retrievePackageNetscore";
 import Fastify from "fastify";
-import { S3Client } from "@aws-sdk/client-s3";
-import { getLogger } from "@package-rater/shared";
 
 const mockMetadataJson = vi.hoisted(() => ({
   byId: {
@@ -88,7 +84,7 @@ const mockMetadataJson = vi.hoisted(() => ({
           dependencies: {},
           standaloneCost: 0.5,
           totalCost: 0.5,
-          costStatus: "completed"
+          costStatus: "completed" 
         }
       }
     },
@@ -124,8 +120,8 @@ const mockMetadataJson = vi.hoisted(() => ({
     }
   },
   costCache: {
-    // completed-dep-1.0.0
     "2985548229775954": {
+      // completed-dep-1.0.0
       totalCost: 1.5,
       standaloneCost: 1.5,
       dependencies: [],
@@ -133,19 +129,6 @@ const mockMetadataJson = vi.hoisted(() => ({
     }
   }
 }));
-
-// Mocking shared functions and classes
-vi.mock("@package-rater/shared", async (importOriginal) => {
-  const original = await importOriginal<typeof shared>();
-  return {
-    ...original,
-    getLogger: vi.fn().mockReturnValue({
-      error: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn()
-    })
-  };
-});
 
 // Mocking filesystem and AWS S3 SDK modules
 vi.mock("fs/promises", () => ({
@@ -156,32 +139,20 @@ vi.mock("fs/promises", () => ({
   mkdir: vi.fn()
 }));
 
-vi.mock("@aws-sdk/client-s3", () => ({
-  S3Client: vi.fn().mockImplementation(() => ({
-    send: vi.fn()
-  })),
-  DeleteObjectsCommand: vi.fn()
-}));
-
-describe("deletePackage", () => {
+describe("retrievePackageNetscore", () => {
   const fastify = Fastify();
-  fastify.delete("/package/:id", deletePackage);
-
-  const logger = getLogger("test");
-
-  let mockS3Client: S3Client;
+  fastify.get("/package/:id/rate", retrievePackageNetscore);
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     process.env.NODE_ENV = "production";
-    mockS3Client = new S3Client();
   });
 
   it("should return 400 if no package ID is provided", async () => {
     const reply = await fastify.inject({
-      method: "DELETE",
-      url: "/package/"
+      method: "GET",
+      url: "/package//rate"
     });
 
     expect(reply.statusCode).toBe(400);
@@ -189,48 +160,37 @@ describe("deletePackage", () => {
 
   it("should return 404 if package does not exist", async () => {
     const reply = await fastify.inject({
-      method: "DELETE",
-      url: "/package/nonexistent-id"
+      method: "GET",
+      url: "/package/nonexistent-id/rate"
     });
 
     expect(reply.statusCode).toBe(404);
   });
 
-  it("should delete package and return 200 on success (S3 deletion)", async () => {
-    (mockS3Client.send as Mock).mockResolvedValueOnce({});
-
+  it("should retrieve netscore info successfully", async () => {
     const reply = await fastify.inject({
-      method: "DELETE",
-      url: "/package/completed-ID"
-    });
-
-    expect(logger.info).toHaveBeenCalledWith("Deleted completed-package from S3.");
-    expect(reply.statusCode).toBe(200);
-  });
-
-  it("should delete package locally and return 200 on success (non-prod)", async () => {
-    process.env.NODE_ENV = "dev";
-
-    const reply = await fastify.inject({
-      method: "DELETE",
-      url: "/package/initiated-ID"
-    });
-
-    const metadata = getPackageMetadata();
-
-    expect(metadata).toEqual({
-      byId: {},
-      byName: {},
-      costCache: {
-        "2985548229775954": {
-          costStatus: "completed",
-          dependencies: [],
-          standaloneCost: 1.5,
-          totalCost: 1.5
-        }
-      }
+      method: "GET",
+      url: "/package/completed-ID/rate"
     });
 
     expect(reply.statusCode).toBe(200);
+    expect(reply.json()).toEqual({
+        NetScore: 1,
+        NetScore_Latency: 1,
+        RampUp: 1,
+        RampUp_Latency: 1,
+        Correctness: 1,
+        Correctness_Latency: 1,
+        BusFactor: 1,
+        BusFactor_Latency: 1,
+        ResponsiveMaintainer: 1,
+        ResponsiveMaintainer_Latency: 1,
+        License: 1,
+        License_Latency: 1,
+        GoodPinningPractice: 1,
+        GoodPinningPracticeLatency: 1,
+        PullRequest: 1,
+        PullRequest_Latency: 1
+    });
   });
 });

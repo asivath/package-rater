@@ -22,7 +22,7 @@ export const retrievePackageNetscore = async (
     return;
   }
   const metadataJson = getPackageMetadata();
-  
+
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);
     reply.code(404).send({ error: "Package does not exist" });
@@ -36,5 +36,5 @@ export const retrievePackageNetscore = async (
 
   const packageRating = metadataJson.byId[id].ndjson;
 
-  reply.code(200).send( packageRating );
+  reply.code(200).send(packageRating);
 };
