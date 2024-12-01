@@ -87,11 +87,14 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
       throw new Error(`Unable to retrieve repository information for URL: ${url}`);
     }
     const [repoName, repoOwner, gitUrl] = repoInfo;
+    const start = new Date();
     const repoDir = await cloneRepo(gitUrl, repoName);
     if (!repoDir) {
       throw new Error(`Repository directory is undefined for URL: ${url}`);
     }
     const totalLinesOfCode = await calculateLOC(repoDir);
+    const end = new Date();
+    const setupTime = (end.getTime() - start.getTime()) / 1000;
     const [correctness, licenseCompatibility, responsiveness, busFactor, rampUp, dependencies, fracPR] =
       await Promise.all([
         latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
@@ -100,7 +103,7 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
         latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
         latencyWrapper(() => calculateRampup(repoOwner, repoName)),
         latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
-        latencyWrapper(() => calculateFracPRReview(repoOwner, repoName, totalLinesOfCode))
+        latencyWrapper(() => calculateFracPRReview(repoOwner, repoName))
       ]);
 
     const netscore =
@@ -138,7 +141,8 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
           responsiveness.time +
           busFactor.time +
           dependencies.time +
-          fracPR.time
+          fracPR.time +
+          setupTime
         ).toFixed(2)
       )
     };
