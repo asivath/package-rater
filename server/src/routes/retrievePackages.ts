@@ -44,6 +44,7 @@ export const retrievePackageInfo = async (
     if (packageRequests.some((pkg) => pkg.Name === "*")) {
       // Fetch all packages from metadata
       const allPackages = Object.entries(metadataJson.byName);
+      allPackages.sort((a, b) => a[0].localeCompare(b[0]));
 
       for (let offsetCount = offset; offsetCount < offset + limit && offsetCount < allPackages.length; offsetCount++) {
         const [name, versions] = allPackages[offsetCount];
@@ -69,23 +70,21 @@ export const retrievePackageInfo = async (
         }
       }
 
-      logger.info(`Fetched packages: ${JSON.stringify(packages)}`);
       reply.code(200).send(packages);
       return;
     }
+
     // Process each package request
     for (const { Name, Version } of packageRequests) {
       if (!Name || !Version) {
         reply.code(400).send({ error: "Missing Name or Version in one of the package objects" });
         return;
       }
-
       if (!metadataJson.byName[Name]) {
         continue; // Skip to the next package if not found
       }
 
       const packageByName = metadataJson.byName[Name].versions;
-
       // Filter by version type and check for duplicates
       for (const [version, details] of Object.entries(packageByName)) {
         if (isVersionMatch(version, Version)) {
@@ -117,9 +116,11 @@ export const retrievePackageInfo = async (
     reply.code(500).send({ error: "Server error occurred while fetching packages" });
     return;
   }
-  const paginatedPackages = packages.slice(offset, offset + limit);
+  console.log(packages);
+  packages.sort((a, b) => a.Name.localeCompare(b.Name));
+  console.log(packages);
 
-  logger.info(`Fetched packages: ${JSON.stringify(paginatedPackages)}`);
+  const paginatedPackages = packages.slice(offset, offset + limit);
   reply.code(200).send(paginatedPackages);
 };
 
@@ -186,11 +187,13 @@ export const retrievePackageByRegEx = async (
         }
       }
     }
-
     if (packages.length === 0) {
       reply.code(404).send({ error: "No package found under this regex." });
       return;
     }
+
+    packages.sort((a, b) => a.Name.localeCompare(b.Name));
+
     const paginatedPackages = packages.slice(offset, offset + limit);
     reply.code(200).send(paginatedPackages);
   } catch (error) {

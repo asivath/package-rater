@@ -67,7 +67,7 @@ async function fetchMergedPRs(owner: string, repo: string, baseRef: string): Pro
     hasNextPage = pageInfo.hasNextPage;
     after = pageInfo.endCursor ?? null;
 
-    logger.debug(`Fetched ${nodes.length} PRs. Next page: ${hasNextPage}`);
+    logger.info(`Fetched ${nodes.length} PRs. Next page: ${hasNextPage}`);
   }
 
   logger.info(`Total merged PRs fetched from ${baseRef} for ${repo}: ${results.length}`);

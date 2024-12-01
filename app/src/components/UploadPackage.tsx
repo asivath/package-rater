@@ -247,7 +247,7 @@ export const UploadPackageForm: React.FC<{
             )}
             {!uploadVersion && <Divider>OR</Divider>}
             {(!uploadedWithContent || !uploadVersion) && (
-                <Box mt={2}>
+              <Box mt={2}>
                 <TextField
                   label="GitHub / npm URL"
                   variant="outlined"
@@ -256,7 +256,7 @@ export const UploadPackageForm: React.FC<{
                   value={packageUrl}
                   onChange={(e) => setPackageUrl(e.target.value)}
                 />
-                </Box>
+              </Box>
             )}
             <FormControlLabel
               control={

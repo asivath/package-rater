@@ -146,7 +146,6 @@ jobs:
         id: run_tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LOG_FILE: test_output.log
         run: |
           yarn test:coverage-ci > test_output.log 2>&1 || echo "test_failed=true" >> $GITHUB_OUTPUT
 
