@@ -116,9 +116,7 @@ export const retrievePackageInfo = async (
     reply.code(500).send({ error: "Server error occurred while fetching packages" });
     return;
   }
-  console.log(packages);
   packages.sort((a, b) => a.Name.localeCompare(b.Name));
-  console.log(packages);
 
   const paginatedPackages = packages.slice(offset, offset + limit);
   reply.code(200).send(paginatedPackages);

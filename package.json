@@ -28,11 +28,11 @@
     "restore-packages": "[ -d /tmp/packages ] && rm -rf server/packages && mv /tmp/packages server/packages || true",
     "start-server": "yarn workspace @package-rater/server run start",
     "stop-server": "yarn workspace @package-rater/server run stop",
-    "test": "yarn workspaces foreach -A --parallel run test",
+    "test": "yarn workspaces foreach -A --parallel run test && yarn test:e2e",
     "test:ci": "yarn workspaces foreach -A --parallel run test:ci",
     "test:coverage": "yarn workspaces foreach -A --parallel run test:coverage",
     "test:coverage-ci": "yarn workspaces foreach -A --parallel run test:coverage-ci",
-    "test:e2e": "yarn backup-packages && yarn start-server && wait-on -t 20s http://localhost:3000 && yarn workspace @package-rater/app run test:e2e; EXIT_CODE=$?; yarn stop-server && yarn restore-packages; exit $EXIT_CODE"
+    "test:e2e": "yarn backup-packages && yarn start-server && wait-on -t 20s http://0.0.0.0:3000 && yarn workspace @package-rater/app run test:e2e; EXIT_CODE=$?; yarn stop-server && yarn restore-packages; exit $EXIT_CODE"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",

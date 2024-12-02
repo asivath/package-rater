@@ -180,7 +180,7 @@ test.describe("UploadPackageForm", () => {
     await newVersion.click();
 
     const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles(path.join(__dirname, "__files__", "test.zip"));
+    await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "test.zip"));
 
     await page.route("**/package", async (route) => {
       const request = route.request();
