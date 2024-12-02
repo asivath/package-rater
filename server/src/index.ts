@@ -11,6 +11,9 @@ import { uploadVersion } from "./routes/uploadVersion.js";
 import { retrievePackageNetscore } from "./routes/retrievePackageNetscore.js";
 import { getLogger } from "@package-rater/shared";
 import "dotenv/config";
+import NodeCache from "node-cache";
+
+export const cache = new NodeCache({ stdTTL: 60 * 60 });
 
 const logger = getLogger("server");
 

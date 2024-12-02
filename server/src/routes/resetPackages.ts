@@ -5,6 +5,7 @@ import { dirname, join } from "path";
 import { readdir, rm } from "fs/promises";
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { clearMetadata } from "../util.js";
+import { cache } from "../index.js";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
@@ -16,6 +17,8 @@ const bucketName = process.env.AWS_BUCKET_NAME;
 
 export const resetPackages = async (_: FastifyRequest, reply: FastifyReply) => {
   try {
+    cache.flushAll();
+
     if (process.env.NODE_ENV === "production") {
       let isTruncated = true;
       while (isTruncated) {

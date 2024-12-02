@@ -5,11 +5,11 @@ import { dirname, join } from "path";
 import { cp, writeFile, readdir, stat } from "fs/promises";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getPackageMetadata } from "../util.js";
-import NodeCache from "node-cache";
 import { tmpdir } from "os";
 import { extract } from "tar";
 import path from "path";
 import admZip from "adm-zip";
+import { cache } from "../index.js";
 
 const logger = getLogger("server");
 const __filename = fileURLToPath(import.meta.url);
@@ -25,7 +25,6 @@ type CachedPackage = {
   ID: string;
   Content: string;
 };
-const cache = new NodeCache({ stdTTL: 60 * 60 });
 
 /**
  * Downloads a package from the server
@@ -46,12 +45,14 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
   const cacheKey = id;
   const cachedData = cache.get(cacheKey) as CachedPackage | undefined;
   if (cachedData) {
+    console.log("Cache hit");
     reply.code(200).send({
       metadata: { Name: cachedData.Name, Version: cachedData.Version, ID: cachedData.ID },
       data: { Content: cachedData.Content }
     });
     return;
   }
+  console.log("Cache miss");
   const metadataJson = getPackageMetadata();
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);
