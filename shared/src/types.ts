@@ -36,7 +36,7 @@ export type PackageDisplay = {
 };
 /**
  * This function asserts that the given object is a PackageDisplay object
- * @param o 
+ * @param o
  */
 export function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   if (!o || typeof o !== "object") {
@@ -71,7 +71,7 @@ export function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
 }
 /**
  * This function asserts that the given object is a PackageCostResponse object
- * @param o 
+ * @param o
  */
 export function assertIsPackageCostResponse(o: any): asserts o is PackageCostResponse {
   if (!o || typeof o !== "object") {
@@ -95,7 +95,7 @@ export function assertIsPackageCostResponse(o: any): asserts o is PackageCostRes
 }
 /**
  * This function asserts that the given object is a Ndjson object
- * @param o 
+ * @param o
  */
 export function assertIsNdjson(o: any): asserts o is Ndjson {
   if (!o || typeof o !== "object") {

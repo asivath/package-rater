@@ -1,10 +1,10 @@
 /*
-  * UploadPackage.tsx
-  * Component for uploading a package
-  * This component is used to upload a package to the database
-  * It is used in the PackageDetails component
-  * It uses the fetcher utility function to make API requests
-  */
+ * UploadPackage.tsx
+ * Component for uploading a package
+ * This component is used to upload a package to the database
+ * It is used in the PackageDetails component
+ * It uses the fetcher utility function to make API requests
+ */
 import React, { useState, useRef } from "react";
 import {
   Box,

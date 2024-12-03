@@ -38,11 +38,11 @@ type CommitResponse = {
 
 /**
  * This function fetches commits and their associated PRs from a GitHub repository
- * @param owner 
- * @param repo 
- * @param branch 
- * @param totalCommits 
- * @returns 
+ * @param owner
+ * @param repo
+ * @param branch
+ * @param totalCommits
+ * @returns
  */
 async function fetchCommitsWithPRs(
   owner: string,
@@ -117,9 +117,9 @@ async function fetchCommitsWithPRs(
 
 /**
  * Calculate the fraction of code introduced through reviewed PRs
- * @param owner 
- * @param repo 
- * @returns 
+ * @param owner
+ * @param repo
+ * @returns
  */
 export async function calculateFracPRReview(owner: string, repo: string): Promise<number> {
   try {

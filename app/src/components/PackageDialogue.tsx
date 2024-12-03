@@ -45,7 +45,7 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [netScoreData, setNetScoreData] = useState<Ndjson | null>(null);
-  
+
   useEffect(() => {
     if (open) {
       const fetchCostScoreData = async () => {
@@ -96,13 +96,7 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
         ) : (
           <List>
             <ListItem>
-              <Box
-                display="grid"
-                gridTemplateColumns="repeat(2, 1fr)"
-                columnGap={2}
-                rowGap={1}
-                width="100%"
-              >
+              <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
                 <ListItemText primary="Version" secondary={packageData.Version} />
                 <ListItemText primary="ID" secondary={packageData.ID} />
               </Box>

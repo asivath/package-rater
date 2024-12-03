@@ -22,13 +22,12 @@ type IssuesData = {
   };
 };
 
-
 /**
-  * Fetches the issues for a repository from the GitHub API
-  * @param owner The owner of the repository
-  * @param repo The name of the repository
-  * @returns The issues data for the repository
-  */
+ * Fetches the issues for a repository from the GitHub API
+ * @param owner The owner of the repository
+ * @param repo The name of the repository
+ * @returns The issues data for the repository
+ */
 async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
   try {
     const query = `

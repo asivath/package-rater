@@ -45,7 +45,7 @@ export type Metadata = {
 };
 /**
  * This function asserts that the given object is a Metadata object
- * @param o 
+ * @param o
  */
 export function assertIsMetadata(o: any): asserts o is Metadata {
   if (!o || typeof o !== "object") {

@@ -66,8 +66,8 @@ if (process.argv[1] === __filename) {
 
 /**
  * Lambda handler to process a URL
- * @param event 
- * @returns 
+ * @param event
+ * @returns
  */
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {

@@ -564,9 +564,9 @@ async function calculateTotalCost(graph: Map<string, PackageNode>): Promise<numb
 
   /**
    * This function performs a depth-first search to calculate the total cost of a node
-   * @param nodeId 
-   * @param visited 
-   * @returns 
+   * @param nodeId
+   * @param visited
+   * @returns
    */
   async function dfsCalculateCost(nodeId: string, visited: Set<string> = new Set()): Promise<number> {
     if (visited.has(nodeId)) {

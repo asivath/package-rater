@@ -65,8 +65,8 @@ async function getRepoOwner(url: string): Promise<[string, string, string] | nul
 
 /**
  * Calculate the lines of code for a repository using cloc
- * @param repoDir 
- * @returns 
+ * @param repoDir
+ * @returns
  */
 export async function calculateLOC(repoDir: string): Promise<number> {
   try {
