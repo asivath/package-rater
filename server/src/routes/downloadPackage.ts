@@ -79,7 +79,6 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
         return;
       }
       const tgzData = await data.Body.transformToByteArray();
-      console.log(tgzData);
       await writeFile(tarBallPath, tgzData);
     } else {
       const tarBallFile = join(packagesDirPath, name, id, `${name}.tgz`);
