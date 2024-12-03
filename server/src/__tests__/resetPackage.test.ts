@@ -4,7 +4,6 @@ import * as shared from "@package-rater/shared";
 import Fastify from "fastify";
 import { resetPackages } from "../routes/resetPackages";
 import { S3Client } from "@aws-sdk/client-s3";
-import { getLogger } from "@package-rater/shared";
 
 vi.stubEnv("NODE_TEST", "true");
 
@@ -33,12 +32,19 @@ vi.mock("fs/promises", () => ({
   readdir: vi.fn().mockResolvedValue([]),
   rm: vi.fn().mockResolvedValue(undefined)
 }));
+vi.mock("../index", () => ({
+  cache: {
+    flushAll: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn()
+  }
+}));
 
 describe("resetPackages", () => {
   const fastify = Fastify();
   fastify.delete("/reset", resetPackages);
 
-  const logger = getLogger("test");
+  const logger = shared.getLogger("test");
 
   let mockS3Client: S3Client;
 

@@ -40,8 +40,8 @@ export const uploadPackage = async (
       const buffer = Buffer.from(Content, "base64");
       const files = await unzipper.Open.buffer(buffer);
       const packageJsonFile = files.files.find((file) => {
-        const parths = file.path.split("/");
-        return parths[parths.length - 1] === "package.json";
+        const parts = file.path.split("/");
+        return parts[parts.length - 1] === "package.json";
       });
       if (!packageJsonFile) {
         logger.error(`No package.json found in ${packageName}`);

@@ -37,6 +37,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "@eslint/js": "^9.9.1",
+    "@types/adm-zip": "^0",
     "@types/eslint__eslintrc": "^2.1.2",
     "@types/eslint__js": "^8.42.3",
     "@types/node": "^22.7.5",
@@ -45,6 +46,7 @@
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
     "@vitest/coverage-istanbul": "2.1.2",
+    "adm-zip": "^0.5.16",
     "concurrently": "^9.0.0",
     "eslint": "^9.11.1",
     "eslint-config-prettier": "^9.1.0",

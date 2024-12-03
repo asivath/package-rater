@@ -2115,7 +2115,6 @@ __metadata:
     playwright: "npm:1.48.0"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
-    react-virtuoso: "npm:^4.12.0"
     typescript: "npm:5.5.4"
     typescript-eslint: "npm:^8.8.0"
     vite: "npm:^5.4.8"
@@ -2174,6 +2173,7 @@ __metadata:
     "@fastify/cors": "npm:^10.0.1"
     "@fastify/static": "npm:^8.0.2"
     "@package-rater/shared": "workspace:1.0.0"
+    "@types/adm-zip": "npm:^0"
     "@types/eslint__eslintrc": "npm:^2.1.2"
     "@types/eslint__js": "npm:^8.42.3"
     "@types/node": "npm:^22.7.5"
@@ -2182,6 +2182,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": "npm:^8.3.0"
     "@typescript-eslint/parser": "npm:^8.3.0"
     "@vitest/coverage-istanbul": "npm:2.1.2"
+    adm-zip: "npm:^0.5.16"
     concurrently: "npm:^9.0.0"
     dotenv: "npm:^16.4.5"
     esbuild: "npm:^0.24.0"
@@ -3080,6 +3081,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/adm-zip@npm:^0":
+  version: 0.5.7
+  resolution: "@types/adm-zip@npm:0.5.7"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/6ba62bd8f4a6e7ffdad08d951c65c4f69161c2b96cc34249dcf3c448dca85749409407b297472d5c66b711325de89012e8607b74c87d99ec23e9b7a44b6c71c6
+  languageName: node
+  linkType: hard
+
 "@types/aws-lambda@npm:^8.10.145":
   version: 8.10.145
   resolution: "@types/aws-lambda@npm:8.10.145"
@@ -3533,6 +3543,13 @@ __metadata:
   bin:
     acorn: bin/acorn
   checksum: 10c0/6d4ee461a7734b2f48836ee0fbb752903606e576cc100eb49340295129ca0b452f3ba91ddd4424a1d4406a98adfb2ebb6bd0ff4c49d7a0930c10e462719bbfd7
+  languageName: node
+  linkType: hard
+
+"adm-zip@npm:^0.5.16":
+  version: 0.5.16
+  resolution: "adm-zip@npm:0.5.16"
+  checksum: 10c0/6f10119d4570c7ba76dcf428abb8d3f69e63f92e51f700a542b43d4c0130373dd2ddfc8f85059f12d4a843703a90c3970cfd17876844b4f3f48bf042bfa6b49f
   languageName: node
   linkType: hard
 
@@ -7498,16 +7515,6 @@ __metadata:
     react: ">=16.6.0"
     react-dom: ">=16.6.0"
   checksum: 10c0/2ba754ba748faefa15f87c96dfa700d5525054a0141de8c75763aae6734af0740e77e11261a1e8f4ffc08fd9ab78510122e05c21c2d79066c38bb6861a886c82
-  languageName: node
-  linkType: hard
-
-"react-virtuoso@npm:^4.12.0":
-  version: 4.12.0
-  resolution: "react-virtuoso@npm:4.12.0"
-  peerDependencies:
-    react: ">=16 || >=17 || >= 18"
-    react-dom: ">=16 || >=17 || >= 18"
-  checksum: 10c0/96af7b8e49e4a5b50a2b762c0133076dbec9df3207aa13889ab8586f54fea9e37e712295b96bfd68ecb68ab368a945f2c451e8a4a2ee21d74ea9f2ec346e21f5
   languageName: node
   linkType: hard
 

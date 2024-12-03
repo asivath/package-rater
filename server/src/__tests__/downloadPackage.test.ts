@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as shared from "@package-rater/shared";
 import { downloadPackage } from "../routes/downloadPackage";
 import Fastify from "fastify";
+import { Dirent } from "fs";
+import * as tar from "tar";
+import * as shared from "@package-rater/shared";
 import * as fs from "fs/promises";
 
 vi.stubEnv("NODE_TEST", "true");
@@ -133,6 +135,21 @@ const mockMetadataJson = vi.hoisted(() => ({
     }
   }
 }));
+vi.mock("tar", () => ({
+  extract: vi.fn().mockResolvedValue(undefined)
+}));
+vi.mock("adm-zip", () => ({
+  default: vi.fn().mockImplementation(() => ({
+    addLocalFolder: vi.fn(),
+    toBuffer: vi.fn().mockReturnValue({
+      toString: vi.fn().mockReturnValue("test-content")
+    }),
+    readFile: vi.fn(),
+    readFileAsync: vi.fn(),
+    readAsText: vi.fn(),
+    readAsTextAsync: vi.fn()
+  }))
+}));
 vi.mock("@package-rater/shared", async (importOriginal) => {
   const original = await importOriginal<typeof shared>();
   return {
@@ -148,7 +165,8 @@ vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue({
       Body: {
-        transformToString: vi.fn().mockResolvedValue("test-package-data")
+        transformToString: vi.fn().mockResolvedValue("test-package-data"),
+        transformToByteArray: vi.fn().mockResolvedValue(new Uint8Array(Buffer.from("test-package-data")))
       }
     })
   })),
@@ -159,13 +177,18 @@ vi.mock("fs/promises", () => ({
   writeFile: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
   readdir: vi.fn(() => Promise.resolve([])),
-  mkdir: vi.fn()
+  mkdir: vi.fn(),
+  stat: vi.fn().mockResolvedValue({
+    isDirectory: vi.fn().mockReturnValue(true)
+  }),
+  cp: vi.fn().mockResolvedValue(undefined)
 }));
-vi.mock("node-cache", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    get: vi.fn().mockReturnValue(undefined),
-    set: vi.fn().mockReturnValue(true)
-  }))
+vi.mock("../index", () => ({
+  cache: {
+    flushAll: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn()
+  }
 }));
 
 describe("downloadPackage", () => {
@@ -202,7 +225,10 @@ describe("downloadPackage", () => {
   });
 
   it("should return 200 with metadata and base64 data when package exists (in development mode)", async () => {
-    vi.mocked(fs.readFile).mockResolvedValueOnce("test-content");
+    process.env.NODE_ENV = "development";
+
+    vi.mocked(fs.writeFile).mockResolvedValueOnce(undefined);
+    vi.mocked(fs.readdir).mockResolvedValueOnce(["test.txt"] as unknown as Dirent[]);
 
     const reply = await fastify.inject({
       method: "GET",
@@ -210,17 +236,21 @@ describe("downloadPackage", () => {
     });
 
     expect(reply.statusCode).toBe(200);
+
     const responseData = reply.json();
     expect(responseData.metadata).toEqual({
       Name: "completed-package",
       Version: "1.0.0",
       ID: "completed-ID"
     });
-    expect(responseData.data.Content).toBe("test-content");
+    expect(responseData.data.Content).toEqual("test-content");
   });
 
   it("should return 200 with metadata and base64 data when package exists (in production mode)", async () => {
     process.env.NODE_ENV = "production";
+
+    vi.mocked(fs.writeFile).mockResolvedValueOnce(undefined);
+    vi.mocked(fs.readdir).mockResolvedValueOnce(["test.txt"] as unknown as Dirent[]);
 
     const reply = await fastify.inject({
       method: "GET",
@@ -228,10 +258,19 @@ describe("downloadPackage", () => {
     });
 
     expect(reply.statusCode).toBe(200);
+
+    // Validate the response
+    const responseData = reply.json();
+    expect(responseData.metadata).toEqual({
+      Name: "completed-package",
+      Version: "1.0.0",
+      ID: "completed-ID"
+    });
+    expect(responseData.data.Content).toEqual("test-content");
   });
 
   it("should return 500 if there is an error in the process", async () => {
-    vi.spyOn(fs, "readFile").mockRejectedValueOnce(new Error("Simulated read error"));
+    vi.mocked(tar.extract).mockRejectedValueOnce(new Error("Simulated error"));
 
     const reply = await fastify.inject({
       method: "GET",
