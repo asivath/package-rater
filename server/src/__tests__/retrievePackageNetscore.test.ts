@@ -84,7 +84,7 @@ const mockMetadataJson = vi.hoisted(() => ({
           dependencies: {},
           standaloneCost: 0.5,
           totalCost: 0.5,
-          costStatus: "completed" 
+          costStatus: "completed"
         }
       }
     },
@@ -175,22 +175,22 @@ describe("retrievePackageNetscore", () => {
 
     expect(reply.statusCode).toBe(200);
     expect(reply.json()).toEqual({
-        NetScore: 1,
-        NetScore_Latency: 1,
-        RampUp: 1,
-        RampUp_Latency: 1,
-        Correctness: 1,
-        Correctness_Latency: 1,
-        BusFactor: 1,
-        BusFactor_Latency: 1,
-        ResponsiveMaintainer: 1,
-        ResponsiveMaintainer_Latency: 1,
-        License: 1,
-        License_Latency: 1,
-        GoodPinningPractice: 1,
-        GoodPinningPracticeLatency: 1,
-        PullRequest: 1,
-        PullRequest_Latency: 1
+      NetScore: 1,
+      NetScore_Latency: 1,
+      RampUp: 1,
+      RampUp_Latency: 1,
+      Correctness: 1,
+      Correctness_Latency: 1,
+      BusFactor: 1,
+      BusFactor_Latency: 1,
+      ResponsiveMaintainer: 1,
+      ResponsiveMaintainer_Latency: 1,
+      License: 1,
+      License_Latency: 1,
+      GoodPinningPractice: 1,
+      GoodPinningPracticeLatency: 1,
+      PullRequest: 1,
+      PullRequest_Latency: 1
     });
   });
 });

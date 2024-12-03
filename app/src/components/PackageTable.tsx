@@ -185,27 +185,7 @@ function Row(props: { row: PackageDisplay[] }) {
                 </TableHead>
                 <TableBody>
                   {row.map((version) => (
-                    // <TableRow
                     <VersionRow key={version.ID} version={version} />
-                    //   key={version.ID}
-                    //   sx={{
-                    //     "&:last-child td, &:last-child th": { border: 0 },
-                    //     "&:hover": {
-                    //       backgroundColor: "rgba(0, 0, 0, 0.04)"
-                    //     }
-                    //   }}>
-                    //   <TableCell align="center">{version.Version}</TableCell>
-                    //   <TableCell align="center">{version.ID}</TableCell>
-                    //   <TableCell align="center">{version.NetScore}</TableCell>
-                    //   <TableCell align="center">
-                    //     <DownloadButton id={version.ID} />
-                    //   </TableCell>
-                    //   <TableCell align="center">
-                    //     {/* <Button variant="outlined" size="small" onClick={handleOpenDialog}> */}
-                    //       View Details
-                    //     {/* </Button> */}
-                    //   </TableCell>
-                    // </TableRow>
                   ))}
                 </TableBody>
               </Table>
