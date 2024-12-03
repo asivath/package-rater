@@ -90,7 +90,7 @@ export const savePackage = async (
     if (packageFilePath) {
       // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
       // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
-      const targetUploadFilePath = path.join(packageIdPath, escapedPackageName);
+      const targetUploadFilePath = path.join(packageIdPath, path.basename(packageFilePath));
       await cp(packageFilePath, targetUploadFilePath, { recursive: true });
 
       if (debloat) {
@@ -127,7 +127,7 @@ export const savePackage = async (
         logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
       }
 
-      await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [escapedPackageName]);
+      await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, ["."]);
       await rm(targetUploadFilePath, { recursive: true });
     } else {
       // Given a url
@@ -273,7 +273,7 @@ export const savePackage = async (
       });
     return { success: true };
   } catch (error) {
-    await cleanupFiles();
+    // await cleanupFiles();
     return { success: false, reason: (error as Error).message };
   }
 };

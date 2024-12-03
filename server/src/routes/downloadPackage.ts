@@ -2,12 +2,11 @@ import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { cp, writeFile, readdir, stat } from "fs/promises";
+import { cp, writeFile, rm } from "fs/promises";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getPackageMetadata } from "../util.js";
 import { tmpdir } from "os";
 import { extract } from "tar";
-import path from "path";
 import admZip from "adm-zip";
 import { cache } from "../index.js";
 
@@ -45,14 +44,13 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
   const cacheKey = id;
   const cachedData = cache.get(cacheKey) as CachedPackage | undefined;
   if (cachedData) {
-    console.log("Cache hit");
     reply.code(200).send({
       metadata: { Name: cachedData.Name, Version: cachedData.Version, ID: cachedData.ID },
       data: { Content: cachedData.Content }
     });
     return;
   }
-  console.log("Cache miss");
+
   const metadataJson = getPackageMetadata();
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);
@@ -83,23 +81,15 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
       await writeFile(tarBallPath, tgzData);
       streamToString = await data.Body.transformToString("base64");
     } else {
-      const packagePath = join(packagesDirPath, name, id, `${name}.tgz`);
-      await cp(packagePath, tarBallPath);
+      const tarBallFile = join(packagesDirPath, name, id, `${name}.tgz`);
+      await cp(tarBallFile, tarBallPath);
     }
     await extract({ file: tarBallPath, cwd: tarBallDir });
-    const extractedContents = await readdir(tarBallDir);
-    const topLevelDirs = await Promise.all(
-      extractedContents.map(async (content) => {
-        const contentPath = path.join(tarBallDir, content);
-        const stats = await stat(contentPath);
-        return stats.isDirectory() && path.extname(contentPath) !== ".tgz" ? content : null;
-      })
-    );
 
-    const validDirs = topLevelDirs.filter((dir) => dir !== null);
-    const extractPath = path.join(tarBallDir, validDirs[0]);
     const zip = new admZip();
-    zip.addLocalFolder(extractPath);
+    zip.addLocalFolder(tarBallDir, undefined, (filePath) => {
+      return !filePath.endsWith(".tar") && !filePath.endsWith(".tgz");
+    });
     streamToString = zip.toBuffer().toString("base64");
 
     cache.set(cacheKey, { Name: name, Version: version, ID: id, Content: streamToString });
@@ -113,6 +103,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
         Content: streamToString
       }
     });
+    await rm(tarBallDir, { recursive: true, force: true });
     return;
   } catch (error) {
     logger.error(`Error downloading package ${name} with version ${version}: ${error}`);
