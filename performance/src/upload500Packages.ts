@@ -68,7 +68,7 @@ async function main() {
   const spinner = ora(chalk.blue("Reading package URLs from file...")).start();
 
   try {
-    const packageUrls = parsePackageUrlsFromFile(filePath).slice(0, 500);
+    const packageUrls = parsePackageUrlsFromFile(filePath).slice(0, 50);
     spinner.succeed(chalk.green(`Found ${packageUrls.length} package URLs.`));
     console.log(chalk.blue(`Calling API for ${packageUrls.length} packages...\n`));
 

@@ -8,11 +8,9 @@ export default defineConfig({
       reporter: ["json-summary", "html", "json"],
       include: ["src/**"],
       exclude: ["src/__tests__/**", "src/dist/**"],
-      // thresholds: {
-      //   statements: 80,
-      //   functions: 100,
-      //   lines: 80
-      // },
+      thresholds: {
+        lines: 60
+      },
       reportOnFailure: true
     },
     hookTimeout: 30000

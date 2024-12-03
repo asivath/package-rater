@@ -142,11 +142,10 @@ jobs:
         if: steps.build.outputs.build_failed == 'true'
         run: exit 1
 
-      - name: Run Tests
+      - name: Run Tests With Coverage
         id: run_tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LOG_FILE: test_output.log
         run: |
           yarn test:coverage-ci > test_output.log 2>&1 || echo "test_failed=true" >> $GITHUB_OUTPUT
 
@@ -166,6 +165,28 @@ jobs:
             });
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Run End-to-End Tests
+        id: run_e2e_tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: yarn test:e2e > e2e_output.log 2>&1 || echo "e2e_failed=true" >> $GITHUB_OUTPUT
+
+      - name: Comment PR on e2e test failure
+        if: steps.run_e2e_tests.outputs.e2e_failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const e2eLog = fs.readFileSync('e2e_output.log', 'utf8');
+            const message = `🚨 End-to-End tests failed. Check the logs:\n\n\`\`\`\n${e2eLog}\n\`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              body: message,
+              repo: context.repo.repo,
+              owner: context.repo.owner,
+            });
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Fail if tests failed
-        if: steps.run_tests.outputs.test_failed == 'true'
+        if: steps.run_tests.outputs.test_failed == 'true' || steps.run_e2e_tests.outputs.e2e_failed == 'true'
         run: exit 1

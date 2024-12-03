@@ -248,6 +248,8 @@ export function PackageTable() {
       }
       if (data.length < 15) {
         setHasMore(false);
+      } else {
+        setHasMore(true);
       }
     } catch (error) {
       console.error("Error fetching packages:", error);
@@ -300,6 +302,8 @@ export function PackageTable() {
       }
       if (data.length < 15) {
         setHasMore(false);
+      } else {
+        setHasMore(true);
       }
     } catch (error) {
       console.error("Error fetching packages by regex:", error);
@@ -310,7 +314,6 @@ export function PackageTable() {
   const onSearch = (searchValue: string, searchByRegex: boolean, version?: string) => {
     setHasSearched(true);
     setOffset(0);
-    setHasMore(true);
     setSearchMode(searchByRegex ? "regex" : "name");
     if (searchByRegex) {
       searchValue = searchValue.trim() === "" ? ".*" : searchValue;
@@ -347,7 +350,7 @@ export function PackageTable() {
       <SearchBar onSearch={onSearch} />
 
       <Collapse in={hasSearched && Object.keys(rows).length > 0} timeout={600} sx={{ width: "95%" }}>
-        <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 0, outline: "1px solid gray" }}>
+        <TableContainer component={Paper} sx={{ marginTop: 2, outline: "1px solid gray" }}>
           <Table aria-label="collapsible table">
             <TableHead></TableHead>
             <TableBody>

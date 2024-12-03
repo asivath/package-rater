@@ -1,4 +1,4 @@
-import { test, expect } from "./baseFixtures";
+import { test, expect } from "../baseFixtures";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -25,7 +25,7 @@ test.describe("UploadPackageForm", () => {
     await page.click('role=button[name="Upload Package"]');
 
     const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles(path.join(__dirname, "__files__", "test.zip"));
+    await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "test.zip"));
 
     await page.fill('input[placeholder="Enter URL to GitHub or npm package"]', "https://github.com/sample/repo");
 
@@ -37,7 +37,7 @@ test.describe("UploadPackageForm", () => {
     await page.click('role=button[name="Upload Package"]');
 
     const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles(path.join(__dirname, "__files__", "test.zip"));
+    await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "test.zip"));
 
     await page.route("**/package", async (route) => {
       const request = route.request();
@@ -180,7 +180,7 @@ test.describe("UploadPackageForm", () => {
     await newVersion.click();
 
     const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles(path.join(__dirname, "__files__", "test.zip"));
+    await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "test.zip"));
 
     await page.route("**/package", async (route) => {
       const request = route.request();
@@ -324,7 +324,7 @@ test.describe("UploadPackageForm", () => {
     await page.click('role=button[name="Upload Package"]');
 
     const fileInput = page.locator('input[type="file"]');
-    const testFilePath = path.join(__dirname, "__files__", "test.zip");
+    const testFilePath = path.resolve(__dirname, "..", "__files__", "test.zip");
     await fileInput.setInputFiles(testFilePath);
 
     await expect(page.locator("text=Selected file: test.zip")).toBeVisible();

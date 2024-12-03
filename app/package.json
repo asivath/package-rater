@@ -6,15 +6,16 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "build:production": "yarn build --mode production",
-    "clean": "rm -rf .nyc_output test-results node_modules coverage playwright-report tsconfig.tsbuildinfo",
+    "clean": "rm -rf .nyc_output test-results node_modules coverage playwright-report tsconfig.tsbuildinfo screenshots",
     "dev": "vite",
     "lint": "eslint src --fix",
     "preview": "vite preview",
-    "test": "yarn playwright test",
+    "test": "yarn playwright test src/__tests__/app",
     "test:ci": "CI=true yarn test",
     "test:coverage": "nyc yarn test && nyc check-coverage && nyc report --reporter=html",
     "test:coverage-ci": "nyc yarn test:ci && nyc check-coverage",
-    "test:watch": "yarn playwright test --ui"
+    "test:watch": "yarn playwright test --ui",
+    "test:e2e": "CI=true yarn playwright test src/__tests__/e2e --project chromium"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",

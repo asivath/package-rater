@@ -71,6 +71,7 @@ export const savePackage = async (
   const packageNamePath = path.join(packagesDirPath, escapedPackageName);
   // Inside the package name directory, each package (different version of the same package) has its own directory with the ID as the name e.g. packages/react/1234567890abcdef
   const packageIdPath = path.join(packageNamePath, id);
+  const tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
   const cleanupFiles = async () => {
     await rm(packageIdPath, { recursive: true });
     if ((await readdir(packageNamePath)).length === 0) {
@@ -83,27 +84,21 @@ export const savePackage = async (
     let dependencies: { [dependency: string]: string } = {};
     let standaloneCost: number = 0;
     let ndjson;
-    let tarBallPath;
     let packageJson;
-    let uploadedWithContent;
-    // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
-    // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
     let readmeString: string | undefined;
 
     if (packageFilePath) {
-      uploadedWithContent = true;
-
-      // Given file path
+      // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
+      // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
       const targetUploadFilePath = path.join(packageIdPath, escapedPackageName);
       await cp(packageFilePath, targetUploadFilePath, { recursive: true });
 
       if (debloat) {
         await minifyProject(packageIdPath);
-
         logger.info(`Finished debloating package ${packageName} v${version}`);
       }
-      const packageJsonPath = path.join(targetUploadFilePath, "package.json");
 
+      const packageJsonPath = path.join(targetUploadFilePath, "package.json");
       packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8")) as {
         repository: { url: string };
         dependencies: { [key: string]: string };
@@ -112,13 +107,11 @@ export const savePackage = async (
         await cleanupFiles();
         return { success: false, reason: "Package score is too low" };
       }
-
       url = packageJson.repository.url;
 
       try {
         const files = await readdir(targetUploadFilePath);
         const readmeRegex = /^readme/i;
-
         for (const file of files) {
           if (readmeRegex.test(file)) {
             const readmeFilePath = path.join(targetUploadFilePath, file);
@@ -127,7 +120,6 @@ export const savePackage = async (
             break;
           }
         }
-
         if (!readmeString) {
           logger.warn(`No README found for package ${packageName} v${version}`);
         }
@@ -135,32 +127,9 @@ export const savePackage = async (
         logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
       }
 
-      try {
-        const files = await readdir(targetUploadFilePath);
-        const readmeRegex = /^readme/i;
-
-        for (const file of files) {
-          if (readmeRegex.test(file)) {
-            const readmeFilePath = path.join(targetUploadFilePath, file);
-            readmeString = await readFile(readmeFilePath, "utf-8");
-            logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
-            break;
-          }
-        }
-
-        if (!readmeString) {
-          logger.warn(`No README found for package ${packageName} v${version}`);
-        }
-      } catch (error) {
-        logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
-      }
-
-      tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
       await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [escapedPackageName]);
       await rm(targetUploadFilePath, { recursive: true });
     } else {
-      uploadedWithContent = false;
-
       // Given a url
       const unscopedName = packageName.startsWith("@") ? packageName.split("/")[1] : packageName;
       const npmTarURL = `https://registry.npmjs.org/${packageName}/-/${unscopedName}-${version}.tgz`;
@@ -169,8 +138,6 @@ export const savePackage = async (
         await cleanupFiles();
         return { success: false, reason: "Failed to fetch package" };
       }
-
-      tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
       const tarballStream = createWriteStream(tarBallPath);
       await pipeline(tarResponse.body, tarballStream);
 
@@ -198,7 +165,6 @@ export const savePackage = async (
       try {
         const files = await readdir(extractPath);
         const readmeRegex = /^readme/i;
-
         for (const file of files) {
           if (readmeRegex.test(file)) {
             const readmeFilePath = path.join(extractPath, file);
@@ -207,7 +173,6 @@ export const savePackage = async (
             break;
           }
         }
-
         if (!readmeString) {
           logger.warn(`No README found for package ${packageName} v${version}`);
         }
@@ -264,7 +229,7 @@ export const savePackage = async (
     //Initialize new package with empty versions and whether it was uploaded with content or URL
     if (!metadata.byName[packageName]) {
       metadata.byName[packageName] = {
-        uploadedWithContent: uploadedWithContent,
+        uploadedWithContent: packageFilePath ? true : false,
         versions: {}
       };
     }

@@ -2,12 +2,16 @@ import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql";
 import { calculateCorrectness } from "../metrics/Correctness";
+import * as shared from "@package-rater/shared";
 
-vi.mock("@package-rater/shared", () => {
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
   return {
+    ...original,
     getLogger: vi.fn().mockReturnValue({
       error: vi.fn(),
-      info: vi.fn()
+      info: vi.fn(),
+      warn: vi.fn()
     })
   };
 });

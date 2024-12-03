@@ -219,7 +219,7 @@ export const UploadPackageForm: React.FC<{
         {!uploadVersion ? <DialogTitle>Upload Package</DialogTitle> : <DialogTitle>Upload {name} Version</DialogTitle>}
         <DialogContent>
           <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2} width="400px">
-            {uploadedWithContent || !uploadVersion ? (
+            {(uploadedWithContent || !uploadVersion) && (
               <>
                 <Button variant="outlined" component="label">
                   Upload ZIP File
@@ -244,27 +244,19 @@ export const UploadPackageForm: React.FC<{
                   </Box>
                 )}
               </>
-            ) : (
-              <></>
             )}
-
-            {!uploadVersion ? <Divider>OR</Divider> : <></>}
-
-            {!uploadedWithContent || !uploadVersion ? (
-              <>
-                <Box mt={2}>
-                  <TextField
-                    label="GitHub / npm URL"
-                    variant="outlined"
-                    fullWidth
-                    placeholder="Enter URL to GitHub or npm package"
-                    value={packageUrl}
-                    onChange={(e) => setPackageUrl(e.target.value)}
-                  />
-                </Box>
-              </>
-            ) : (
-              <></>
+            {!uploadVersion && <Divider>OR</Divider>}
+            {(!uploadedWithContent || !uploadVersion) && (
+              <Box mt={2}>
+                <TextField
+                  label="GitHub / npm URL"
+                  variant="outlined"
+                  fullWidth
+                  placeholder="Enter URL to GitHub or npm package"
+                  value={packageUrl}
+                  onChange={(e) => setPackageUrl(e.target.value)}
+                />
+              </Box>
             )}
             <FormControlLabel
               control={

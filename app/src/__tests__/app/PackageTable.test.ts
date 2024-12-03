@@ -1,4 +1,4 @@
-import { test, expect } from "./baseFixtures";
+import { test, expect } from "../baseFixtures";
 
 test.describe("PackageTable Component Tests", () => {
   test("should render the search bar and search button with settings cog", async ({ page }) => {
