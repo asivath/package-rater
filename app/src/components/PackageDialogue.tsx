@@ -34,11 +34,7 @@ interface PackageDialogProps {
   packageData: PackageDisplay;
 }
 
-export const PackageDialog: React.FC<PackageDialogProps> = ({
-  open,
-  onClose,
-  packageData,
-}) => {
+export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, packageData }) => {
   const [costData, setCostData] = useState<PackageCostData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,13 +51,9 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({
             const errorText = await response.text();
             throw new Error(`Error ${response.status}: ${errorText}`);
           }
-          console.log("Response:", response);
           const data = await response.json();
-          console.log("Data:", data);
-          console.log("Cost data:", data[packageData.ID]);
           setCostData(data[packageData.ID]);
         } catch (error) {
-          console.error("Fetch error:", error);
           setError((error as Error).message);
         } finally {
           setLoading(false);
@@ -80,7 +72,7 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({
       <DialogTitle>{`Package Details - ${packageData.Name} v${packageData.Version}`}</DialogTitle>
       <DialogContent dividers>
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
             <CircularProgress />
           </div>
         ) : error ? (
@@ -103,9 +95,9 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({
               <ListItemText primary="Standalone Cost" secondary={`${packageData.StandaloneCost?.toFixed(2)} MB`} />
             </ListItem>
             {costData?.totalCost !== undefined && (
-                <ListItem>
+              <ListItem>
                 <ListItemText primary="Total Cost" secondary={`${costData.totalCost?.toFixed(2)} MB`} />
-                </ListItem>
+              </ListItem>
             )}
             <ListItem>
               <ListItemText
