@@ -1,3 +1,7 @@
+/*
+This file contains the PackageDialog component which displays the details of the selected package
+It fetches the cost and net score data for the package from the API via ID
+ */
 import React, { useEffect, useState } from "react";
 import {
   Dialog,
@@ -41,7 +45,7 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [netScoreData, setNetScoreData] = useState<Ndjson | null>(null);
-
+  
   useEffect(() => {
     if (open) {
       const fetchCostScoreData = async () => {
@@ -94,10 +98,10 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
             <ListItem>
               <Box
                 display="grid"
-                gridTemplateColumns="repeat(2, 1fr)" // 2 columns of equal width
-                columnGap={2} // Spacing between columns
-                rowGap={1} // Spacing between rows
-                width="100%" // Ensures full-width content
+                gridTemplateColumns="repeat(2, 1fr)"
+                columnGap={2}
+                rowGap={1}
+                width="100%"
               >
                 <ListItemText primary="Version" secondary={packageData.Version} />
                 <ListItemText primary="ID" secondary={packageData.ID} />

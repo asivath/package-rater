@@ -1,3 +1,6 @@
+/*
+  * DownloadButton component is a button that allows the user to download the package as a zip file
+  */
 import React from "react";
 import { fetcher } from "../util";
 import { IconButton, Tooltip } from "@mui/material";

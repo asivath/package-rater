@@ -1,3 +1,12 @@
+/*
+  This component displays the packages in a table format.
+  It fetches the packages from the backend and displays them in a collapsible table format.
+  The user can search for packages by name or regex.
+  The user can also upload a new package by clicking the "Upload" button.
+  The user can download a package by clicking the "Download" button.
+  The user can view the details of a package by clicking the "Details" button.
+  Details comes from the PackageDialog component.
+*/
 import { useState } from "react";
 import {
   Box,
