@@ -64,7 +64,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
   let streamToString = "";
   try {
     const tarBallDir = join(tmpdir(), `${name}-${version}`);
-    const tarBallPath = join(tarBallDir, `${name}-${version}.tar`);
+    const tarBallPath = join(tarBallDir, `${name}-${version}.tgz`);
     if (process.env.NODE_ENV === "production") {
       const params = {
         Bucket: bucketName,
