@@ -1,10 +1,23 @@
 import { describe, it, expect, vi, Mock, beforeEach } from "vitest";
 import { calculateFracPRReview } from "../metrics/FracCodePR";
 import { getGitHubData } from "../graphql";
+import * as shared from "@package-rater/shared";
 
 vi.mock("../graphql", () => ({
   getGitHubData: vi.fn()
 }));
+
+vi.mock("@package-rater/shared", async (importOriginal) => {
+  const original = await importOriginal<typeof shared>();
+  return {
+    ...original,
+    getLogger: vi.fn().mockReturnValue({
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn()
+    })
+  };
+});
 
 describe("calculateFracPRReview", () => {
   beforeEach(() => {

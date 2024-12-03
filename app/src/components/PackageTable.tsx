@@ -22,6 +22,7 @@ import { fetcher } from "../util";
 import { SearchBar } from "./SearchBar";
 import { UploadPackageForm } from "./UploadPackage";
 import { DownloadButton } from "./DownloadButton";
+import { PackageDialog } from "./PackageDialogue";
 
 type PackageDisplay = {
   Name: string;
@@ -70,6 +71,43 @@ function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
 function Row(props: { row: PackageDisplay[] }) {
   const { row } = props;
   const [open, setOpen] = useState(false);
+
+  function VersionRow({ version }: { version: PackageDisplay }) {
+    const [dialogOpen, setDialogOpen] = useState(false);
+
+    const handleOpenDialog = () => {
+      setDialogOpen(true);
+    };
+
+    const handleCloseDialog = () => {
+      setDialogOpen(false);
+    };
+    return (
+      <>
+        <TableRow
+          key={version.ID}
+          sx={{
+            "&:last-child td, &:last-child th": { border: 0 },
+            "&:hover": {
+              backgroundColor: "rgba(0, 0, 0, 0.04)"
+            }
+          }}>
+          <TableCell align="center">{version.Version}</TableCell>
+          <TableCell align="center">{version.ID}</TableCell>
+          <TableCell align="center">{version.NetScore}</TableCell>
+          <TableCell align="center">
+            <Button variant="outlined" size="small" onClick={handleOpenDialog}>
+              Details
+            </Button>
+          </TableCell>
+          <TableCell align="center">
+            <DownloadButton id={version.ID} />
+          </TableCell>
+        </TableRow>
+        <PackageDialog open={dialogOpen} onClose={handleCloseDialog} packageData={version} />
+      </>
+    );
+  }
 
   return (
     <>
@@ -131,13 +169,7 @@ function Row(props: { row: PackageDisplay[] }) {
               <Table size="small" aria-label="versions" sx={{ borderCollapse: "collapse" }}>
                 <TableHead>
                   <TableRow>
-                    {[
-                      "Version Number",
-                      "Package ID",
-                      "Net Score",
-                      ...(row.some((version) => version.CostStatus === "completed") ? ["Cost"] : []),
-                      "Download"
-                    ].map((header) => (
+                    {["Version Number", "Package ID", "Net Score", "Details", "Download"].map((header) => (
                       <TableCell
                         key={header}
                         align="center"
@@ -153,26 +185,27 @@ function Row(props: { row: PackageDisplay[] }) {
                 </TableHead>
                 <TableBody>
                   {row.map((version) => (
-                    <TableRow
-                      key={version.ID}
-                      sx={{
-                        "&:last-child td, &:last-child th": { border: 0 },
-                        "&:hover": {
-                          backgroundColor: "rgba(0, 0, 0, 0.04)"
-                        }
-                      }}>
-                      <TableCell align="center">{version.Version}</TableCell>
-                      <TableCell align="center">{version.ID}</TableCell>
-                      <TableCell align="center">{version.NetScore}</TableCell>
-                      {version.CostStatus == "completed" ? (
-                        <TableCell align="center">{version.TotalCost}</TableCell>
-                      ) : (
-                        <></>
-                      )}
-                      <TableCell align="center">
-                        <DownloadButton id={version.ID} />
-                      </TableCell>
-                    </TableRow>
+                    // <TableRow
+                    <VersionRow key={version.ID} version={version} />
+                    //   key={version.ID}
+                    //   sx={{
+                    //     "&:last-child td, &:last-child th": { border: 0 },
+                    //     "&:hover": {
+                    //       backgroundColor: "rgba(0, 0, 0, 0.04)"
+                    //     }
+                    //   }}>
+                    //   <TableCell align="center">{version.Version}</TableCell>
+                    //   <TableCell align="center">{version.ID}</TableCell>
+                    //   <TableCell align="center">{version.NetScore}</TableCell>
+                    //   <TableCell align="center">
+                    //     <DownloadButton id={version.ID} />
+                    //   </TableCell>
+                    //   <TableCell align="center">
+                    //     {/* <Button variant="outlined" size="small" onClick={handleOpenDialog}> */}
+                    //       View Details
+                    //     {/* </Button> */}
+                    //   </TableCell>
+                    // </TableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -315,11 +348,12 @@ export function PackageTable() {
     setHasSearched(true);
     setOffset(0);
     setSearchMode(searchByRegex ? "regex" : "name");
+    searchValue = searchValue.trim();
     if (searchByRegex) {
-      searchValue = searchValue.trim() === "" ? ".*" : searchValue;
+      searchValue = searchValue === "" ? ".*" : searchValue;
       fetchViaRegex(searchValue);
     } else {
-      searchValue = searchValue.trim() === "" ? "*" : searchValue;
+      searchValue = searchValue === "" ? "*" : searchValue;
       fetchViaName(searchValue, version);
     }
   };
@@ -350,7 +384,7 @@ export function PackageTable() {
       <SearchBar onSearch={onSearch} />
 
       <Collapse in={hasSearched && Object.keys(rows).length > 0} timeout={600} sx={{ width: "95%" }}>
-        <TableContainer component={Paper} sx={{ marginTop: 2, outline: "1px solid gray" }}>
+        <TableContainer component={Paper} sx={{ marginTop: 2, borderRadius: 0.5, outline: "1px solid gray" }}>
           <Table aria-label="collapsible table">
             <TableHead></TableHead>
             <TableBody>

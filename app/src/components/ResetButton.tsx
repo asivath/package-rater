@@ -18,6 +18,7 @@ export const ResetButton: React.FC = () => {
     try {
       await fetcher("/reset", { method: "DELETE" });
       setOpen(false);
+      window.location.reload()
     } catch {
       setOpen(false);
     }
