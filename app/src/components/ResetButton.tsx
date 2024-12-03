@@ -1,3 +1,8 @@
+/* 
+  This component is used to reset the S3 bucket or local packages. 
+  It will open a dialog to confirm the action before proceeding.
+  The reset action will be triggered by a DELETE request to the server.
+*/
 import React, { useState } from "react";
 import { fetcher } from "../util";
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography } from "@mui/material";
@@ -18,6 +23,7 @@ export const ResetButton: React.FC = () => {
     try {
       await fetcher("/reset", { method: "DELETE" });
       setOpen(false);
+      window.location.reload();
     } catch {
       setOpen(false);
     }

@@ -1,5 +1,7 @@
 import { Ndjson, assertIsNdjson } from "@package-rater/shared";
-
+/**
+ * Metadata for all packages and their versions
+ */
 export type Metadata = {
   byId: {
     [id: string]: {
@@ -41,7 +43,10 @@ export type Metadata = {
     };
   };
 };
-
+/**
+ * This function asserts that the given object is a Metadata object
+ * @param o
+ */
 export function assertIsMetadata(o: any): asserts o is Metadata {
   if (!o || typeof o !== "object") {
     throw new Error("Metadata must be an object");

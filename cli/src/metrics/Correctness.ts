@@ -1,3 +1,6 @@
+/**
+ * Utlity functions to calculate the correctness metric for a repository
+ */
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
 
@@ -19,6 +22,12 @@ type IssuesData = {
   };
 };
 
+/**
+ * Fetches the issues for a repository from the GitHub API
+ * @param owner The owner of the repository
+ * @param repo The name of the repository
+ * @returns The issues data for the repository
+ */
 async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
   try {
     const query = `

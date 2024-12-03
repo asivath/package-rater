@@ -1,3 +1,7 @@
+/**
+ * This script reads package URLs from a file and calls the API to upload them.
+ * It uses the fetch API to make POST requests to the API.
+ */
 import fs from "fs";
 import path from "path";
 import pLimit from "p-limit";
@@ -22,7 +26,12 @@ function parsePackageUrlsFromFile(filePath: string): string[] {
 
   return packageUrls;
 }
-
+/**
+ * Calls the API for each package URL in the list
+ * @param packageUrls The list of package URLs to process
+ * @param concurrency The number of concurrent requests to make
+ * @returns A list of failures
+ */
 async function callApiForPackages(packageUrls: string[], concurrency = 10) {
   const limit = pLimit(concurrency);
   const failures: { url: string; error: string }[] = [];
@@ -62,7 +71,9 @@ async function callApiForPackages(packageUrls: string[], concurrency = 10) {
     console.log(chalk.green("\nAll packages processed successfully!"));
   }
 }
-
+/**
+ * Main function that reads the file and processes the packages
+ */
 async function main() {
   const filePath = path.resolve("./dependencies.txt");
   const spinner = ora(chalk.blue("Reading package URLs from file...")).start();

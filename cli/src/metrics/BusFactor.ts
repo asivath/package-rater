@@ -1,3 +1,7 @@
+/**
+ * Utility functions for calculating the bus factor of a repository
+ */
+
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
 

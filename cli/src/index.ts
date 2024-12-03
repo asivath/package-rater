@@ -7,7 +7,11 @@ import "dotenv/config";
 
 const __filename = fileURLToPath(import.meta.url);
 const logger = getLogger("cli");
-
+/**
+ * Process a file containing a list of URLs
+ * @param file The file containing the list of URLs
+ * @returns The result of processing the URLs
+ */
 async function processURLFile(file: string): Promise<void> {
   try {
     const data = await fs.readFile(file, "utf8");
@@ -60,6 +64,11 @@ if (process.argv[1] === __filename) {
   }
 }
 
+/**
+ * Lambda handler to process a URL
+ * @param event
+ * @returns
+ */
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
     const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;

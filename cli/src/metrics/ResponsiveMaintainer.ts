@@ -1,3 +1,6 @@
+/**
+ * This module calculates the responsiveness score for a repository on GitHub
+ */
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
 

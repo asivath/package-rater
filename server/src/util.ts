@@ -1,3 +1,6 @@
+/**
+ * Utility functions for the server
+ */
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { readFile, mkdir, writeFile, rm, cp, access, readdir, stat, rmdir } from "fs/promises";
 import { createWriteStream } from "fs";
@@ -21,7 +24,12 @@ const __dirname = path.dirname(__filename);
 const packagesDirPath = path.join(__dirname, "..", "packages");
 const metadataPath = path.join(packagesDirPath, "metadata.json");
 let metadata: Metadata;
-
+/**
+ * Calculates the ID of a package
+ * @param packageName The name of the package
+ * @param version The version of the package
+ * @returns The ID of the package
+ */
 async function loadMetadata(): Promise<void> {
   const metadataFile = JSON.parse(await readFile(metadataPath, "utf-8"));
   assertIsMetadata(metadataFile);
@@ -554,6 +562,12 @@ async function calculateTotalCost(graph: Map<string, PackageNode>): Promise<numb
     }
   }
 
+  /**
+   * This function performs a depth-first search to calculate the total cost of a node
+   * @param nodeId
+   * @param visited
+   * @returns
+   */
   async function dfsCalculateCost(nodeId: string, visited: Set<string> = new Set()): Promise<number> {
     if (visited.has(nodeId)) {
       return 0;
@@ -651,11 +665,22 @@ export const checkIfPackageExists = (name: string) => {
   return metadata.byName[name] ? true : false;
 };
 
+/**
+ * Checks if the package version exists
+ * @param id The package ID
+ * @returns Whether the package version exists
+ */
 export const checkIfPackageVersionExists = (id: string) => {
   const metadata = getPackageMetadata();
   return metadata.byId[id] ? true : false;
 };
 
+/**
+ * Checks if the package version exists
+ * @param packageName The name of the package
+ * @param version The version of the package
+ * @returns Whether the package version exists
+ */
 export const checkIfContentPatchValid = (availablePackageVersions: string[], newVersion: string) => {
   const [newMajor, newMinor, newPatch] = newVersion.split(".").map(Number);
   for (const curVersion of availablePackageVersions) {

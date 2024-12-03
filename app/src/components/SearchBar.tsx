@@ -1,3 +1,6 @@
+/*
+  SearchBar component is a controlled component that takes a search value and search by regex boolean as input and calls the onSearch function when the search button is clicked or the enter key is pressed. It also has a settings button that opens a menu with a checkbox to enable search by regex and a text field to enter the version to search for.
+*/
 import React, { useState } from "react";
 import {
   TextField,

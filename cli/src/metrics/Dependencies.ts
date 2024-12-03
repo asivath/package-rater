@@ -1,3 +1,6 @@
+/**
+ * Utility functions for calculating dependency metrics.
+ */
 import fs from "fs/promises";
 import path from "path";
 import { getLogger } from "@package-rater/shared";

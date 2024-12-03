@@ -1,3 +1,6 @@
+/**
+ * This script is a simple load test that sends requests to a local registry server
+ */
 import ora from "ora";
 import chalk from "chalk";
 
@@ -20,7 +23,10 @@ const metrics: Metrics = {
   successfulRequests: 0,
   failedRequests: 0,
 };
-
+/**
+ * This function simulates a client that sends requests to the local registry server
+ * @param clientId 
+ */
 async function clientWorker(clientId: number) {
   const spinner = ora(`Client ${clientId} starting...`).start();
   const endTime = Date.now() + testDurationMs;
@@ -46,7 +52,9 @@ async function clientWorker(clientId: number) {
   spinner.succeed(`Client ${clientId} completed`);
 }
 
-
+/**
+ * This function runs the load test
+ */
 async function runLoadTest() {
   console.log(chalk.blue("Starting load test..."));
   const startTime = Date.now();

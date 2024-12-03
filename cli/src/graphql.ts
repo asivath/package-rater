@@ -1,8 +1,18 @@
+/**
+ * This file contains the function to fetch data from the GitHub API using GraphQL
+ */
 import "dotenv/config";
 import { getLogger } from "@package-rater/shared";
 
 const logger = getLogger("cli");
-
+/**
+ * Fetches data from the GitHub API using GraphQL
+ * @param packageName The name of the package
+ * @param ownerName The owner of the package
+ * @param requestString The GraphQL query string
+ * @param args Additional arguments for the query
+ * @returns The data fetched from the GitHub API
+ */
 export async function getGitHubData(
   packageName: string,
   ownerName: string,

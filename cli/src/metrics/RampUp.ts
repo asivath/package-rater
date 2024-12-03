@@ -1,3 +1,6 @@
+/**
+ * This function calculates the Ramp-up score for a repository
+ */
 import { getGitHubData } from "../graphql.js";
 import { getLogger } from "@package-rater/shared";
 

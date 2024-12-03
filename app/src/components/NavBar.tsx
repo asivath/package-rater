@@ -1,3 +1,7 @@
+/*
+  This component is the navigation bar of the application.
+  It contains the logo, the title of the application, the reset button and the upload package form.
+*/
 import { AppBar, Toolbar, Typography, Box, Avatar } from "@mui/material";
 import { ResetButton } from "./ResetButton";
 import { UploadPackageForm } from "./UploadPackage";
