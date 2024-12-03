@@ -135,7 +135,7 @@ export const savePackage = async (
         logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
       }
 
-      await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, ["."]);
+      await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [path.basename(packageFilePath)]);
       await rm(targetUploadFilePath, { recursive: true });
     } else {
       // Given a url
@@ -281,7 +281,7 @@ export const savePackage = async (
       });
     return { success: true };
   } catch (error) {
-    // await cleanupFiles();
+    await cleanupFiles();
     return { success: false, reason: (error as Error).message };
   }
 };

@@ -55,7 +55,6 @@ test.describe("DownloadButton", () => {
     await downloadButton.click();
 
     const download = await downloadPromise;
-
-    await expect(download.suggestedFilename()).toBe("TestPackage-1.0.0.zip");
+    expect(download.suggestedFilename()).toBe("TestPackage-1.0.0.zip");
   });
 });

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as shared from "@package-rater/shared";
 import { downloadPackage } from "../routes/downloadPackage";
 import Fastify from "fastify";
-import * as fs from "fs/promises";
 import { Dirent } from "fs";
+import * as tar from "tar";
+import * as shared from "@package-rater/shared";
+import * as fs from "fs/promises";
 
 vi.stubEnv("NODE_TEST", "true");
 
@@ -182,11 +183,12 @@ vi.mock("fs/promises", () => ({
   }),
   cp: vi.fn().mockResolvedValue(undefined)
 }));
-vi.mock("node-cache", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    get: vi.fn().mockReturnValue(undefined),
-    set: vi.fn().mockReturnValue(true)
-  }))
+vi.mock("../index", () => ({
+  cache: {
+    flushAll: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn()
+  }
 }));
 
 describe("downloadPackage", () => {
@@ -268,7 +270,7 @@ describe("downloadPackage", () => {
   });
 
   it("should return 500 if there is an error in the process", async () => {
-    vi.spyOn(fs, "readFile").mockRejectedValueOnce(new Error("Simulated read error"));
+    vi.mocked(tar.extract).mockRejectedValueOnce(new Error("Simulated error"));
 
     const reply = await fastify.inject({
       method: "GET",

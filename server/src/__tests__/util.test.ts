@@ -491,7 +491,7 @@ describe("savePackage", () => {
         file: expect.stringMatching(/test-package\.tgz$/),
         cwd: expect.stringMatching(/test-package\/8474585353350172/)
       }),
-      ["test-package"]
+      ["package-file"]
     );
 
     expect(logger.info).toHaveBeenCalledWith(
