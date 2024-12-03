@@ -273,7 +273,7 @@ export const savePackage = async (
       });
     return { success: true };
   } catch (error) {
-    // await cleanupFiles();
+    await cleanupFiles();
     return { success: false, reason: (error as Error).message };
   }
 };

@@ -49,7 +49,10 @@ describe("calculateLicense", () => {
 
   it("should return 0 if no license is found", async () => {
     // Simulate missing package.json, LICENSE, and README.md
-    readFile.mockRejectedValueOnce(new Error("ENOENT")).mockRejectedValueOnce(new Error("ENOENT")).mockRejectedValueOnce(new Error("ENOENT"));
+    readFile
+      .mockRejectedValueOnce(new Error("ENOENT"))
+      .mockRejectedValueOnce(new Error("ENOENT"))
+      .mockRejectedValueOnce(new Error("ENOENT"));
 
     const score = await calculateLicense(owner, repo, repoDir);
     expect(score).toBe(0);
