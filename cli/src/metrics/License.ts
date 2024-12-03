@@ -1,3 +1,7 @@
+/**
+ * Calculate the license score by checking LICENSE, README, and package.json files.
+ * The more restrictive the license, the lower the score.
+ */
 import fs from "fs/promises";
 import path from "path";
 import { getLogger } from "@package-rater/shared";

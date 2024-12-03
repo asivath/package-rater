@@ -1,3 +1,8 @@
+/**
+ * Calculate the fraction of code introduced through reviewed PRs
+ * Note that due to the latency cost of taking all lines of code,
+ * We are only taking the first 100 commits as a "sample"
+ */
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
 
@@ -31,6 +36,14 @@ type CommitResponse = {
   };
 };
 
+/**
+ * This function fetches commits and their associated PRs from a GitHub repository
+ * @param owner 
+ * @param repo 
+ * @param branch 
+ * @param totalCommits 
+ * @returns 
+ */
 async function fetchCommitsWithPRs(
   owner: string,
   repo: string,
@@ -102,6 +115,12 @@ async function fetchCommitsWithPRs(
   return results;
 }
 
+/**
+ * Calculate the fraction of code introduced through reviewed PRs
+ * @param owner 
+ * @param repo 
+ * @returns 
+ */
 export async function calculateFracPRReview(owner: string, repo: string): Promise<number> {
   try {
     const totalCommits = 100;

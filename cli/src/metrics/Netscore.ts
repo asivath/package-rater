@@ -1,3 +1,7 @@
+/**
+ * This file clones and calculates lines of codes for a repository
+ * and calculates the metrics for the repository
+ */
 import { getLogger, getGithubRepo, cloneRepo, Ndjson, assertIsNdjson } from "@package-rater/shared";
 import { calculateCorrectness } from "./Correctness.js";
 import { calculateLicense } from "./License.js";
@@ -59,6 +63,11 @@ async function getRepoOwner(url: string): Promise<[string, string, string] | nul
   return null;
 }
 
+/**
+ * Calculate the lines of code for a repository using cloc
+ * @param repoDir 
+ * @returns 
+ */
 export async function calculateLOC(repoDir: string): Promise<number> {
   try {
     const execAsync = promisify(exec);
