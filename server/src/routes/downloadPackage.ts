@@ -2,7 +2,7 @@ import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { cp, writeFile, rm } from "fs/promises";
+import { cp, writeFile, mkdir, rm } from "fs/promises";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getPackageMetadata } from "../util.js";
 import { tmpdir } from "os";
@@ -64,6 +64,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
   let streamToString = "";
   try {
     const tarBallDir = join(tmpdir(), `${name}-${version}`);
+    await mkdir(tarBallDir, { recursive: true });
     const tarBallPath = join(tarBallDir, `${name}-${version}.tgz`);
     if (process.env.NODE_ENV === "production") {
       const params = {
@@ -78,8 +79,8 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
         return;
       }
       const tgzData = await data.Body.transformToByteArray();
+      console.log(tgzData);
       await writeFile(tarBallPath, tgzData);
-      streamToString = await data.Body.transformToString("base64");
     } else {
       const tarBallFile = join(packagesDirPath, name, id, `${name}.tgz`);
       await cp(tarBallFile, tarBallPath);
