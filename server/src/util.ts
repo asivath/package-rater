@@ -112,7 +112,15 @@ export const savePackage = async (
         await cleanupFiles();
         return { success: false, reason: "Package score is too low" };
       }
-      url = packageJson.repository.url || `https://github.com/${packageJson.repository}`;
+      if (typeof packageJson.repository === "string") {
+        url = `https://github.com/${packageJson.repository}`;
+      } else if (packageJson.repository?.url) {
+        url = packageJson.repository.url;
+      } else {
+        await cleanupFiles();
+        return { success: false, reason: "Invalid repository information" };
+      }
+      url = url.replace(/^git:|^git\+/, "https:");
 
       try {
         const zipEntries = zip.getEntries();
