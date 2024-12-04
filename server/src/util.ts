@@ -111,11 +111,12 @@ export const savePackage = async (
         repository: { url: string };
         dependencies: { [key: string]: string };
       };
-      if (!packageJson.repository || !packageJson.repository.url) {
+
+      if (!packageJson.repository) {
         await cleanupFiles();
         return { success: false, reason: "Package score is too low" };
       }
-      url = packageJson.repository.url;
+      url = packageJson.repository.url || `https://github.com/${packageJson.repository}`;
 
       try {
         const files = await readdir(targetUploadFilePath);
