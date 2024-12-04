@@ -15,6 +15,8 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
   };
 });
 vi.mock("fs/promises", () => ({
+  readdir: vi.fn().mockResolvedValue([{ name: "file.ts", isDirectory: () => false }]),
+  readFile: vi.fn().mockResolvedValue("file content"),
   rm: vi.fn().mockResolvedValue(undefined)
 }));
 vi.mock("../metrics/Correctness", () => ({
@@ -35,19 +37,12 @@ vi.mock("../metrics/BusFactor", () => ({
 vi.mock("../metrics/Dependencies", () => ({
   calculatePinnedDependencyFraction: vi.fn().mockResolvedValue(0.8)
 }));
-
 vi.mock("../metrics/FracCodePR", () => ({
   calculateFracPRReview: vi.fn().mockResolvedValue(0.8)
 }));
-
-vi.mock("util", () => ({
-  promisify: vi.fn(() => {
-    return vi.fn().mockResolvedValue({
-      stdout: JSON.stringify({
-        JavaScript: { code: 1000 },
-        TypeScript: { code: 500 }
-      })
-    });
+vi.mock("sloc", () => ({
+  default: vi.fn().mockReturnValue({
+    total: 1500
   })
 }));
 

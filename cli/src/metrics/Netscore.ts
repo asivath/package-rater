@@ -10,9 +10,10 @@ import { calculateResponsiveMaintainer } from "./ResponsiveMaintainer.js";
 import { calculateBusFactor } from "./BusFactor.js";
 import { calculatePinnedDependencyFraction } from "./Dependencies.js";
 import { rm } from "fs/promises";
-import { promisify } from "util";
-import { exec } from "child_process";
 import { calculateFracPRReview } from "./FracCodePR.js";
+import { readdir, readFile } from "fs/promises";
+import path from "path";
+import sloc from "sloc";
 
 const logger = getLogger("cli");
 
@@ -64,18 +65,31 @@ async function getRepoOwner(url: string): Promise<[string, string, string] | nul
 }
 
 /**
- * Calculate the lines of code for a repository using cloc
+ * Calculate the lines of code for a repository using sloc
  * @param repoDir
  * @returns
  */
 export async function calculateLOC(repoDir: string): Promise<number> {
   try {
-    const execAsync = promisify(exec);
-    const { stdout } = await execAsync(`npx cloc --json ${repoDir}`);
-    const clocData = JSON.parse(stdout);
-    const jsLines = clocData.JavaScript?.code || 0;
-    const tsLines = clocData.TypeScript?.code || 0;
-    const totalLines = jsLines + tsLines;
+    const readDirectory = async (dir: string): Promise<string[]> => {
+      const entries = await readdir(dir, { withFileTypes: true });
+      const files = await Promise.all(
+        entries.map((entry) => {
+          const fullPath = path.resolve(dir, entry.name);
+          return entry.isDirectory() ? readDirectory(fullPath) : [fullPath];
+        })
+      );
+      return files.flat();
+    };
+    const allFiles = await readDirectory(repoDir);
+    const jsTsFiles = allFiles.filter((file) => /\.(js|jsx|ts|tsx)$/.test(path.extname(file)));
+    let totalLines = 0;
+    for (const file of jsTsFiles) {
+      const content = await readFile(file, "utf-8");
+      const stats = sloc(content, path.extname(file).slice(1));
+      totalLines += stats.total;
+    }
+
     logger.info(`Calculated LOC for ${repoDir}: ${totalLines}`);
     return totalLines;
   } catch (error) {
