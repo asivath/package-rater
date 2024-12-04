@@ -10,16 +10,52 @@ import { getPackageCost } from "./routes/getPackageCost.js";
 import { uploadVersion } from "./routes/uploadVersion.js";
 import { retrievePackageNetscore } from "./routes/retrievePackageNetscore.js";
 import { getLogger } from "@package-rater/shared";
-import "dotenv/config";
 import NodeCache from "node-cache";
+import { readFile, writeFile } from "fs/promises";
+import "dotenv/config";
 
 export const cache = new NodeCache({ stdTTL: 60 * 60 });
 
 const logger = getLogger("server");
 
 const fastify = Fastify({
-  logger: false,
-  bodyLimit: 30 * 1024 * 1024 // 30MB
+  logger: {
+    level: "debug",
+    file: "server.log",
+    transport: {
+      target: "pino-pretty",
+      options: {
+        colorize: false,
+        destination: "server.log"
+      }
+    }
+  },
+  bodyLimit: 30 * 1024 * 1024, // 30MB,
+  keepAliveTimeout: 60000
+});
+
+fastify.addHook("onRequest", async (request) => {
+  request.log.info(
+    {
+      method: request.method,
+      url: request.url,
+      headers: request.headers,
+      body: request.body
+    },
+    "Request details"
+  );
+});
+
+fastify.addHook("onResponse", async (request, reply) => {
+  request.log.info(
+    {
+      statusCode: reply.statusCode,
+      url: request.url,
+      method: request.method,
+      headers: reply.getHeaders()
+    },
+    "Response details"
+  );
 });
 
 fastify.register(cors, {
@@ -32,6 +68,19 @@ fastify.register(fastifyStatic, {
   prefix: "/"
 });
 
+fastify.delete("/log", async (_, reply) => {
+  await writeFile("server.log", "");
+  await writeFile("../package-rater.log", "");
+  reply.code(200).send({ message: "Server log cleared" });
+});
+fastify.get("/server-log", async (_, reply) => {
+  const log = await readFile("server.log", "utf-8");
+  reply.code(200).send(log);
+});
+fastify.get("/package-rater-log", async (_, reply) => {
+  const log = await readFile("../package-rater.log", "utf-8");
+  reply.code(200).send(log);
+});
 fastify.post("/package", uploadPackage);
 fastify.post("/packages", retrievePackageInfo);
 fastify.post("/package/byRegEx", retrievePackageByRegEx);

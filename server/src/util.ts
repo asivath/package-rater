@@ -110,7 +110,7 @@ export const savePackage = async (
 
       if (!packageJson.repository) {
         await cleanupFiles();
-        return { success: false, reason: "Package score is too low" };
+        return { success: false, reason: "No repository present in package.json" };
       }
       if (typeof packageJson.repository === "string") {
         url = `https://github.com/${packageJson.repository}`;
@@ -120,7 +120,8 @@ export const savePackage = async (
         await cleanupFiles();
         return { success: false, reason: "Invalid repository information" };
       }
-      url = url.replace(/^git:|^git\+/, "https:");
+      url = url.replace(/^git\+/, "");
+      url = url.replace(/^git:\/\//, "https://");
 
       try {
         const zipEntries = zip.getEntries();
@@ -193,7 +194,6 @@ export const savePackage = async (
       await rm(extractPath, { recursive: true });
       await rm(tarBallPath);
     }
-
     if (process.env.NODE_ENV === "production") {
       if (!process.env.CLI_API_URL) {
         return { success: false, reason: "CLI API URL not provided" };
