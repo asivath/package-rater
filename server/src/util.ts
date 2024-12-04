@@ -2,13 +2,13 @@
  * Utility functions for the server
  */
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { readFile, mkdir, writeFile, rm, cp, access, readdir, stat, rmdir } from "fs/promises";
+import { readFile, mkdir, writeFile, rm, access, readdir, stat, rmdir } from "fs/promises";
 import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { assertIsNdjson, getLogger, cloneRepo } from "@package-rater/shared";
-import { create, extract } from "tar";
+import { extract } from "tar";
 import { pipeline } from "stream/promises";
 import { assertIsMetadata, Metadata } from "./types.js";
 import { createHash } from "crypto";
@@ -16,6 +16,7 @@ import { tmpdir } from "os";
 import { satisfies } from "semver";
 import esbuild from "esbuild";
 import path from "path";
+import AdmZip from "adm-zip";
 import "dotenv/config";
 
 const logger = getLogger("server");
@@ -56,8 +57,8 @@ const bucketName = process.env.AWS_BUCKET_NAME;
  * @param version The version of the package
  * @param id The ID of the package
  * @param debloat Whether to debloat the package
- * @param packageFilePath The path to the package file (provide either packageFilePath or url)
- * @param url The URL of the package (provide either packageFilePath or url)
+ * @param zip The AdmZip object of the package (provide either zip or url)
+ * @param url The URL of the package (provide either zip or url)
  * @returns Whether the package was saved successfully
  */
 export const savePackage = async (
@@ -65,13 +66,13 @@ export const savePackage = async (
   version: string,
   id: string,
   debloat: boolean,
-  packageFilePath?: string,
+  zip?: AdmZip,
   url?: string
 ): Promise<{ success: boolean; reason?: string }> => {
-  if (!packageFilePath && !url) {
+  if (!zip && !url) {
     return { success: false, reason: "No package file path or URL provided" };
   }
-  if (packageFilePath && url) {
+  if (zip && url) {
     return { success: false, reason: "Provide either package file path or URL, not both" };
   }
   const escapedPackageName = packageName.replace("/", "_");
@@ -79,7 +80,7 @@ export const savePackage = async (
   const packageNamePath = path.join(packagesDirPath, escapedPackageName);
   // Inside the package name directory, each package (different version of the same package) has its own directory with the ID as the name e.g. packages/react/1234567890abcdef
   const packageIdPath = path.join(packageNamePath, id);
-  const tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
+  const zipPath = path.join(packageIdPath, `${escapedPackageName}.zip`);
   const cleanupFiles = async () => {
     await rm(packageIdPath, { recursive: true });
     if ((await readdir(packageNamePath)).length === 0) {
@@ -94,20 +95,15 @@ export const savePackage = async (
     let ndjson;
     let packageJson;
     let readmeString: string | undefined;
+    let finalZip: AdmZip;
 
-    if (packageFilePath) {
-      // File path where the package will copied to, folder called the package name inside the package ID directory e.g. packages/react/1234567890abcdef/react
-      // We don't copy the package to the package ID directory directly because we need to eventually tar the entire directory then delete
-      const targetUploadFilePath = path.join(packageIdPath, path.basename(packageFilePath));
-      await cp(packageFilePath, targetUploadFilePath, { recursive: true });
-
-      if (debloat) {
-        await minifyProject(packageIdPath);
-        logger.info(`Finished debloating package ${packageName} v${version}`);
-      }
-
-      const packageJsonPath = path.join(targetUploadFilePath, "package.json");
-      packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8")) as {
+    if (zip) {
+      const packageJsonEntry = zip
+        .getEntries()
+        .filter((entry) => !entry.isDirectory && entry.entryName.endsWith("package.json"))
+        .sort((a, b) => a.entryName.split("/").length - b.entryName.split("/").length)[0];
+      // Already checked earlier that package.json exists
+      packageJson = JSON.parse(packageJsonEntry!.getData().toString()) as {
         repository: { url: string };
         dependencies: { [key: string]: string };
       };
@@ -119,13 +115,12 @@ export const savePackage = async (
       url = packageJson.repository.url || `https://github.com/${packageJson.repository}`;
 
       try {
-        const files = await readdir(targetUploadFilePath);
+        const zipEntries = zip.getEntries();
         const readmeRegex = /^readme/i;
-        for (const file of files) {
-          if (readmeRegex.test(file)) {
-            const readmeFilePath = path.join(targetUploadFilePath, file);
-            readmeString = await readFile(readmeFilePath, "utf-8");
-            logger.info(`Found README at ${readmeFilePath} for package ${packageName} v${version}`);
+        for (const entry of zipEntries) {
+          if (!entry.isDirectory && readmeRegex.test(entry.entryName.split("/").pop() || "")) {
+            readmeString = entry.getData().toString("utf-8");
+            logger.info(`Found README in zip at ${entry.entryName} for package ${packageName} v${version}`);
             break;
           }
         }
@@ -133,11 +128,9 @@ export const savePackage = async (
           logger.warn(`No README found for package ${packageName} v${version}`);
         }
       } catch (error) {
-        logger.error(`Error reading files in directory ${targetUploadFilePath}: ${(error as Error).message}`);
+        logger.error(`Error processing zip file for package ${packageName} v${version}: ${(error as Error).message}`);
       }
-
-      await create({ gzip: true, file: tarBallPath, cwd: packageIdPath }, [path.basename(packageFilePath)]);
-      await rm(targetUploadFilePath, { recursive: true });
+      finalZip = zip;
     } else {
       // Given a url
       const unscopedName = packageName.startsWith("@") ? packageName.split("/")[1] : packageName;
@@ -147,6 +140,7 @@ export const savePackage = async (
         await cleanupFiles();
         return { success: false, reason: "Failed to fetch package" };
       }
+      const tarBallPath = path.join(packageIdPath, `${escapedPackageName}.tgz`);
       const tarballStream = createWriteStream(tarBallPath);
       await pipeline(tarResponse.body, tarballStream);
 
@@ -161,12 +155,6 @@ export const savePackage = async (
       );
       const validDirs = topLevelDirs.filter((dir) => dir !== null);
       const extractPath = path.join(packageIdPath, validDirs[0]);
-
-      if (debloat) {
-        await minifyProject(extractPath);
-        logger.info(`Finished debloating package ${packageName} v${version}`);
-        await create({ gzip: true, file: tarBallPath, cwd: extractPath }, ["."]);
-      }
 
       const packageJsonPath = path.join(extractPath, "package.json");
       packageJson = JSON.parse(await readFile(packageJsonPath, "utf-8"));
@@ -189,7 +177,13 @@ export const savePackage = async (
         logger.error(`Error reading files in directory ${extractPath}: ${(error as Error).message}`);
       }
 
+      finalZip = new AdmZip();
+      finalZip.addLocalFolder(extractPath, undefined, (filename) => {
+        return !filename.endsWith(".tgz");
+      });
+
       await rm(extractPath, { recursive: true });
+      await rm(tarBallPath);
     }
 
     if (process.env.NODE_ENV === "production") {
@@ -221,8 +215,21 @@ export const savePackage = async (
       return { success: false, reason: "Package score is too low" };
     }
 
+    if (debloat) {
+      const tempDebloatDir = path.join(tmpdir(), id);
+      await mkdir(tempDebloatDir, { recursive: true });
+      finalZip.extractAllTo(tempDebloatDir, true);
+      await minifyProject(tempDebloatDir);
+      logger.info(`Finished debloating package ${packageName} v${version}`);
+      finalZip = new AdmZip();
+      finalZip.addLocalFolder(tempDebloatDir);
+      await rm(tempDebloatDir, { recursive: true });
+    }
+
+    finalZip.writeZip(zipPath);
+
     dependencies = packageJson.dependencies || {};
-    standaloneCost = (await stat(tarBallPath)).size / (1024 * 1000);
+    standaloneCost = (await stat(zipPath)).size / (1024 * 1000);
 
     //Add info based on ID
     metadata.byId[id] = {
@@ -238,7 +245,7 @@ export const savePackage = async (
     //Initialize new package with empty versions and whether it was uploaded with content or URL
     if (!metadata.byName[packageName]) {
       metadata.byName[packageName] = {
-        uploadedWithContent: packageFilePath ? true : false,
+        uploadedWithContent: zip ? true : false,
         versions: {}
       };
     }
@@ -260,7 +267,7 @@ export const savePackage = async (
     );
 
     if (process.env.NODE_ENV === "production") {
-      await uploadToS3(escapedPackageName, id, tarBallPath);
+      await uploadToS3(escapedPackageName, id, zipPath);
       await cleanupFiles();
     }
 
@@ -433,11 +440,18 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
         return depId;
       });
 
+      const zip = new AdmZip();
+      zip.addLocalFolder(extractPath, undefined, (filename) => {
+        return !filename.endsWith(".tgz");
+      });
+      const zipBuffer = zip.toBuffer();
+      const standaloneCost = zipBuffer.length / (1024 * 1000);
+
       const node: PackageNode = {
         id,
         packageName,
         version,
-        standaloneCost: (await stat(tarBallPath)).size / (1024 * 1000),
+        standaloneCost: standaloneCost,
         totalCost: 0,
         dependencies
       };
