@@ -56,13 +56,14 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
 
   const name: string = metadataJson.byId[id].packageName;
   const version: string = metadataJson.byId[id].version;
+  const escapedPackageName = name.replace("/", "_");
 
   let streamToString = "";
   try {
     if (process.env.NODE_ENV === "production") {
       const params = {
         Bucket: bucketName,
-        Key: `${name}/${id}/${name}.zip`
+        Key: `${escapedPackageName}/${id}/${escapedPackageName}.zip`
       };
       const data = await s3Client.send(new GetObjectCommand(params));
 
@@ -74,7 +75,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
       const zipData = await data.Body.transformToByteArray();
       streamToString = Buffer.from(zipData).toString("base64");
     } else {
-      const zipPath = join(packagesDirPath, name, id, `${name}.zip`);
+      const zipPath = join(packagesDirPath, escapedPackageName, id, `${escapedPackageName}.zip`);
       const zipData = await readFile(zipPath);
       streamToString = zipData.toString("base64");
     }
