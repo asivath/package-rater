@@ -95,9 +95,8 @@ export async function calculateLicense(owner: string, repo: string, repoDir?: st
     logger.error("Repository directory is not defined");
     return 0;
   }
-  const licenseFilePath = path.join(repoDir, "LICENSE");
+  const files = await fs.readdir(repoDir);
   const packageFilePath = path.join(repoDir, "package.json");
-  const readmeFilePath = path.join(repoDir, "README.md");
   // Check package.json for license
   try {
     const packageJson = JSON.parse(await fs.readFile(packageFilePath, "utf8"));
@@ -114,11 +113,14 @@ export async function calculateLicense(owner: string, repo: string, repoDir?: st
 
   // Check LICENSE file for license
   try {
-    const licenseContent = await fs.readFile(licenseFilePath, "utf8");
-    for (const [license, score] of compatibilityTable) {
-      if (licenseContent.includes(license)) {
-        logger.info(`Found license ${license} in LICENSE file for ${owner}/${repo}`);
-        return score;
+    const licenseFiles = files.filter((file) => file.toLowerCase().includes("license"));
+    for (const licenseFile of licenseFiles) {
+      const licenseContent = await fs.readFile(path.join(repoDir, licenseFile), "utf8");
+      for (const [license, score] of compatibilityTable) {
+        if (licenseContent.toLowerCase().includes(license.toLowerCase())) {
+          logger.info(`Found license ${license} in LICENSE for ${owner}/${repo}`);
+          return score;
+        }
       }
     }
   } catch (error) {
@@ -129,11 +131,14 @@ export async function calculateLicense(owner: string, repo: string, repoDir?: st
 
   // Check README.md for license information
   try {
-    const readmeContent = await fs.readFile(readmeFilePath, "utf8");
-    for (const [license, score] of compatibilityTable) {
-      if (readmeContent.toLowerCase().includes(license.toLowerCase())) {
-        logger.info(`Found license ${license} in README.md for ${owner}/${repo}`);
-        return score;
+    const readmeFiles = files.filter((file) => file.toLowerCase().includes("readme"));
+    for (const readmeFile of readmeFiles) {
+      const readmeContent = await fs.readFile(path.join(repoDir, readmeFile), "utf8");
+      for (const [license, score] of compatibilityTable) {
+        if (readmeContent.toLowerCase().includes(license.toLowerCase())) {
+          logger.info(`Found license ${license} in README for ${owner}/${repo}`);
+          return score;
+        }
       }
     }
   } catch (error) {
