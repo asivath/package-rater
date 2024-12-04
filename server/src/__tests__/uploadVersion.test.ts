@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { uploadVersion } from "../routes/uploadVersion";
 import Fastify from "fastify";
 import * as shared from "@package-rater/shared";
-import * as unzipper from "unzipper";
 import * as crypto from "crypto";
 import * as util from "../util";
+import * as AdmZip from "adm-zip";
 
 vi.mock("@package-rater/shared", async (importOriginal) => {
   const original = await importOriginal<typeof shared>();
@@ -105,57 +105,15 @@ vi.mock("../util.js", async (importOriginal) => {
     calculatePackageId: vi.fn().mockReturnValue("id2")
   };
 });
+vi.mock("adm-zip", () => ({
+  default: vi.fn().mockReturnValue({
+    getEntries: vi.fn().mockReturnValue([])
+  })
+}));
 
 describe("uploadVersion", () => {
   const logger = shared.getLogger("test");
   global.fetch = vi.fn();
-  const zipperSpy = vi.spyOn(unzipper.Open, "buffer");
-  const zipperProperties = {
-    signature: 0,
-    diskNumber: 0,
-    diskStart: 0,
-    numberOfRecordsOnDisk: 0,
-    centralDirectorySize: 0,
-    centralDirectoryOffset: 0,
-    commentLength: 0,
-    numberOfRecords: 0,
-    sizeOfCentralDirectory: 0,
-    offsetToStartOfCentralDirectory: 0,
-    extract: vi.fn()
-  };
-  const fileProperties = {
-    path: "package.json",
-    buffer: vi.fn(),
-    type: "File" as const,
-    signature: 0,
-    versionMadeBy: 0,
-    versionNeededToExtract: 0,
-    flags: 0,
-    compressionMethod: 0,
-    lastModifiedTime: 0,
-    crc32: 0,
-    compressedSize: 0,
-    uncompressedSize: 0,
-    fileNameLength: 0,
-    extraFieldLength: 0,
-    fileCommentLength: 0,
-    diskNumberStart: 0,
-    internalFileAttributes: 0,
-    externalFileAttributes: 0,
-    relativeOffsetOfLocalHeader: 0,
-    versionsNeededToExtract: 0,
-    lastModifiedDate: 0,
-    lastModifiedDateTime: new Date(),
-    diskNumber: 0,
-    isDirectory: vi.fn(),
-    openReadStream: vi.fn(),
-    offsetToLocalFileHeader: 0,
-    pathBuffer: Buffer.from(""),
-    isUnicode: 0,
-    extra: Buffer.from(""),
-    comment: "",
-    stream: vi.fn()
-  };
   const fastify = Fastify();
   fastify.post("/package/:id", uploadVersion);
 
@@ -186,13 +144,11 @@ describe("uploadVersion", () => {
       metadata: { Name: "completed-package", Version: "1.0.0", ID: "id1" },
       data: { Content: "test", URL: "", debloat: false }
     };
-    const files = {
-      files: [
-        { ...fileProperties, path: "README.md" },
-        { ...fileProperties, path: "src/index.js" }
-      ]
+    const mockedZipInstance = {
+      getEntries: vi.fn().mockReturnValueOnce([{ entryName: "index.js", getData: vi.fn() }])
     };
-    zipperSpy.mockResolvedValueOnce({ ...files, ...zipperProperties });
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
 
     const reply = await fastify.inject({
       method: "POST",
@@ -200,7 +156,7 @@ describe("uploadVersion", () => {
       body: body
     });
 
-    expect(logger.error).toHaveBeenCalledWith("No package.json found in ");
+    expect(logger.error).toHaveBeenCalledWith("No package.json found in the uploaded package");
     expect(reply.statusCode).toBe(400);
     expect(reply.json()).toEqual({ error: "No package.json found in the package" });
   });
@@ -268,18 +224,15 @@ describe("uploadVersion", () => {
     };
 
     const packageJson = { name: "completed-package", version: "1.0.0" };
-    const files = {
-      files: [
-        {
-          ...fileProperties,
-          path: "package.json",
-          buffer: vi.fn().mockResolvedValue(Buffer.from(JSON.stringify(packageJson)))
-        }
-      ]
+    const mockedZipInstance = {
+      getEntries: vi
+        .fn()
+        .mockReturnValueOnce([
+          { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
+        ])
     };
-    zipperSpy.mockResolvedValueOnce({ ...files, ...zipperProperties });
-
-    // vi.mocked(util.checkIfPackageVersionExists).mockReturnValueOnce(true);
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
     vi.mocked(util.checkIfPackageVersionExists).mockReturnValueOnce(true);
 
     const reply = await fastify.inject({
@@ -389,17 +342,15 @@ describe("uploadVersion", () => {
     };
 
     const packageJson = { name: "content-package", version: "1.0.1" };
-    const files = {
-      files: [
-        {
-          ...fileProperties,
-          path: "package.json",
-          buffer: vi.fn().mockResolvedValue(Buffer.from(JSON.stringify(packageJson)))
-        },
-        { ...fileProperties, path: "index.js", buffer: vi.fn() }
-      ]
+    const mockedZipInstance = {
+      getEntries: vi
+        .fn()
+        .mockReturnValueOnce([
+          { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
+        ])
     };
-    zipperSpy.mockResolvedValueOnce({ ...files, ...zipperProperties });
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
     vi.mocked(util.savePackage).mockResolvedValueOnce({ success: false, reason: "Error saving the package" });
 
     const reply = await fastify.inject({
@@ -420,17 +371,15 @@ describe("uploadVersion", () => {
     };
 
     const packageJson = { name: "content-package", version: "1.0.1" };
-    const files = {
-      files: [
-        {
-          ...fileProperties,
-          path: "package.json",
-          buffer: vi.fn().mockResolvedValue(Buffer.from(JSON.stringify(packageJson)))
-        },
-        { ...fileProperties, path: "index.js" }
-      ]
+    const mockedZipInstance = {
+      getEntries: vi
+        .fn()
+        .mockReturnValueOnce([
+          { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
+        ])
     };
-    zipperSpy.mockResolvedValueOnce({ ...files, ...zipperProperties });
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
 
     const reply = await fastify.inject({
       method: "POST",

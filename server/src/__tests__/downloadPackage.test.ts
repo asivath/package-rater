@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { downloadPackage } from "../routes/downloadPackage";
 import Fastify from "fastify";
-import { Dirent } from "fs";
-import * as tar from "tar";
 import * as shared from "@package-rater/shared";
 import * as fs from "fs/promises";
-
-vi.stubEnv("NODE_TEST", "true");
 
 const mockMetadataJson = vi.hoisted(() => ({
   byId: {
@@ -135,9 +131,6 @@ const mockMetadataJson = vi.hoisted(() => ({
     }
   }
 }));
-vi.mock("tar", () => ({
-  extract: vi.fn().mockResolvedValue(undefined)
-}));
 vi.mock("adm-zip", () => ({
   default: vi.fn().mockImplementation(() => ({
     addLocalFolder: vi.fn(),
@@ -165,23 +158,15 @@ vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue({
       Body: {
-        transformToString: vi.fn().mockResolvedValue("test-package-data"),
-        transformToByteArray: vi.fn().mockResolvedValue(new Uint8Array(Buffer.from("test-package-data")))
+        transformToString: vi.fn().mockResolvedValue("test-content"),
+        transformToByteArray: vi.fn().mockResolvedValue(new Uint8Array(Buffer.from("test-content")))
       }
     })
   })),
   GetObjectCommand: vi.fn()
 }));
 vi.mock("fs/promises", () => ({
-  readFile: vi.fn(() => Promise.resolve(JSON.stringify(mockMetadataJson))),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  rm: vi.fn().mockResolvedValue(undefined),
-  readdir: vi.fn(() => Promise.resolve([])),
-  mkdir: vi.fn(),
-  stat: vi.fn().mockResolvedValue({
-    isDirectory: vi.fn().mockReturnValue(true)
-  }),
-  cp: vi.fn().mockResolvedValue(undefined)
+  readFile: vi.fn().mockResolvedValue(Buffer.from("test-content"))
 }));
 vi.mock("../index", () => ({
   cache: {
@@ -189,6 +174,9 @@ vi.mock("../index", () => ({
     get: vi.fn(),
     set: vi.fn()
   }
+}));
+vi.mock("../util", () => ({
+  getPackageMetadata: vi.fn().mockReturnValue(mockMetadataJson)
 }));
 
 describe("downloadPackage", () => {
@@ -227,9 +215,6 @@ describe("downloadPackage", () => {
   it("should return 200 with metadata and base64 data when package exists (in development mode)", async () => {
     process.env.NODE_ENV = "development";
 
-    vi.mocked(fs.writeFile).mockResolvedValueOnce(undefined);
-    vi.mocked(fs.readdir).mockResolvedValueOnce(["test.txt"] as unknown as Dirent[]);
-
     const reply = await fastify.inject({
       method: "GET",
       url: "/packages/completed-ID"
@@ -243,14 +228,12 @@ describe("downloadPackage", () => {
       Version: "1.0.0",
       ID: "completed-ID"
     });
-    expect(responseData.data.Content).toEqual("test-content");
+    // base64 encoding of "test-content"
+    expect(responseData.data.Content).toEqual("dGVzdC1jb250ZW50");
   });
 
   it("should return 200 with metadata and base64 data when package exists (in production mode)", async () => {
     process.env.NODE_ENV = "production";
-
-    vi.mocked(fs.writeFile).mockResolvedValueOnce(undefined);
-    vi.mocked(fs.readdir).mockResolvedValueOnce(["test.txt"] as unknown as Dirent[]);
 
     const reply = await fastify.inject({
       method: "GET",
@@ -266,11 +249,12 @@ describe("downloadPackage", () => {
       Version: "1.0.0",
       ID: "completed-ID"
     });
-    expect(responseData.data.Content).toEqual("test-content");
+    // base64 encoding of "test-content"
+    expect(responseData.data.Content).toEqual("dGVzdC1jb250ZW50");
   });
 
   it("should return 500 if there is an error in the process", async () => {
-    vi.mocked(tar.extract).mockRejectedValueOnce(new Error("Simulated error"));
+    vi.mocked(fs.readFile).mockRejectedValue(new Error("Error reading file"));
 
     const reply = await fastify.inject({
       method: "GET",

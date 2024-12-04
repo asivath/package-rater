@@ -15,6 +15,7 @@ import * as tar from "tar";
 import * as util from "util";
 import * as esbuild from "esbuild";
 import * as fsPromises from "fs/promises";
+import * as AdmZip from "adm-zip";
 import { Dirent } from "fs";
 
 vi.mock("fs/promises", () => ({
@@ -354,7 +355,6 @@ vi.mock("tar", async (importOriginal) => {
   const original = await importOriginal<typeof tar>();
   return {
     ...original,
-    create: vi.fn(),
     extract: vi.fn()
   };
 });
@@ -398,6 +398,15 @@ vi.mock("esbuild", async (importOriginal) => {
     }
   };
 });
+vi.mock("adm-zip", () => ({
+  default: vi.fn().mockImplementation(() => ({
+    getEntries: vi.fn(),
+    addLocalFolder: vi.fn(),
+    writeZip: vi.fn(),
+    extractAllTo: vi.fn(),
+    toBuffer: vi.fn().mockReturnValue({ buffer: Buffer.from("test"), length: 512000 })
+  }))
+}));
 
 const mockNdJson: shared.Ndjson = {
   NetScore: 0.8,
@@ -449,7 +458,6 @@ function createMockStat(isDirectory: boolean) {
 }
 
 describe("savePackage", () => {
-  const tarSpy = vi.spyOn(tar, "create");
   const logger = shared.getLogger("test");
   global.fetch = vi.fn();
 
@@ -457,23 +465,30 @@ describe("savePackage", () => {
     vi.clearAllMocks();
   });
 
+  const packageJson = {
+    name: "test-package",
+    version: "1.0.0",
+    dependencies: {},
+    repository: {
+      url: "https://www.npmjs.com/package/test-package"
+    }
+  };
   const testPackageId = calculatePackageId("test-package", "1.0.0");
   const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
   it("should save a package from file path and upload to S3 in prod", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("CLI_API_URL", "https://test-api.com");
-    const packageFilePath = "/path/to/package-file";
-
-    vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
-      JSON.stringify({
-        name: "test-package",
-        version: "1.0.0",
-        dependencies: {},
-        repository: {
-          url: "https://www.npmjs.com/package/test-package"
-        }
-      })
-    );
+    const mockedZipInstance = {
+      // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+      ...AdmZip.default(),
+      getEntries: vi
+        .fn()
+        .mockReturnValueOnce([
+          { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
+        ])
+    };
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
     (global.fetch as Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -483,19 +498,18 @@ describe("savePackage", () => {
     });
     vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true));
 
-    const result = await savePackage("test-package", "1.0.0", testPackageId, false, packageFilePath, undefined);
-    expect(result.success).toBe(true);
-    expect(tarSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        gzip: true,
-        file: expect.stringMatching(/test-package\.tgz$/),
-        cwd: expect.stringMatching(/test-package\/8474585353350172/)
-      }),
-      ["package-file"]
+    const result = await savePackage(
+      "test-package",
+      "1.0.0",
+      testPackageId,
+      false,
+      mockedZipInstance as unknown as AdmZip,
+      undefined
     );
+    expect(result.success).toBe(true);
 
     expect(logger.info).toHaveBeenCalledWith(
-      `Uploaded package test-package to S3: test-package/${testPackageId}/test-package.tgz`
+      `Uploaded package test-package to S3: test-package/${testPackageId}/test-package.zip`
     );
     expect(logger.info).toHaveBeenCalledWith(
       `Saved package test-package v1.0.0 with ID ${testPackageId} and standalone cost 0.50 MB`
@@ -530,7 +544,7 @@ describe("savePackage", () => {
 
     expect(result.success).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
-      `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.tgz`
+      `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.zip`
     );
     expect(logger.info).toHaveBeenCalledWith(
       `Saved package test-package2 v1.0.0 with ID ${testPackageId2} and standalone cost 0.50 MB`
@@ -566,7 +580,7 @@ describe("savePackage", () => {
       "1.0.0",
       testPackageId,
       false,
-      "/path/to/package-file",
+      "this is stupid" as unknown as AdmZip,
       "https://www.npmjs.com/package/test-package"
     );
 
@@ -583,8 +597,25 @@ describe("savePackage", () => {
 
   it("should return an error if minifyProject fails", async () => {
     vi.mocked(fsPromises.readdir).mockRejectedValueOnce(new Error("Failed to read directory"));
-
-    const result = await savePackage("test-package", "1.0.0", testPackageId, true, "/path/to/package-file", undefined);
+    const mockedZipInstance = {
+      // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+      ...AdmZip.default(),
+      getEntries: vi
+        .fn()
+        .mockReturnValueOnce([
+          { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
+        ])
+    };
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
+    const result = await savePackage(
+      "test-package",
+      "1.0.0",
+      testPackageId,
+      true,
+      mockedZipInstance as unknown as AdmZip,
+      undefined
+    );
 
     expect(result.success).toBe(false);
     expect(result.reason).toBe("Failed to read directory");
@@ -609,8 +640,26 @@ describe("savePackage", () => {
         }
       })
     );
+    const mockedZipInstance = {
+      // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+      ...AdmZip.default(),
+      getEntries: vi
+        .fn()
+        .mockReturnValueOnce([
+          { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
+        ])
+    };
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
 
-    const result = await savePackage("test-package", "1.0.0", testPackageId, true, "/path/to/package-file", undefined);
+    const result = await savePackage(
+      "test-package",
+      "1.0.0",
+      testPackageId,
+      true,
+      mockedZipInstance as unknown as AdmZip,
+      undefined
+    );
 
     expect(result.success).toBe(true);
     expect(esbuildSpy).toHaveBeenCalledOnce();
@@ -628,6 +677,7 @@ describe("savePackage", () => {
       .mockResolvedValueOnce(createMockStat(false))
       .mockResolvedValueOnce(createMockStat(true));
     vi.mocked(fsPromises.readdir)
+      .mockResolvedValueOnce(["package/"] as unknown as Dirent[])
       .mockResolvedValueOnce(["package/"] as unknown as Dirent[])
       .mockResolvedValueOnce(["package.js"] as unknown as Dirent[]);
 

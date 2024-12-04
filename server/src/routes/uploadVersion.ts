@@ -7,11 +7,8 @@ import {
   getPackageMetadata,
   savePackage
 } from "../util.js";
-import { writeFile, rm, mkdir } from "fs/promises";
-import { tmpdir } from "os";
 import { getNpmPackageDetails, getGithubDetails } from "../util.js";
-import path from "path";
-import unzipper from "unzipper";
+import AdmZip from "adm-zip";
 
 const logger = getLogger("server");
 
@@ -49,7 +46,7 @@ export const uploadVersion = async (
   let id = "";
   try {
     //Checks for versioning and package naming conflicts
-    const metadataJson = await getPackageMetadata();
+    const metadataJson = getPackageMetadata();
 
     if (Name !== metadataJson.byId[oldID].packageName || Version !== metadataJson.byId[oldID].version || oldID !== ID) {
       logger.error(`Incorrect packageName or Version given for ${packageName}`);
@@ -60,19 +57,18 @@ export const uploadVersion = async (
     }
     if (Content) {
       const buffer = Buffer.from(Content, "base64");
-      const files = await unzipper.Open.buffer(buffer);
-      const packageJsonFile = files.files.find((file) => {
-        const parths = file.path.split("/");
-        return parths[parths.length - 1] === "package.json";
-      });
-      if (!packageJsonFile) {
-        logger.error(`No package.json found in ${packageName}`);
+      const zip = new AdmZip(buffer);
+      const packageJsonEntry = zip
+        .getEntries()
+        .filter((entry) => !entry.isDirectory && entry.entryName.endsWith("package.json"))
+        .sort((a, b) => a.entryName.split("/").length - b.entryName.split("/").length)[0];
+      if (!packageJsonEntry) {
+        logger.error("No package.json found in the uploaded package");
         reply.code(400).send({ error: "No package.json found in the package" });
         return;
       }
-      const packageData = await packageJsonFile.buffer();
-      const packageJson = JSON.parse(packageData.toString());
-      packageName = packageJson.name || files.files[0].path.split("/")[0];
+      const packageJson = JSON.parse(packageJsonEntry.getData().toString());
+      packageName = packageJson.name;
       version = packageJson.version || "1.0.0";
 
       const availablePackageVersions = metadataJson.byName[Name].versions;
@@ -87,30 +83,18 @@ export const uploadVersion = async (
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
-      const tempPath = tmpdir();
-      for (const file of files.files) {
-        const filePath = `${tempPath}/${file.path}`;
-        if (file.type === "Directory") {
-          await mkdir(filePath, { recursive: true });
-        } else {
-          const fileBuffer = await file.buffer();
-          await writeFile(filePath, fileBuffer);
-        }
-      }
-      const uploadedTempDirPath = path.join(tempPath, files.files[0].path);
 
       if (metadataJson.byName[packageName].uploadedWithContent === false) {
         logger.error(`Error saving the package ${packageName}: package must be uploaded with URL`);
         reply.code(400).send({ error: "package upload types cannot be mixed" });
       }
 
-      const result = await savePackage(packageName, version, id, debloat, uploadedTempDirPath);
+      const result = await savePackage(packageName, version, id, debloat, zip);
       if (result.success === false) {
         logger.error(`Error saving the package ${packageName}: ${result.reason}`);
         reply.code(500).send({ error: "Error saving the package" });
         return;
       }
-      await rm(uploadedTempDirPath, { recursive: true });
     } else {
       const normalizedURL = URL.replace("www.npmjs.org", "www.npmjs.com");
 

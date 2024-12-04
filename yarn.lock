@@ -2179,7 +2179,6 @@ __metadata:
     "@types/eslint__js": "npm:^8.42.3"
     "@types/node": "npm:^22.7.5"
     "@types/semver": "npm:^7"
-    "@types/unzipper": "npm:^0"
     "@typescript-eslint/eslint-plugin": "npm:^8.3.0"
     "@typescript-eslint/parser": "npm:^8.3.0"
     "@vitest/coverage-istanbul": "npm:2.1.2"
@@ -2199,7 +2198,6 @@ __metadata:
     tar: "npm:^7.4.3"
     typescript: "npm:5.5.4"
     typescript-eslint: "npm:^8.8.0"
-    unzipper: "npm:^0.12.3"
     vitest: "npm:2.1.2"
     winston: "npm:^3.15.0"
   languageName: unknown

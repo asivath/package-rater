@@ -7,10 +7,7 @@ import {
   getNpmPackageDetails,
   getGithubDetails
 } from "../util.js";
-import { writeFile, rm, mkdir } from "fs/promises";
-import { tmpdir } from "os";
-import path from "path";
-import unzipper from "unzipper";
+import AdmZip from "adm-zip";
 
 const logger = getLogger("server");
 
@@ -38,44 +35,31 @@ export const uploadPackage = async (
   try {
     if (Content) {
       const buffer = Buffer.from(Content, "base64");
-      const files = await unzipper.Open.buffer(buffer);
-      const packageJsonFile = files.files.find((file) => {
-        const parts = file.path.split("/");
-        return parts[parts.length - 1] === "package.json";
-      });
-      if (!packageJsonFile) {
-        logger.error(`No package.json found in ${packageName}`);
+      const zip = new AdmZip(buffer);
+      const packageJsonEntry = zip
+        .getEntries()
+        .filter((entry) => !entry.isDirectory && entry.entryName.endsWith("package.json"))
+        .sort((a, b) => a.entryName.split("/").length - b.entryName.split("/").length)[0];
+      if (!packageJsonEntry) {
+        logger.error("No package.json found in the uploaded package");
         reply.code(400).send({ error: "No package.json found in the package" });
         return;
       }
-      const packageData = await packageJsonFile.buffer();
-      const packageJson = JSON.parse(packageData.toString());
-      packageName = packageJson.name || files.files[0].path.split("/")[0];
+      const packageJson = JSON.parse(packageJsonEntry.getData().toString());
+      packageName = packageJson.name;
       version = packageJson.version || "1.0.0";
       id = calculatePackageId(packageName, version);
       if (checkIfPackageExists(packageName)) {
-        logger.error(`Package ${packageName} with version ${version} already exists`);
+        logger.error(`Package ${packageName} already exists, use the update route`);
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
-      const tempPath = tmpdir();
-      for (const file of files.files) {
-        const filePath = `${tempPath}/${file.path}`;
-        if (file.type === "Directory") {
-          await mkdir(filePath, { recursive: true });
-        } else {
-          const fileBuffer = await file.buffer();
-          await writeFile(filePath, fileBuffer);
-        }
-      }
-      const uploadedTempDirPath = path.join(tempPath, files.files[0].path);
-      const result = await savePackage(packageName, version, id, debloat, uploadedTempDirPath);
+      const result = await savePackage(packageName, version, id, debloat, zip);
       if (result.success === false) {
         logger.error(`Error saving the package ${packageName}: ${result.reason}`);
         reply.code(500).send({ error: "Error saving the package" });
         return;
       }
-      await rm(uploadedTempDirPath, { recursive: true });
     } else {
       const normalizedURL = URL.replace("www.npmjs.org", "www.npmjs.com");
       if (normalizedURL.includes("npmjs.com")) {
@@ -115,7 +99,7 @@ export const uploadPackage = async (
       }
       id = calculatePackageId(packageName, version);
       if (checkIfPackageExists(packageName)) {
-        logger.error(`Package ${packageName} with version ${version} already exists`);
+        logger.error(`Package ${packageName} already exists, use the update route`);
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
