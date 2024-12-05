@@ -28,6 +28,12 @@ export const uploadVersion = async (
   }>,
   reply: FastifyReply
 ) => {
+  if (!request.body || !request.body.metadata || !request.body.data) {
+    reply
+      .code(400)
+      .send({ error: "There is missing field(s) in the PackageID or it is formed improperly, or is invalid." });
+    return;
+  }
   const { metadata, data } = request.body;
   const oldID = request.params.id; //ID of the package
   const { Content, URL, debloat } = data; //Actual content of the package, URL to download the package, and whether to debloat the package

@@ -13,6 +13,10 @@ export const retrievePackageInfo = async (
   request: FastifyRequest<{ Body: Array<{ Name: string; Version: string }> }>,
   reply: FastifyReply
 ) => {
+  if (!request.body) {
+    reply.code(400).send({ error: "Missing array of package objects" });
+    return;
+  }
   const packageRequests = request.body;
   const limit = 15;
 
@@ -77,7 +81,9 @@ export const retrievePackageInfo = async (
     // Process each package request
     for (const { Name, Version } of packageRequests) {
       if (!Name || !Version) {
-        reply.code(400).send({ error: "Missing Name or Version in one of the package objects" });
+        reply
+          .code(400)
+          .send({ error: "There is missing field(s) in the PackageQuery or it is formed improperly, or is invalid." });
         return;
       }
       if (!metadataJson.byName[Name]) {
