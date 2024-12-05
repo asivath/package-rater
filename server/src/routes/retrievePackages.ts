@@ -10,7 +10,7 @@ const logger = getLogger("server");
  * @returns
  */
 export const retrievePackageInfo = async (
-  request: FastifyRequest<{ Body: Array<{ Name: string; Version: string }> }>,
+  request: FastifyRequest<{ Body: Array<{ Name: string; Version?: string }> }>,
   reply: FastifyReply
 ) => {
   if (!request.body) {
@@ -79,7 +79,11 @@ export const retrievePackageInfo = async (
     }
 
     // Process each package request
-    for (const { Name, Version } of packageRequests) {
+    for (const pkg of packageRequests) {
+      let { Name, Version } = pkg;
+      if (!Version){
+        Version = "0.0.0-999999.999999.999999"
+      }
       if (!Name || !Version) {
         reply
           .code(400)
