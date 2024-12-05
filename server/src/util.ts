@@ -683,18 +683,7 @@ export async function calculateTotalPackageCost(packageName: string, version: st
  * @param id The package ID
  * @returns Whether the package exists
  */
-export const checkIfPackageExists = (name: string) => {
-  const metadata = getPackageMetadata();
-  return metadata.byName[name] ? true : false;
-};
-
-/**
- * Checks if the package version exists
- * @param id The package ID
- * @returns Whether the package version exists
- */
-export const checkIfPackageVersionExists = (id: string) => {
-  const metadata = getPackageMetadata();
+export const checkIfPackageExists = (id: string) => {
   return metadata.byId[id] ? true : false;
 };
 

@@ -179,33 +179,9 @@ describe("uploadPackage", () => {
 
     expect(reply.statusCode).toBe(409);
     expect(reply.json()).toEqual({ error: "Package already exists" });
-    expect(logger.error).toHaveBeenCalledWith("Package test-package already exists, use the update route");
-  });
-
-  it("should fetch package details from npm registry if no version is provided", async () => {
-    const body = { Content: "", URL: "https://www.npmjs.com/package/test-package", debloat: false };
-
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true,
-      json: vi.fn().mockResolvedValue({
-        name: "test-package",
-        "dist-tags": { latest: "1.0.0" },
-        versions: { "1.0.0": { name: "test-package", version: "1.0.0" } }
-      })
-    });
-
-    const reply = await fastify.inject({
-      method: "POST",
-      url: "/package",
-      body: body
-    });
-
-    expect(reply.statusCode).toBe(201);
-    expect(reply.json()).toEqual({
-      metadata: { Name: "test-package", Version: "1.0.0", ID: "mocked-hash-id" },
-      data: body
-    });
-    expect(logger.info).toHaveBeenCalledWith("Package test-package with version 1.0.0 uploaded successfully");
+    expect(logger.error).toHaveBeenCalledWith(
+      "Package test-package with version 1.0.0 already exists, use the update route"
+    );
   });
 
   it("should return 424 if the package score is too low for npm package", async () => {
@@ -288,7 +264,7 @@ describe("uploadPackage", () => {
 
     expect(reply.statusCode).toBe(201);
     expect(reply.json()).toEqual({
-      data: body,
+      data: { Content: "some-base64-encoded-content" },
       metadata: { Name: "test-package", Version: "1.0.0", ID: "mocked-hash-id" }
     });
     expect(logger.info).toHaveBeenCalledWith("Package test-package with version 1.0.0 uploaded successfully");
@@ -306,7 +282,7 @@ describe("uploadPackage", () => {
     expect(reply.statusCode).toBe(201);
     expect(reply.json()).toEqual({
       metadata: { Name: "test-package", Version: "1.0.0", ID: "mocked-hash-id" },
-      data: body
+      data: { URL: "https://www.npmjs.com/package/test-package/v/1.0.0" }
     });
     expect(logger.info).toHaveBeenCalledWith("Package test-package with version 1.0.0 uploaded successfully");
   });
@@ -321,7 +297,10 @@ describe("uploadPackage", () => {
     });
 
     expect(reply.statusCode).toBe(201);
-    expect(reply.json()).toEqual({ metadata: { Name: "repo", Version: "1.0.0", ID: "mocked-hash-id" }, data: body });
+    expect(reply.json()).toEqual({
+      metadata: { Name: "repo", Version: "1.0.0", ID: "mocked-hash-id" },
+      data: { URL: "https://www.github.com/owner/repo" }
+    });
     expect(logger.info).toHaveBeenCalledWith("Package repo with version 1.0.0 uploaded successfully");
   });
 });

@@ -76,10 +76,6 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
         }
       };
       fetchCostScoreData();
-    } else {
-      setCostData(null);
-      setNetScoreData(null);
-      setError(null);
     }
   }, [open, packageData.ID]);
 
