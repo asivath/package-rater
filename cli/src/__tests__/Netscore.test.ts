@@ -58,7 +58,7 @@ describe("calculateMetrics", () => {
 
     const result = await calculateMetrics("https://github.com/owner/repo");
     expect(result.Correctness).toBe(0.8);
-    expect(result.License).toBe(0.8);
+    expect(result.LicenseScore).toBe(0.8);
     expect(result.RampUp).toBe(0.8);
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
@@ -74,7 +74,7 @@ describe("calculateMetrics", () => {
 
     expect(result.NetScore).toBe(0);
     expect(result.Correctness).toBe(0);
-    expect(result.License).toBe(0);
+    expect(result.LicenseScore).toBe(0);
     expect(result.RampUp).toBe(0);
     expect(result.ResponsiveMaintainer).toBe(0);
     expect(result.BusFactor).toBe(0);
@@ -93,7 +93,7 @@ describe("calculateMetrics", () => {
 
     expect(result.NetScore).toBe(0.8);
     expect(result.Correctness).toBe(0.8);
-    expect(result.License).toBe(0.8);
+    expect(result.LicenseScore).toBe(0.8);
     expect(result.RampUp).toBe(0.8);
     expect(result.ResponsiveMaintainer).toBe(0.8);
     expect(result.BusFactor).toBe(0.8);
@@ -110,7 +110,7 @@ describe("calculateMetrics", () => {
 
     expect(result.NetScore).toBe(0);
     expect(result.Correctness).toBe(0);
-    expect(result.License).toBe(0);
+    expect(result.LicenseScore).toBe(0);
     expect(result.RampUp).toBe(0);
     expect(result.ResponsiveMaintainer).toBe(0);
     expect(result.BusFactor).toBe(0);
