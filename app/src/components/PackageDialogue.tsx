@@ -155,7 +155,7 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
                 </ListItem>
                 <ListItem>
                   <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
-                    <ListItemText primary="License" secondary={netScoreData.License} />
+                    <ListItemText primary="License" secondary={netScoreData.LicenseScore} />
                     <ListItemText primary="License Latency" secondary={netScoreData.LicenseLatency} />
                   </Box>
                 </ListItem>
