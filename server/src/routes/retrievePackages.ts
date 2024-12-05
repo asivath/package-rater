@@ -80,9 +80,10 @@ export const retrievePackageInfo = async (
 
     // Process each package request
     for (const pkg of packageRequests) {
-      let { Name, Version } = pkg;
-      if (!Version){
-        Version = "0.0.0-999999.999999.999999"
+      const Name = pkg.Name;
+      let Version = pkg.Version;
+      if (!Version) {
+        Version = "0.0.0-999999.999999.999999";
       }
       if (!Name || !Version) {
         reply
