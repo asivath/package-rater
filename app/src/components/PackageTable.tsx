@@ -98,7 +98,7 @@ function Row(props: { row: PackageDisplay[] }) {
           sx={{
             "&:last-child td, &:last-child th": { border: 0 },
             "&:hover": {
-              backgroundColor: "rgba(0, 0, 0, 0.04)"
+              backgroundColor: "rgba(0, 0, 0, 0.1)"
             }
           }}>
           <TableCell align="center">{version.Version}</TableCell>
@@ -123,7 +123,7 @@ function Row(props: { row: PackageDisplay[] }) {
       <TableRow
         sx={{
           "& > *": {},
-          "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" }
+          "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.1)" }
         }}
         onClick={() => setOpen(!open)}>
         <TableCell sx={{ width: "40px", padding: 1 }}>
@@ -151,7 +151,6 @@ function Row(props: { row: PackageDisplay[] }) {
               uploadVersion={true}
               id={row[0].ID}
               name={row[0].Name}
-              version={row[0].Version}
               uploadedWithContent={row[0].UploadedWithContent}
             />
           </Box>

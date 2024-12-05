@@ -33,11 +33,11 @@ export const UploadPackageForm: React.FC<{
   uploadVersion: boolean;
   id?: string;
   name?: string;
-  version?: string;
   uploadedWithContent?: boolean;
-}> = ({ uploadVersion, id, name, version, uploadedWithContent }) => {
+}> = ({ uploadVersion, id, name, uploadedWithContent }) => {
   const [file, setFile] = useState<File | null>(null);
   const [packageUrl, setPackageUrl] = useState("");
+  const [version, setVersion] = useState("");
   const [uploadPackageFormOpen, setUploadPackageFormOpen] = useState(false);
   const [debloat, setDebloat] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -126,6 +126,8 @@ export const UploadPackageForm: React.FC<{
         body: JSON.stringify(body)
       });
       if (!response.ok) {
+        const responseJson = await response.json();
+        const error = responseJson.error;
         switch (response.status) {
           case 409:
             setError("Package already exists");
@@ -137,13 +139,14 @@ export const UploadPackageForm: React.FC<{
             setError("Error saving the package");
             break;
           default:
-            setError("An unknown error occurred");
+            setError(error);
             break;
         }
         return;
       }
       setSuccess(true);
       setPackageUrl("");
+      setVersion("");
       setFile(null);
     } catch (error) {
       setError((error as Error).message);
@@ -155,6 +158,7 @@ export const UploadPackageForm: React.FC<{
   const handleExited = () => {
     setFile(null);
     setPackageUrl("");
+    setVersion("");
     setDebloat(false);
     setError(null);
     setSuccess(false);
@@ -163,7 +167,13 @@ export const UploadPackageForm: React.FC<{
   return (
     <Box>
       {uploadVersion ? (
-        <IconButton aria-label="perform action" color="primary" onClick={() => setUploadPackageFormOpen(true)}>
+        <IconButton
+          aria-label="perform action"
+          color="primary"
+          onClick={(event) => {
+            event.stopPropagation();
+            setUploadPackageFormOpen(true);
+          }}>
           {uploadedWithContent ? (
             <Tooltip title="Upload Content Version" arrow>
               <DriveFolderUploadIcon />
@@ -196,6 +206,9 @@ export const UploadPackageForm: React.FC<{
       <Dialog
         open={uploadPackageFormOpen}
         onClose={() => setUploadPackageFormOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        onClick={(event) => event.stopPropagation()}
         TransitionComponent={Fade}
         TransitionProps={{ onExited: handleExited }}>
         {loading && (
@@ -225,7 +238,7 @@ export const UploadPackageForm: React.FC<{
         )}
         {!uploadVersion ? <DialogTitle>Upload Package</DialogTitle> : <DialogTitle>Upload {name} Version</DialogTitle>}
         <DialogContent>
-          <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2} width="400px">
+          <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2}>
             {(uploadedWithContent || !uploadVersion) && (
               <>
                 <Button variant="outlined" component="label">
@@ -250,6 +263,16 @@ export const UploadPackageForm: React.FC<{
                     </Button>
                   </Box>
                 )}
+                {uploadVersion && (
+                  <TextField
+                    label="Version"
+                    variant="outlined"
+                    fullWidth
+                    placeholder="Enter version"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                  />
+                )}
               </>
             )}
             {!uploadVersion && <Divider>OR</Divider>}
@@ -263,6 +286,17 @@ export const UploadPackageForm: React.FC<{
                   value={packageUrl}
                   onChange={(e) => setPackageUrl(e.target.value)}
                 />
+                {uploadVersion && (
+                  <TextField
+                    margin="normal"
+                    label="Version"
+                    variant="outlined"
+                    fullWidth
+                    placeholder="Enter version"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                  />
+                )}
               </Box>
             )}
             <FormControlLabel

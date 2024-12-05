@@ -1,10 +1,9 @@
 import { test, expect } from "../baseFixtures";
 
 test.describe("DownloadButton", () => {
-  test.beforeEach(async ({ page }) => {
+  test("should download a package when clicking the Download button", async ({ page }) => {
     await page.goto("http://localhost:5173");
 
-    // Mocking the package list API response
     await page.route("**/packages", async (route) => {
       await route.fulfill({
         status: 200,
@@ -22,9 +21,7 @@ test.describe("DownloadButton", () => {
     });
 
     await page.locator('role=button[name="Search"]').click();
-  });
 
-  test("should download a package when clicking the Download button", async ({ page }) => {
     const packageName = "TestPackage";
     const downloadPromise = page.waitForEvent("download");
     const packageRow = page.locator(`text=${packageName}`);

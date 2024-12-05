@@ -53,8 +53,8 @@ export const uploadPackage = async (
       packageName = packageJson.name;
       version = packageJson.version || "1.0.0";
       id = calculatePackageId(packageName, version);
-      if (checkIfPackageExists(packageName)) {
-        logger.error(`Package ${packageName} already exists, use the update route`);
+      if (checkIfPackageExists(id)) {
+        logger.error(`Package ${packageName} with version ${version} already exists, use the update route`);
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
@@ -102,8 +102,8 @@ export const uploadPackage = async (
         version = details.version;
       }
       id = calculatePackageId(packageName, version);
-      if (checkIfPackageExists(packageName)) {
-        logger.error(`Package ${packageName} already exists, use the update route`);
+      if (checkIfPackageExists(id)) {
+        logger.error(`Package ${packageName} with version ${version} already exists, use the update route`);
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
@@ -125,5 +125,6 @@ export const uploadPackage = async (
     return;
   }
   logger.info(`Package ${packageName} with version ${version} uploaded successfully`);
-  reply.code(201).send({ metadata: { Name: packageName, Version: version, ID: id }, data: request.body });
+  const data = Content ? { Content } : { URL };
+  reply.code(201).send({ metadata: { Name: packageName, Version: version, ID: id }, data });
 };

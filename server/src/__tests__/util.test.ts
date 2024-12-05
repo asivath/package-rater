@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import {
   savePackage,
   checkIfPackageExists,
-  checkIfPackageVersionExists,
   checkIfContentPatchValid,
   getExactAvailableVersion,
   calculateTotalPackageCost,
@@ -698,27 +697,13 @@ describe("savePackage", () => {
 
 describe("checkIfPackageExists", () => {
   it("should return true if package exists", async () => {
-    const result = checkIfPackageExists("completed-package");
+    const result = checkIfPackageExists("8949875233423535");
 
     expect(result).toBe(true);
   });
 
   it("should return false if package does not exist", async () => {
     const result = checkIfPackageExists("non-existing-package");
-
-    expect(result).toBe(false);
-  });
-});
-
-describe("checkIfPackageVersionExists", () => {
-  it("should return true if package version exists", async () => {
-    const result = checkIfPackageVersionExists("6023484092574754");
-
-    expect(result).toBe(true);
-  });
-
-  it("should return false if package version does not exist", async () => {
-    const result = checkIfPackageVersionExists("non-existing-ID");
 
     expect(result).toBe(false);
   });
