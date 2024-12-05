@@ -142,21 +142,21 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
 
     const ndjsonOutput: Ndjson = {
       BusFactor: parseFloat(busFactor.result.toFixed(2)),
-      BusFactor_Latency: parseFloat(busFactor.time.toFixed(2)),
+      BusFactorLatency: parseFloat(busFactor.time.toFixed(2)),
       Correctness: parseFloat(correctness.result.toFixed(2)),
-      Correctness_Latency: parseFloat(correctness.time.toFixed(2)),
+      CorrectnessLatency: parseFloat(correctness.time.toFixed(2)),
       RampUp: parseFloat(rampUp.result.toFixed(2)),
-      RampUp_Latency: parseFloat(rampUp.time.toFixed(2)),
+      RampUpLatency: parseFloat(rampUp.time.toFixed(2)),
       ResponsiveMaintainer: parseFloat(responsiveness.result.toFixed(2)),
-      ResponsiveMaintainer_Latency: parseFloat(responsiveness.time.toFixed(2)),
+      ResponsiveMaintainerLatency: parseFloat(responsiveness.time.toFixed(2)),
       License: parseFloat(licenseCompatibility.result.toFixed(2)),
-      License_Latency: parseFloat(licenseCompatibility.time.toFixed(2)),
+      LicenseLatency: parseFloat(licenseCompatibility.time.toFixed(2)),
       GoodPinningPractice: parseFloat(dependencies.result.toFixed(2)),
       GoodPinningPracticeLatency: parseFloat(dependencies.time.toFixed(2)),
       PullRequest: parseFloat(fracPR.result.toFixed(2)),
-      PullRequest_Latency: parseFloat(fracPR.time.toFixed(2)),
+      PullRequestLatency: parseFloat(fracPR.time.toFixed(2)),
       NetScore: parseFloat(netscore.toFixed(2)),
-      NetScore_Latency: parseFloat(
+      NetScoreLatency: parseFloat(
         (
           correctness.time +
           licenseCompatibility.time +
@@ -177,21 +177,21 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
     logger.error(`Error calculating metrics: ${error}`);
     const ndjson: Ndjson = {
       BusFactor: 0,
-      BusFactor_Latency: 0,
+      BusFactorLatency: 0,
       Correctness: 0,
-      Correctness_Latency: 0,
+      CorrectnessLatency: 0,
       RampUp: 0,
-      RampUp_Latency: 0,
+      RampUpLatency: 0,
       ResponsiveMaintainer: 0,
-      ResponsiveMaintainer_Latency: 0,
+      ResponsiveMaintainerLatency: 0,
       License: 0,
-      License_Latency: 0,
+      LicenseLatency: 0,
       GoodPinningPractice: 0,
       GoodPinningPracticeLatency: 0,
       PullRequest: 0,
-      PullRequest_Latency: 0,
+      PullRequestLatency: 0,
       NetScore: 0,
-      NetScore_Latency: 0
+      NetScoreLatency: 0
     };
     assertIsNdjson(ndjson);
     return ndjson;

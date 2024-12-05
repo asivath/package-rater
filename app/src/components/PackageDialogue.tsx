@@ -123,25 +123,25 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
                 <ListItem>
                   <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
                     <ListItemText primary="Netscore" secondary={netScoreData.NetScore} />
-                    <ListItemText primary="Netscore Latency" secondary={netScoreData.NetScore_Latency} />
+                    <ListItemText primary="Netscore Latency" secondary={netScoreData.NetScoreLatency} />
                   </Box>
                 </ListItem>
                 <ListItem>
                   <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
                     <ListItemText primary="Bus Factor" secondary={netScoreData.BusFactor} />
-                    <ListItemText primary="Bus Factor Latency" secondary={netScoreData.BusFactor_Latency} />
+                    <ListItemText primary="Bus Factor Latency" secondary={netScoreData.BusFactorLatency} />
                   </Box>
                 </ListItem>
                 <ListItem>
                   <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
                     <ListItemText primary="Correctness" secondary={netScoreData.Correctness} />
-                    <ListItemText primary="Correctness Latency" secondary={netScoreData.Correctness_Latency} />
+                    <ListItemText primary="Correctness Latency" secondary={netScoreData.CorrectnessLatency} />
                   </Box>
                 </ListItem>
                 <ListItem>
                   <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
                     <ListItemText primary="Ramp Up" secondary={netScoreData.RampUp} />
-                    <ListItemText primary="Ramp Up Latency" secondary={netScoreData.RampUp_Latency} />
+                    <ListItemText primary="Ramp Up Latency" secondary={netScoreData.RampUpLatency} />
                   </Box>
                 </ListItem>
                 <ListItem>
@@ -149,14 +149,14 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
                     <ListItemText primary="Responsive Maintainer" secondary={netScoreData.ResponsiveMaintainer} />
                     <ListItemText
                       primary="Responsive Maintainer Latency"
-                      secondary={netScoreData.ResponsiveMaintainer_Latency}
+                      secondary={netScoreData.ResponsiveMaintainerLatency}
                     />
                   </Box>
                 </ListItem>
                 <ListItem>
                   <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
                     <ListItemText primary="License" secondary={netScoreData.License} />
-                    <ListItemText primary="License Latency" secondary={netScoreData.License_Latency} />
+                    <ListItemText primary="License Latency" secondary={netScoreData.LicenseLatency} />
                   </Box>
                 </ListItem>
                 <ListItem>
@@ -171,7 +171,7 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
                 <ListItem>
                   <Box display="grid" gridTemplateColumns="repeat(2, 1fr)" columnGap={2} rowGap={1} width="100%">
                     <ListItemText primary="Pull Request" secondary={netScoreData.PullRequest} />
-                    <ListItemText primary="Pull Request Latency" secondary={netScoreData.PullRequest_Latency} />
+                    <ListItemText primary="Pull Request Latency" secondary={netScoreData.PullRequestLatency} />
                   </Box>
                 </ListItem>
               </>

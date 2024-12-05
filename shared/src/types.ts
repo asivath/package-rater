@@ -1,20 +1,20 @@
 export type Ndjson = {
   BusFactor: number;
-  BusFactor_Latency: number;
+  BusFactorLatency: number;
   Correctness: number;
-  Correctness_Latency: number;
+  CorrectnessLatency: number;
   RampUp: number;
-  RampUp_Latency: number;
+  RampUpLatency: number;
   ResponsiveMaintainer: number;
-  ResponsiveMaintainer_Latency: number;
+  ResponsiveMaintainerLatency: number;
   License: number;
-  License_Latency: number;
+  LicenseLatency: number;
   GoodPinningPractice: number;
   GoodPinningPracticeLatency: number;
   PullRequest: number;
-  PullRequest_Latency: number;
+  PullRequestLatency: number;
   NetScore: number;
-  NetScore_Latency: number;
+  NetScoreLatency: number;
 };
 
 export type PackageCostResponse = {
@@ -104,44 +104,44 @@ export function assertIsNdjson(o: any): asserts o is Ndjson {
   if (typeof o.NetScore !== "number") {
     throw new Error("Ndjson.NetScore is not a number");
   }
-  if (typeof o.NetScore_Latency !== "number") {
-    throw new Error("Ndjson.NetScore_Latency is not a number");
+  if (typeof o.NetScoreLatency !== "number") {
+    throw new Error("Ndjson.NetScoreLatency is not a number");
   }
   if (typeof o.RampUp !== "number") {
     throw new Error("Ndjson.RampUp is not a number");
   }
-  if (typeof o.RampUp_Latency !== "number") {
-    throw new Error("Ndjson.RampUp_Latency is not a number");
+  if (typeof o.RampUpLatency !== "number") {
+    throw new Error("Ndjson.RampUpLatency is not a number");
   }
   if (typeof o.Correctness !== "number") {
     throw new Error("Ndjson.Correctness is not a number");
   }
-  if (typeof o.Correctness_Latency !== "number") {
-    throw new Error("Ndjson.Correctness_Latency is not a number");
+  if (typeof o.CorrectnessLatency !== "number") {
+    throw new Error("Ndjson.CorrectnessLatency is not a number");
   }
   if (typeof o.BusFactor !== "number") {
     throw new Error("Ndjson.BusFactor is not a number");
   }
-  if (typeof o.BusFactor_Latency !== "number") {
-    throw new Error("Ndjson.BusFactor_Latency is not a number");
+  if (typeof o.BusFactorLatency !== "number") {
+    throw new Error("Ndjson.BusFactorLatency is not a number");
   }
   if (typeof o.ResponsiveMaintainer !== "number") {
     throw new Error("Ndjson.ResponsiveMaintainer is not a number");
   }
-  if (typeof o.ResponsiveMaintainer_Latency !== "number") {
-    throw new Error("Ndjson.ResponsiveMaintainer_Latency is not a number");
+  if (typeof o.ResponsiveMaintainerLatency !== "number") {
+    throw new Error("Ndjson.ResponsiveMaintainerLatency is not a number");
   }
   if (typeof o.License !== "number") {
     throw new Error("Ndjson.License is not a number");
   }
-  if (typeof o.License_Latency !== "number") {
-    throw new Error("Ndjson.License_Latency is not a number");
+  if (typeof o.LicenseLatency !== "number") {
+    throw new Error("Ndjson.LicenseLatency is not a number");
   }
   if (typeof o.PullRequest !== "number") {
     throw new Error("Ndjson.PullRequest is not a number");
   }
-  if (typeof o.PullRequest_Latency !== "number") {
-    throw new Error("Ndjson.PullRequest_Latency is not a number");
+  if (typeof o.PullRequestLatency !== "number") {
+    throw new Error("Ndjson.PullRequestLatency is not a number");
   }
   if (typeof o.GoodPinningPractice !== "number") {
     throw new Error("Ndjson.GoodPinningPractice is not a number");

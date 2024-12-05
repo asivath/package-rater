@@ -71,8 +71,8 @@ jobs:
       - name: Run ESLint and Prettier
         id: lint_and_prettify
         run: |
-          yarn lint > eslint-output.txt || echo "eslint_failed=true" >> $GITHUB_OUTPUT
-          yarn format || echo "prettify_failed=true" >> $GITHUB_OUTPUT
+          yarn lint:ci > eslint-output.txt || echo "eslint_failed=true" >> $GITHUB_OUTPUT
+          yarn format:ci || echo "prettify_failed=true" >> $GITHUB_OUTPUT
 
       - name: Comment PR on ESLint/Prettier failure
         if: steps.lint_and_prettify.outputs.eslint_failed == 'true' || steps.lint_and_prettify.outputs.prettify_failed == 'true'
