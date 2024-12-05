@@ -8,7 +8,7 @@ export type Ndjson = {
   ResponsiveMaintainer: number;
   ResponsiveMaintainerLatency: number;
   LicenseScore: number;
-  LicenseLatency: number;
+  LicenseScoreLatency: number;
   GoodPinningPractice: number;
   GoodPinningPracticeLatency: number;
   PullRequest: number;
@@ -134,8 +134,8 @@ export function assertIsNdjson(o: any): asserts o is Ndjson {
   if (typeof o.LicenseScore !== "number") {
     throw new Error("Ndjson.LicenseScore is not a number");
   }
-  if (typeof o.LicenseLatency !== "number") {
-    throw new Error("Ndjson.LicenseLatency is not a number");
+  if (typeof o.LicenseScoreLatency !== "number") {
+    throw new Error("Ndjson.LicenseScoreLatency is not a number");
   }
   if (typeof o.PullRequest !== "number") {
     throw new Error("Ndjson.PullRequest is not a number");
