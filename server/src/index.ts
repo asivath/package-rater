@@ -34,28 +34,57 @@ const fastify = Fastify({
   keepAliveTimeout: 60000
 });
 
+fastify.addHook("preHandler", async (request) => {
+  if (request.method === "OPTIONS") {
+    return;
+  }
+  request.log.info(
+    {
+      body: request.body
+    },
+    "Parsed Request Body"
+  );
+});
+
 fastify.addHook("onRequest", async (request) => {
+  if (request.method === "OPTIONS") {
+    return;
+  }
   request.log.info(
     {
       method: request.method,
       url: request.url,
       headers: request.headers,
-      body: request.body
     },
     "Request details"
   );
 });
 
 fastify.addHook("onResponse", async (request, reply) => {
+  if (request.method === "OPTIONS") {
+    return;
+  }
   request.log.info(
     {
       statusCode: reply.statusCode,
       url: request.url,
       method: request.method,
-      headers: reply.getHeaders()
     },
     "Response details"
   );
+});
+
+fastify.addHook("onSend", async (request, _reply, payload) => {
+  if (request.method === "OPTIONS") {
+    return;
+  }
+  request.log.info(
+    {
+      responseBody: payload
+    },
+    "Response Body"
+  );
+  return payload;
 });
 
 fastify.register(cors, {
