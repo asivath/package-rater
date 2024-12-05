@@ -21,6 +21,10 @@ export const uploadPackage = async (
   request: FastifyRequest<{ Body: { Content: string; URL: string; debloat: boolean } }>,
   reply: FastifyReply
 ) => {
+  if (!request.body || (!request.body.Content && !request.body.URL)) {
+    reply.code(400).send({ error: "There is missing field(s) in the PackageData or it is formed improperly" });
+    return;
+  }
   const { Content, URL, debloat } = request.body;
   if ((!Content && !URL) || (Content && URL)) {
     reply.code(400).send({

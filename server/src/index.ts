@@ -54,7 +54,7 @@ fastify.addHook("onRequest", async (request) => {
     {
       method: request.method,
       url: request.url,
-      headers: request.headers,
+      headers: request.headers
     },
     "Request details"
   );
@@ -68,7 +68,7 @@ fastify.addHook("onResponse", async (request, reply) => {
     {
       statusCode: reply.statusCode,
       url: request.url,
-      method: request.method,
+      method: request.method
     },
     "Response details"
   );
