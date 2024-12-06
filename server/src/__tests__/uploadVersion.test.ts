@@ -121,6 +121,7 @@ describe("uploadVersion", () => {
   });
 
   it("should return 400 if no metadata or data is provided", async () => {
+    checkIfPackageExists.mockReturnValueOnce(true);
     const reply = await fastify.inject({
       method: "POST",
       url: "/package/id1",
@@ -135,6 +136,7 @@ describe("uploadVersion", () => {
   });
 
   it("should return 400 if both Content and URL are provided", async () => {
+    checkIfPackageExists.mockReturnValueOnce(true);
     const body = {
       metadata: { Name: "completed-package", Version: "1.0.0", ID: "id1" },
       data: { Content: "some-base64-encoded-content", URL: "http://example.com", debloat: false }

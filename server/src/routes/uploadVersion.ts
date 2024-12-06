@@ -27,6 +27,11 @@ export const uploadVersion = async (
   }>,
   reply: FastifyReply
 ) => {
+  const oldID = request.params.id;
+  if (!checkIfPackageExists(oldID)) {
+    return reply.code(404).send({ error: "Package not found" });
+  }
+
   if (!request.body?.metadata || !request.body?.data) {
     return reply.code(400).send({
       error:
@@ -35,7 +40,6 @@ export const uploadVersion = async (
   }
 
   const { metadata, data } = request.body;
-  const oldID = request.params.id;
   const { Content, URL, debloat = false } = data;
   const { Name, Version, ID } = metadata;
   if ((!Content && !URL) || (Content && URL)) {
@@ -45,9 +49,6 @@ export const uploadVersion = async (
     });
   }
 
-  if (!checkIfPackageExists(oldID)) {
-    return reply.code(404).send({ error: "Package not found" });
-  }
   const id = calculatePackageId(Name, Version);
   if (checkIfPackageExists(id)) {
     return reply.code(409).send({ error: "Package already exists" });
