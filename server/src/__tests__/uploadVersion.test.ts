@@ -301,7 +301,7 @@ describe("uploadVersion", () => {
     expect(logger.error).toHaveBeenCalled();
   });
 
-  it("should return 201 when package is uploaded successfully", async () => {
+  it("should return 200 when package is uploaded successfully", async () => {
     checkIfPackageExists.mockReturnValueOnce(true).mockReturnValueOnce(false);
     const body = {
       metadata: { Name: "content-package", Version: "1.0.0", ID: "id2" },
@@ -325,15 +325,12 @@ describe("uploadVersion", () => {
       body: body
     });
 
-    expect(reply.statusCode).toBe(201);
-    expect(reply.json()).toEqual({
-      data: body,
-      metadata: { Name: "content-package", Version: "1.0.0", ID: "id2" }
-    });
+    expect(reply.statusCode).toBe(200);
+    expect(reply.json()).toEqual({ message: "Version is updated." });
     expect(logger.info).toHaveBeenCalledWith("Package content-package with version 1.0.0 uploaded successfully");
   });
 
-  it("should return 201 when package is uploaded successfully from npm", async () => {
+  it("should return 200 when package is uploaded successfully from npm", async () => {
     checkIfPackageExists.mockReturnValueOnce(true).mockReturnValueOnce(false);
     const body = {
       metadata: { Name: "completed-package", Version: "1.0.0", ID: "id1" },
@@ -346,15 +343,12 @@ describe("uploadVersion", () => {
       body: body
     });
 
-    expect(reply.statusCode).toBe(201);
-    expect(reply.json()).toEqual({
-      metadata: { Name: "completed-package", Version: "1.0.0", ID: "id2" },
-      data: body
-    });
+    expect(reply.statusCode).toBe(200);
+    expect(reply.json()).toEqual({ message: "Version is updated." });
     expect(logger.info).toHaveBeenCalledWith("Package completed-package with version 1.0.0 uploaded successfully");
   });
 
-  it("should return 201 when package is uploaded successfully from github", async () => {
+  it("should return 200 when package is uploaded successfully from github", async () => {
     checkIfPackageExists.mockReturnValueOnce(true).mockReturnValueOnce(false);
     const body = {
       metadata: { Name: "completed-package", Version: "1.0.0", ID: "id1" },
@@ -367,8 +361,8 @@ describe("uploadVersion", () => {
       body: body
     });
 
-    expect(reply.statusCode).toBe(201);
-    expect(reply.json()).toEqual({ metadata: { Name: "completed-package", Version: "1.0.0", ID: "id2" }, data: body });
+    expect(reply.statusCode).toBe(200);
+    expect(reply.json()).toEqual({ message: "Version is updated." });
     expect(logger.info).toHaveBeenCalledWith("Package completed-package with version 1.0.0 uploaded successfully");
   });
 });
