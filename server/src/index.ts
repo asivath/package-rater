@@ -87,7 +87,7 @@ fastify.addHook("onSend", async (request, _reply, payload) => {
   return payload;
 });
 
-await fastify.register(cors,  {
+await fastify.register(cors, {
   origin: ["http://127.0.0.1:3000", "http://localhost:5173", process.env.CLOUDFRONT_ORIGIN].filter(Boolean),
   methods: ["GET", "POST", "PUT", "OPTIONS", "DELETE"]
 });
