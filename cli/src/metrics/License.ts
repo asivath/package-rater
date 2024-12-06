@@ -20,7 +20,6 @@ const compatibilityTable = new Map([
   ["EPL-1.0", 0.5],
   ["EPL-2.0", 0.5],
   ["CC0-1.0", 1],
-  ["Unlicense", 1],
   ["ISC", 1],
   ["Zlib", 1],
   ["Artistic-2.0", 0.75],
@@ -111,16 +110,25 @@ export async function calculateLicense(owner: string, repo: string, repoDir?: st
     }
   }
 
+  const matchLicenseWithRegex = (content: string): number | null => {
+    for (const [license, score] of compatibilityTable) {
+      const licenseRegex = new RegExp(`\\b${license}\\b`, "i");
+      if (licenseRegex.test(content)) {
+        return score;
+      }
+    }
+    return null;
+  };
+
   // Check LICENSE file for license
   try {
-    const licenseFiles = files.filter((file) => file.toLowerCase().includes("license"));
+    const licenseFiles = files.filter((file) => /license/i.test(file));
     for (const licenseFile of licenseFiles) {
       const licenseContent = await fs.readFile(path.join(repoDir, licenseFile), "utf8");
-      for (const [license, score] of compatibilityTable) {
-        if (licenseContent.toLowerCase().includes(license.toLowerCase())) {
-          logger.info(`Found license ${license} in LICENSE for ${owner}/${repo}`);
-          return score;
-        }
+      const score = matchLicenseWithRegex(licenseContent);
+      if (score !== null) {
+        logger.info(`Found license in LICENSE file for ${owner}/${repo}`);
+        return score;
       }
     }
   } catch (error) {
@@ -131,14 +139,13 @@ export async function calculateLicense(owner: string, repo: string, repoDir?: st
 
   // Check README.md for license information
   try {
-    const readmeFiles = files.filter((file) => file.toLowerCase().includes("readme"));
+    const readmeFiles = files.filter((file) => /readme/i.test(file));
     for (const readmeFile of readmeFiles) {
       const readmeContent = await fs.readFile(path.join(repoDir, readmeFile), "utf8");
-      for (const [license, score] of compatibilityTable) {
-        if (readmeContent.toLowerCase().includes(license.toLowerCase())) {
-          logger.info(`Found license ${license} in README for ${owner}/${repo}`);
-          return score;
-        }
+      const score = matchLicenseWithRegex(readmeContent);
+      if (score !== null) {
+        logger.info(`Found license in README file for ${owner}/${repo}`);
+        return score;
       }
     }
   } catch (error) {
