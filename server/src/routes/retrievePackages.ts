@@ -170,7 +170,7 @@ export const retrievePackageByRegEx = async (
   const packages: PackageDisplay[] = [];
   try {
     const metadataJson = getPackageMetadata();
-    const regex = new RegExp(RegEx);
+    const regex = new RegExp(RegEx, "m");
 
     for (const [name, versions] of Object.entries(metadataJson.byName)) {
       for (const [version, details] of Object.entries(versions.versions)) {
