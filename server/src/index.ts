@@ -93,7 +93,7 @@ await fastify.register(cors, {
 });
 
 await fastify.register(fastifyRateLimit, {
-  max: 100,
+  max: 600,
   timeWindow: "1 minute"
 });
 
