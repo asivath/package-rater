@@ -124,5 +124,5 @@ export const uploadVersion = async (
   }
 
   logger.info(`Package ${Name} with version ${Version} uploaded successfully`);
-  return reply.code(201).send({ metadata: { Name, Version, ID: id }, data: request.body });
+  return reply.code(200).send({ message: "Version is updated." });
 };
