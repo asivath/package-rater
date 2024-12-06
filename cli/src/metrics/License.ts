@@ -112,7 +112,7 @@ export async function calculateLicense(owner: string, repo: string, repoDir?: st
 
   const matchLicenseWithRegex = (content: string): number | null => {
     for (const [license, score] of compatibilityTable) {
-      const licenseRegex = new RegExp(`\\b${license}\\b`, "i"); // Word boundary, case-insensitive
+      const licenseRegex = new RegExp(`\\b${license}\\b`, "i");
       if (licenseRegex.test(content)) {
         return score;
       }
