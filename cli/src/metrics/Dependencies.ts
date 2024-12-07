@@ -13,12 +13,14 @@ const logger = getLogger("cli");
  * @returns True if pinned to a major.minor version, false otherwise.
  */
 export function isPinnedToMajorMinor(versionConstraint: string): boolean {
-  // Reject versions with caret (^)
-  if (versionConstraint.startsWith("^")) {
-    return false;
-  }
-  const majorMinorRegex = /^(\d+)\.(\d+)(?:\.\d+)?$/;
-  return majorMinorRegex.test(versionConstraint);
+  // Regular expression to match pinned major.minor versions (e.g., "~1.2.3" or "^1.2")
+  const tildeRegex = /^~(\d+)\.(\d+)(?:\.\d+)?$/; //~1.2.3
+  const shortCaretRegex = /^\^(\d+)\.(\d+)$/; //^1.2
+  const strictRegex = /^(\d+)\.(\d+)(?:\.\d+)?$/; //1.2.3
+
+  // Allow "~" or strict versions but reject caret-based ranges
+  return tildeRegex.test(versionConstraint) || shortCaretRegex.test(versionConstraint) || strictRegex.test(versionConstraint);
+
 }
 
 /**
@@ -83,12 +85,15 @@ export async function calculatePinnedDependencyFraction(
       const dependencies = {
         ...packageJson.dependencies,
         ...packageJson.devDependencies,
-        ...packageJson.optionalDependencies
+        ...packageJson.optionalDependencies,
+        ...packageJson.peerDependencies,
+        ...packageJson.bundledDependencies
       };
       // Iterate through dependencies and check if they are pinned
       for (const [, versionConstraint] of Object.entries(dependencies)) {
         totalDependencies++;
         if (typeof versionConstraint == "string" && isPinnedToMajorMinor(versionConstraint)) {
+          logger.info(`Pinned dependency found in ${packageJsonPath}: ${versionConstraint}`);
           pinnedDependencies++;
         }
       }
@@ -103,5 +108,5 @@ export async function calculatePinnedDependencyFraction(
   }
 
   // Calculate the fraction of pinned dependencies
-  return (totalDependencies - pinnedDependencies) / totalDependencies;
+  return pinnedDependencies / totalDependencies;
 }
