@@ -78,7 +78,7 @@ describe("calculatePinnedDependencyFraction", () => {
     const mockPackageJson = JSON.stringify({
       dependencies: {
         package1: "^1.0.0",
-        package2: "1.2.0"
+        package2: "~1.2.0"
       },
       devDependencies: {
         package3: "2.3.0"
@@ -89,7 +89,7 @@ describe("calculatePinnedDependencyFraction", () => {
     readFile.mockResolvedValueOnce(mockPackageJson);
 
     const fraction = await calculatePinnedDependencyFraction("owner", "repo", "/fake-dir");
-    expect(fraction).toBe(1 / 3); // One out of three dependencies is pinned
+    expect(fraction).toBe(1 / 2); // two out of three dependencies are pinned to at least a major/minor version
   });
 
   it("should return 1.0 if no dependencies are found", async () => {
