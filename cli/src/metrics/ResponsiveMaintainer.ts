@@ -73,7 +73,6 @@ export async function calculateResponsiveMaintainer(owner: string, name: string)
     })) as IssueQueryResponse;
 
     const issues: Issue[] = issue_result.data.repository.issues.edges;
-    console.log(issues);
 
     if (issues.length === 0) {
       logger.info("No issues found");
