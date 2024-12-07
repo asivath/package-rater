@@ -19,8 +19,9 @@ export function isPinnedToMajorMinor(versionConstraint: string): boolean {
   const strictRegex = /^(\d+)\.(\d+)(?:\.\d+)?$/; //1.2.3
 
   // Allow "~" or strict versions but reject caret-based ranges
-  return tildeRegex.test(versionConstraint) || shortCaretRegex.test(versionConstraint) || strictRegex.test(versionConstraint);
-
+  return (
+    tildeRegex.test(versionConstraint) || shortCaretRegex.test(versionConstraint) || strictRegex.test(versionConstraint)
+  );
 }
 
 /**
