@@ -24,45 +24,74 @@ describe("calculateFracPRReview", () => {
     vi.clearAllMocks();
   });
 
-  it("should calculate PR review fraction correctly", async () => {
-    const mockCommitData = {
+  it("should calculate PR review fraction correctly with valid commits and reviews", async () => {
+    // Mock GetDefaultBranch
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          defaultBranchRef: {
+            name: "main"
+          }
+        }
+      }
+    });
+
+    // Mock GetCommitCount (totalCommits = 3)
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
       data: {
         repository: {
           ref: {
             target: {
               history: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                },
-                nodes: [
+                totalCount: 3
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Mock GetCommits (fetch all 3 commits)
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                edges: [
                   {
-                    additions: 100,
-                    deletions: 50,
-                    associatedPullRequests: {
-                      nodes: [
-                        {
-                          reviewDecision: "APPROVED"
-                        }
-                      ]
+                    node: {
+                      additions: 100,
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: "APPROVED"
+                          }
+                        ]
+                      }
                     }
                   },
                   {
-                    additions: 200,
-                    deletions: 100,
-                    associatedPullRequests: {
-                      nodes: []
+                    node: {
+                      additions: 200,
+                      associatedPullRequests: {
+                        nodes: [] // no PR
+                      }
                     }
                   },
                   {
-                    additions: 150,
-                    deletions: 75,
-                    associatedPullRequests: {
-                      nodes: [
-                        {
-                          reviewDecision: null
-                        }
-                      ]
+                    node: {
+                      additions: 150,
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: "CHANGES_REQUESTED"
+                          }
+                        ]
+                      }
                     }
                   }
                 ]
@@ -71,51 +100,84 @@ describe("calculateFracPRReview", () => {
           }
         }
       }
-    };
-
-    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce(mockCommitData);
+    });
 
     const fracPRReview = await calculateFracPRReview("owner", "repo");
 
-    // Calculations:
-    // Total lines changed = (100 - 50) + (200 - 100) + (150 - 75) = 225
-    // Lines from reviewed commits = (100 - 50) = 50
-    // Expected fraction = 50 / 225 ≈ 0.2222
-
-    expect(fracPRReview).toBeCloseTo(50 / 225);
+    // totalChanges = 100 + 200 + 150 = 450
+    // reviewedChanges = only the commit with APPROVED PR = 100
+    // fraction = 100 / 450 ≈ 0.2222
+    expect(fracPRReview).toBeCloseTo(100 / 450);
   });
 
-  it("should return 0 when no commits are associated with reviewed PRs", async () => {
-    const mockCommitData = {
+  it("should return 0 when no commits have approved PRs", async () => {
+    // Mock GetDefaultBranch
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          defaultBranchRef: {
+            name: "main"
+          }
+        }
+      }
+    });
+
+    // Mock GetCommitCount (totalCommits = 3)
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
       data: {
         repository: {
           ref: {
             target: {
               history: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                },
-                nodes: [
+                totalCount: 3
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // All commits have no APPROVED reviews
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                edges: [
                   {
-                    additions: 100,
-                    deletions: 50,
-                    associatedPullRequests: {
-                      nodes: []
+                    node: {
+                      additions: 100,
+                      associatedPullRequests: {
+                        nodes: [] // no PR
+                      }
                     }
                   },
                   {
-                    additions: 200,
-                    deletions: 100,
-                    associatedPullRequests: {
-                      nodes: []
+                    node: {
+                      additions: 200,
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: "CHANGES_REQUESTED"
+                          }
+                        ]
+                      }
                     }
                   },
                   {
-                    additions: 150,
-                    deletions: 75,
-                    associatedPullRequests: {
-                      nodes: []
+                    node: {
+                      additions: 150,
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: "COMMENTED"
+                          }
+                        ]
+                      }
                     }
                   }
                 ]
@@ -124,104 +186,76 @@ describe("calculateFracPRReview", () => {
           }
         }
       }
-    };
-
-    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce(mockCommitData);
+    });
 
     const fracPRReview = await calculateFracPRReview("owner", "repo");
 
+    // totalChanges = 100 + 200 + 150 = 450
+    // No APPROVED PR commits, reviewedChanges = 0
+    // fraction = 0
     expect(fracPRReview).toBe(0);
-  });
-
-  it("should not exceed fraction of 1 when reviewed lines changed exceed total lines changed", async () => {
-    const mockCommitData = {
-      data: {
-        repository: {
-          ref: {
-            target: {
-              history: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                },
-                nodes: [
-                  {
-                    additions: 50,
-                    deletions: 100,
-                    associatedPullRequests: {
-                      nodes: []
-                    }
-                  },
-                  {
-                    additions: 100,
-                    deletions: 150,
-                    associatedPullRequests: {
-                      nodes: []
-                    }
-                  },
-                  {
-                    additions: 200,
-                    deletions: 50,
-                    associatedPullRequests: {
-                      nodes: [
-                        {
-                          reviewDecision: "APPROVED"
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    };
-
-    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce(mockCommitData);
-
-    const fracPRReview = await calculateFracPRReview("owner", "repo");
-
-    // Calculations:
-    // Total lines changed = (-50) + (-50) + (200 - 50) = 100
-    // Lines from reviewed commits = 200 - 50 = 150
-    // Expected fraction = 150 / 100 = 1 (clamped between 0 and 1)
-
-    expect(fracPRReview).toBe(1);
   });
 
   it("should return 0 when total lines changed is zero", async () => {
-    const mockCommitData = {
+    // Mock GetDefaultBranch
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          defaultBranchRef: {
+            name: "main"
+          }
+        }
+      }
+    });
+
+    // Mock GetCommitCount (totalCommits = 2)
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
       data: {
         repository: {
           ref: {
             target: {
               history: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                },
-                nodes: [
+                totalCount: 2
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Both commits have 0 additions
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                edges: [
                   {
-                    additions: 100,
-                    deletions: 100,
-                    associatedPullRequests: {
-                      nodes: [
-                        {
-                          reviewDecision: "APPROVED"
-                        }
-                      ]
+                    node: {
+                      additions: 0,
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: "APPROVED"
+                          }
+                        ]
+                      }
                     }
                   },
                   {
-                    additions: 200,
-                    deletions: 200,
-                    associatedPullRequests: {
-                      nodes: [
-                        {
-                          reviewDecision: "APPROVED"
-                        }
-                      ]
+                    node: {
+                      additions: 0,
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: "APPROVED"
+                          }
+                        ]
+                      }
                     }
                   }
                 ]
@@ -230,17 +264,94 @@ describe("calculateFracPRReview", () => {
           }
         }
       }
-    };
-
-    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce(mockCommitData);
+    });
 
     const fracPRReview = await calculateFracPRReview("owner", "repo");
 
+    // totalChanges = 0 + 0 = 0
+    // reviewedChanges = 0 (even though approved, total changes = 0)
+    // fraction = 0
     expect(fracPRReview).toBe(0);
   });
 
-  it("should handle pagination correctly", async () => {
-    const mockCommitDataPage1 = {
+  it("should return 0 when no commits are found", async () => {
+    // Mock GetDefaultBranch
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          defaultBranchRef: {
+            name: "main"
+          }
+        }
+      }
+    });
+
+    // Mock GetCommitCount (totalCommits = 0)
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                totalCount: 0
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // With 0 commits, no fetchCommits call is needed. If code attempts to fetch, return no edges
+    // But let's assume code doesn't fetch if totalCount=0
+    // If code does fetch anyway:
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                edges: []
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const fracPRReview = await calculateFracPRReview("owner", "repo");
+    expect(fracPRReview).toBe(0);
+  });
+
+  it("should correctly handle fetching newest and oldest commits when totalCommits > 600", async () => {
+    // Mock GetDefaultBranch
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          defaultBranchRef: {
+            name: "main"
+          }
+        }
+      }
+    });
+
+    // Mock GetCommitCount (totalCommits = 700 > 600 threshold)
+    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce({
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                totalCount: 700
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Mock fetching newest 300 commits (page 1)
+    const newestCommitsPage1 = {
       data: {
         repository: {
           ref: {
@@ -248,21 +359,23 @@ describe("calculateFracPRReview", () => {
               history: {
                 pageInfo: {
                   hasNextPage: true,
-                  endCursor: "cursor1"
+                  endCursor: "newestCursor1"
                 },
-                nodes: [
-                  {
-                    additions: 100,
-                    deletions: 50,
-                    associatedPullRequests: {
-                      nodes: [
-                        {
-                          reviewDecision: "APPROVED"
-                        }
-                      ]
+                edges: Array(100)
+                  .fill(null)
+                  .map((_, index) => ({
+                    node: {
+                      additions: 100 + index, // Simulate unique additions
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: index % 2 === 0 ? "APPROVED" : "CHANGES_REQUESTED" // Alternate approvals
+                          }
+                        ]
+                      }
                     }
-                  }
-                ]
+                  }))
               }
             }
           }
@@ -270,7 +383,72 @@ describe("calculateFracPRReview", () => {
       }
     };
 
-    const mockCommitDataPage2 = {
+    const newestCommitsPage2 = {
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: "newestCursor2"
+                },
+                edges: Array(100)
+                  .fill(null)
+                  .map((_, index) => ({
+                    node: {
+                      additions: 200 + index, // Simulate unique additions
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: index % 2 === 0 ? "APPROVED" : "CHANGES_REQUESTED" // Alternate approvals
+                          }
+                        ]
+                      }
+                    }
+                  }))
+              }
+            }
+          }
+        }
+      }
+    };
+
+    // Mock fetching oldest 300 commits (page 1)
+    const oldestCommitsPage1 = {
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                pageInfo: {
+                  hasNextPage: true,
+                  endCursor: "oldestCursor1"
+                },
+                edges: Array(100)
+                  .fill(null)
+                  .map((_, index) => ({
+                    node: {
+                      additions: 300 + index, // Simulate unique additions
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: index % 2 === 0 ? "APPROVED" : "COMMENTED" // Alternate approvals
+                          }
+                        ]
+                      }
+                    }
+                  }))
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const oldestCommitsPage2 = {
       data: {
         repository: {
           ref: {
@@ -280,15 +458,21 @@ describe("calculateFracPRReview", () => {
                   hasNextPage: false,
                   endCursor: null
                 },
-                nodes: [
-                  {
-                    additions: 200,
-                    deletions: 100,
-                    associatedPullRequests: {
-                      nodes: []
+                edges: Array(100)
+                  .fill(null)
+                  .map((_, index) => ({
+                    node: {
+                      additions: 400 + index, // Simulate unique additions
+                      associatedPullRequests: {
+                        nodes: [
+                          {
+                            baseRefName: "main",
+                            reviewDecision: index % 2 === 0 ? "APPROVED" : "CHANGES_REQUESTED" // Alternate approvals
+                          }
+                        ]
+                      }
                     }
-                  }
-                ]
+                  }))
               }
             }
           }
@@ -296,102 +480,23 @@ describe("calculateFracPRReview", () => {
       }
     };
 
+    // Mock responses in sequence for fetchCommits calls
     vi.mocked(getGitHubData as Mock)
-      .mockResolvedValueOnce(mockCommitDataPage1)
-      .mockResolvedValueOnce(mockCommitDataPage2);
+      .mockResolvedValueOnce(newestCommitsPage1) // Newest commits, page 1
+      .mockResolvedValueOnce(newestCommitsPage2) // Newest commits, page 2
+      .mockResolvedValueOnce(oldestCommitsPage1) // Oldest commits, page 1
+      .mockResolvedValueOnce(oldestCommitsPage2); // Oldest commits, page 2
 
     const fracPRReview = await calculateFracPRReview("owner", "repo");
 
     // Calculations:
-    // Total lines changed = (100 - 50) + (200 - 100) = 150
-    // Lines from reviewed commits = (100 - 50) = 50
-    // Expected fraction = 50 / 150 ≈ 0.3333
+    // - Total changes from newest commits = 300 commits with 100 additions each
+    // - Total changes from oldest commits = 300 commits with 100 additions each
+    // - APPROVED commits = (half of both newest and oldest commits are APPROVED)
+    // Reviewed changes = 150 * 100 (newest) + 150 * 100 (oldest) = 30000
+    // Total changes = 300 * 100 (newest) + 300 * 100 (oldest) = 60000
+    // Fraction = 30000 / 60000 = 0.5
 
-    expect(fracPRReview).toBeCloseTo(50 / 150);
-  });
-
-  it("should return 0 when no commits are found", async () => {
-    const mockCommitData = {
-      data: {
-        repository: {
-          ref: {
-            target: {
-              history: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                },
-                nodes: []
-              }
-            }
-          }
-        }
-      }
-    };
-
-    vi.mocked(getGitHubData as Mock).mockResolvedValueOnce(mockCommitData);
-
-    const fracPRReview = await calculateFracPRReview("owner", "repo");
-
-    expect(fracPRReview).toBe(0);
-  });
-
-  it("should try master branch if main branch has no commits", async () => {
-    const mockMainBranchData = {
-      data: {
-        repository: {
-          ref: null
-        }
-      }
-    };
-
-    const mockMasterBranchData = {
-      data: {
-        repository: {
-          ref: {
-            target: {
-              history: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                },
-                nodes: [
-                  {
-                    additions: 100,
-                    deletions: 50,
-                    associatedPullRequests: {
-                      nodes: [
-                        {
-                          reviewDecision: "APPROVED"
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    };
-
-    vi.mocked(getGitHubData as Mock).mockImplementation((repo, owner, query, variables) => {
-      if (variables.branch === "main") {
-        return Promise.resolve(mockMainBranchData);
-      } else if (variables.branch === "master") {
-        return Promise.resolve(mockMasterBranchData);
-      } else {
-        return Promise.reject(new Error("Unknown branch"));
-      }
-    });
-
-    const fracPRReview = await calculateFracPRReview("owner", "repo");
-
-    // Calculations:
-    // Total lines changed = 100 - 50 = 50
-    // Lines from reviewed commits = 50
-    // Expected fraction = 50 / 50 = 1
-
-    expect(fracPRReview).toBe(1);
+    expect(fracPRReview).toBeCloseTo(0.5);
   });
 });

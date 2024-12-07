@@ -7,10 +7,10 @@ const themeOptions: ThemeOptions = {
       main: "#233d4d"
     },
     secondary: {
-      main: "#ffc300"
+      main: "#957100"
     },
     error: {
-      main: "#d32f2f"
+      main: "#ff7a7a"
     },
     warning: {
       main: "#ed6c02"
