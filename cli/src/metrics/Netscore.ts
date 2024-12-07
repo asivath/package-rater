@@ -121,15 +121,16 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
 
     const busFactorPromise = latencyWrapper(() => calculateBusFactor(repoOwner, repoName, totalLinesOfCode));
 
-    const [busFactor, correctness, licenseCompatibility, responsiveness, rampUp, dependencies, fracPR] = await Promise.all([
-      busFactorPromise,
-      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
-      latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
-      latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
-      latencyWrapper(() => calculateRampup(repoOwner, repoName)),
-      latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
-      latencyWrapper(() => calculateFracPRReview(repoOwner, repoName))
-    ]);
+    const [busFactor, correctness, licenseCompatibility, responsiveness, rampUp, dependencies, fracPR] =
+      await Promise.all([
+        busFactorPromise,
+        latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
+        latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
+        latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
+        latencyWrapper(() => calculateRampup(repoOwner, repoName)),
+        latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
+        latencyWrapper(() => calculateFracPRReview(repoOwner, repoName))
+      ]);
 
     const netscore =
       0.1 * busFactor.result +

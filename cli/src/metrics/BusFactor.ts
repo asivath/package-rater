@@ -2,9 +2,16 @@ import { getLogger } from "@package-rater/shared";
 
 const logger = getLogger("cli");
 
-async function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+type Contributor = {
+  author: {
+    login: string | null;
+  };
+  total: number;
+};
 
 /**
  * Fetch contributor stats for a GitHub repository
@@ -12,7 +19,7 @@ async function sleep(ms: number) {
  * @param repo The repository name
  * @returns The contributor stats
  */
-async function fetchContributorStats(owner: string, repo: string): Promise<any[] | null> {
+async function fetchContributorStats(owner: string, repo: string): Promise<Contributor[] | null> {
   const maxRetries = 10;
   const delay = 3000;
 
@@ -30,7 +37,7 @@ async function fetchContributorStats(owner: string, repo: string): Promise<any[]
         logger.warn(`Contributor stats not ready yet. Waiting ${delay / 1000}s before retry...`);
         await sleep(delay);
       } else {
-        logger.error("Contributor stats not ready after waiting ~15s. Try again later.");
+        logger.error("Contributor stats not ready after waiting ~30s. Try again later.");
         return null;
       }
       continue;
@@ -41,7 +48,7 @@ async function fetchContributorStats(owner: string, repo: string): Promise<any[]
       return [];
     }
 
-    const contributors = await response.json();
+    const contributors = (await response.json()) as Contributor[];
     return Array.isArray(contributors) ? contributors : [];
   }
 
@@ -86,7 +93,7 @@ function desiredBusFactorForLOC(loc: number): number {
  * @param owner The repository owner
  * @param repo The repository name
  * @param loc The lines of code
- * @returns 
+ * @returns The calculated bus factor
  */
 export async function calculateBusFactor(owner: string, repo: string, loc: number): Promise<number> {
   const contributors = await fetchContributorStats(owner, repo);
@@ -99,9 +106,8 @@ export async function calculateBusFactor(owner: string, repo: string, loc: numbe
     return 0;
   }
 
-  const commitCounts = contributors
-    .filter((c: any) => c.author && c.author.login)
-    .map((c: any) => c.total);
+  const commitCounts = contributors.filter((c) => c.author && c.author.login).map((c) => c.total);
+
   if (commitCounts.length === 0) {
     logger.info(`No commit data found for ${owner}/${repo}. Returning 0.`);
     return 0;
@@ -112,9 +118,7 @@ export async function calculateBusFactor(owner: string, repo: string, loc: numbe
   const desired = desiredBusFactorForLOC(loc);
   const totalContributors = commitCounts.length;
   if (totalContributors < desired) {
-    logger.info(
-      `Total contributors (${totalContributors}) is less than desired (${desired}). Returning 0.`
-    );
+    logger.info(`Total contributors (${totalContributors}) is less than desired (${desired}). Returning 0.`);
     return 0;
   }
 
@@ -122,6 +126,8 @@ export async function calculateBusFactor(owner: string, repo: string, loc: numbe
   let score = 1 - gini;
   score = Math.min(1, score * 4);
 
-  logger.info(`Bus factor for ${owner}/${repo}: ${score.toFixed(2)}, desired: ${desired}, contributors: ${totalContributors}`);
+  logger.info(
+    `Bus factor for ${owner}/${repo}: ${score.toFixed(2)}, desired: ${desired}, contributors: ${totalContributors}`
+  );
   return score;
 }
