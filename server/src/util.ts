@@ -448,18 +448,11 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
         return depId;
       });
 
-      const zip = new AdmZip();
-      zip.addLocalFolder(extractPath, undefined, (filename) => {
-        return !filename.endsWith(".tgz");
-      });
-      const zipBuffer = zip.toBuffer();
-      const standaloneCost = zipBuffer.length / (1024 * 1000);
-
       const node: PackageNode = {
         id,
         packageName,
         version,
-        standaloneCost: standaloneCost,
+        standaloneCost: (await stat(tarBallPath)).size / (1024 * 1000),
         totalCost: 0,
         dependencies
       };
