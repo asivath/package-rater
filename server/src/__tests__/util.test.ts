@@ -11,7 +11,7 @@ import {
 import * as shared from "@package-rater/shared";
 import * as s3Client from "@aws-sdk/client-s3";
 import * as tar from "tar";
-import * as util from "util";
+// import * as util from "util";
 import * as esbuild from "esbuild";
 import * as fsPromises from "fs/promises";
 import * as AdmZip from "adm-zip";
@@ -473,7 +473,7 @@ describe("savePackage", () => {
     }
   };
   const testPackageId = calculatePackageId("test-package", "1.0.0");
-  const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
+  // const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
   // it("should save a package from file path and upload to S3 in prod", async () => {
   //   vi.stubEnv("NODE_ENV", "production");
   //   vi.stubEnv("CLI_API_URL", "https://test-api.com");
