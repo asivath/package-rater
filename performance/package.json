@@ -20,6 +20,7 @@
   "packageManager": "yarn@4.5.1",
   "scripts": {
     "upload": "yarn tsx src/upload500Packages.ts",
-    "latency": "yarn tsx src/latencyTesting.ts"
+    "latency": "yarn tsx src/latencyTesting.ts",
+    "cli": "yarn tsx src/benchmarkCLI.ts"
   }
 }
