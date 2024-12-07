@@ -118,16 +118,18 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
     const totalLinesOfCode = await calculateLOC(repoDir);
     const end = new Date();
     const setupTime = (end.getTime() - start.getTime()) / 1000;
-    const [correctness, licenseCompatibility, responsiveness, busFactor, rampUp, dependencies, fracPR] =
-      await Promise.all([
-        latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
-        latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
-        latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
-        latencyWrapper(() => calculateBusFactor(repoOwner, repoName)),
-        latencyWrapper(() => calculateRampup(repoOwner, repoName)),
-        latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
-        latencyWrapper(() => calculateFracPRReview(repoOwner, repoName))
-      ]);
+
+    const busFactorPromise = latencyWrapper(() => calculateBusFactor(repoOwner, repoName, totalLinesOfCode));
+
+    const [busFactor, correctness, licenseCompatibility, responsiveness, rampUp, dependencies, fracPR] = await Promise.all([
+      busFactorPromise,
+      latencyWrapper(() => calculateCorrectness(repoOwner, repoName, totalLinesOfCode)),
+      latencyWrapper(() => calculateLicense(repoOwner, repoName, repoDir)),
+      latencyWrapper(() => calculateResponsiveMaintainer(repoOwner, repoName)),
+      latencyWrapper(() => calculateRampup(repoOwner, repoName)),
+      latencyWrapper(() => calculatePinnedDependencyFraction(repoOwner, repoName, repoDir)),
+      latencyWrapper(() => calculateFracPRReview(repoOwner, repoName))
+    ]);
 
     const netscore =
       0.1 * busFactor.result +
