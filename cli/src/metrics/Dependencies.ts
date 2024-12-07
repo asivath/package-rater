@@ -91,7 +91,6 @@ export async function calculatePinnedDependencyFraction(
       for (const [, versionConstraint] of Object.entries(dependencies)) {
         totalDependencies++;
         if (typeof versionConstraint == "string" && isPinnedToMajorMinor(versionConstraint)) {
-          logger.info(`Pinned dependency found in ${packageJsonPath}: ${versionConstraint}`);
           pinnedDependencies++;
         }
       }
