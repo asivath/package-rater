@@ -22,6 +22,7 @@ import {
   Alert,
   Fade,
   IconButton,
+  Icon,
   Tooltip
 } from "@mui/material";
 import { fetcher } from "../util";
@@ -166,32 +167,31 @@ export const UploadPackageForm: React.FC<{
   return (
     <Box>
       {uploadVersion ? (
-        uploadedWithContent ? (
-          <Tooltip title="Upload Content Version" arrow>
-            <IconButton
-              aria-label="Upload Content Version"
-              color="primary"
-              onClick={(event) => {
-                event.stopPropagation();
-                setUploadPackageFormOpen(true);
-              }}>
-              <DriveFolderUploadIcon fontSize="medium" />
-            </IconButton>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Upload URL Version" arrow>
-            <IconButton aria-label="Upload URL Version" color="primary"
-            onClick={(event) => {
+        <IconButton
+          aria-label="perform action"
+          color="primary"
+          onClick={(event) => {
             event.stopPropagation();
             setUploadPackageFormOpen(true);
           }}>
-              <CloudUploadIcon fontSize="medium" />
-            </IconButton>
-          </Tooltip>
-        )
+          {uploadedWithContent ? (
+            <Tooltip title="Upload Content Version" arrow>
+              <DriveFolderUploadIcon />
+            </Tooltip>
+          ) : (
+            <Tooltip title="Upload URL Version" arrow>
+              <Box>
+                <Icon fontSize="large">
+                  <CloudUploadIcon />
+                </Icon>
+              </Box>
+            </Tooltip>
+          )}
+        </IconButton>
       ) : (
         <Button
           color="secondary"
+          component="label"
           sx={{
             marginLeft: "auto",
             background: "none",
@@ -241,7 +241,7 @@ export const UploadPackageForm: React.FC<{
           <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2}>
             {(uploadedWithContent || !uploadVersion) && (
               <>
-                <Button variant="outlined">
+                <Button variant="outlined" component="label">
                   Upload ZIP File
                   <input hidden type="file" accept=".zip" ref={fileInputRef} onChange={handleFileUpload} />
                 </Button>
