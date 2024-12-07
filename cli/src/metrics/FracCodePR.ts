@@ -1,8 +1,9 @@
 /**
- * Calculate the fraction of code introduced through reviewed PRs
- * Note that due to the latency cost of taking all lines of code,
- * We are only taking the first 100 commits as a "sample"
+ * Calculate the fraction of code introduced through reviewed PRs.
+ * Note, we cosider a PR is reviewed only if it is approved.
+ * We also look at commits in the default branch of the repository and if it has an associated PRs.
  */
+
 import { getLogger } from "@package-rater/shared";
 import { getGitHubData } from "../graphql.js";
 
@@ -10,9 +11,9 @@ const logger = getLogger("cli");
 
 type CommitNode = {
   additions: number;
-  deletions: number;
   associatedPullRequests: {
     nodes: {
+      baseRefName: string;
       reviewDecision: string;
     }[];
   };
@@ -28,7 +29,9 @@ type CommitResponse = {
               hasNextPage: boolean;
               endCursor: string | null;
             };
-            nodes: CommitNode[];
+            edges: {
+              node: CommitNode;
+            }[];
           };
         };
       };
@@ -37,21 +40,23 @@ type CommitResponse = {
 };
 
 /**
- * This function fetches commits and their associated PRs from a GitHub repository
- * @param owner
- * @param repo
- * @param branch
- * @param totalCommits
- * @returns
+ * Fetch commits from a branch with pagination.
+ * @param owner Repository owner
+ * @param repo Repository name
+ * @param branch Default branch name
+ * @param totalCommits Number of commits to fetch
+ * @param after Cursor for pagination
+ * @returns Array of commit nodes
  */
-async function fetchCommitsWithPRs(
+async function fetchCommits(
   owner: string,
   repo: string,
   branch: string,
-  totalCommits: number
-): Promise<CommitNode[]> {
-  const query = `
-    query GetCommitsWithPRs($owner: String!, $repo: String!, $branch: String!, $first: Int!, $after: String) {
+  totalCommits: number,
+  after: string | null = null
+): Promise<{ commits: CommitNode[]; endCursor: string | null; hasNextPage: boolean }> {
+  const commitQuery = `
+    query GetCommits($owner: String!, $repo: String!, $branch: String!, $first: Int!, $after: String) {
       repository(owner: $owner, name: $repo) {
         ref(qualifiedName: $branch) {
           target {
@@ -61,12 +66,14 @@ async function fetchCommitsWithPRs(
                   hasNextPage
                   endCursor
                 }
-                nodes {
-                  additions
-                  deletions
-                  associatedPullRequests(first: 1) {
-                    nodes {
-                      reviewDecision
+                edges {
+                  node {
+                    additions
+                    associatedPullRequests(first: 1) {
+                      nodes {
+                        baseRefName
+                        reviewDecision
+                      }
                     }
                   }
                 }
@@ -78,89 +85,164 @@ async function fetchCommitsWithPRs(
     }
   `;
 
-  const results: CommitNode[] = [];
-  let hasNextPage = true;
-  let after: string | null = null;
-  const perPage = 100;
-  let fetchedCommits = 0;
+  const perPage = Math.min(totalCommits, 100);
+  const data = (await getGitHubData(repo, owner, commitQuery, {
+    branch,
+    first: perPage,
+    after
+  })) as CommitResponse;
 
-  while (hasNextPage && fetchedCommits < totalCommits) {
-    const remainingCommits = totalCommits - fetchedCommits;
-    const first = remainingCommits < perPage ? remainingCommits : perPage;
-
-    const data = (await getGitHubData(repo, owner, query, {
-      branch,
-      first,
-      after
-    })) as CommitResponse;
-
-    const history = data.data.repository.ref?.target?.history;
-    if (!history) {
-      logger.error(`No commit history found for branch ${branch} in repo ${repo}`);
-      break;
-    }
-
-    const { nodes, pageInfo } = history;
-
-    results.push(...nodes);
-    fetchedCommits += nodes.length;
-
-    hasNextPage = pageInfo.hasNextPage && fetchedCommits < totalCommits;
-    after = pageInfo.endCursor ?? null;
-
-    logger.info(`Fetched ${nodes.length} PRs. Next page: ${hasNextPage}`);
+  const history = data.data.repository.ref?.target?.history;
+  if (!history) {
+    logger.error(`No commit history found for branch ${branch} in repo ${repo}`);
+    return { commits: [], endCursor: null, hasNextPage: false };
   }
 
-  logger.info(`Total commits fetched from ${branch} for ${repo}: ${results.length}`);
-  return results;
+  const commits = history.edges.map((edge) => edge.node);
+  const { hasNextPage, endCursor } = history.pageInfo;
+
+  return { commits, endCursor, hasNextPage };
 }
 
 /**
- * Calculate the fraction of code introduced through reviewed PRs
- * @param owner
- * @param repo
- * @returns
+ * Fetch commits from both the newest and oldest parts of the commit history.
+ * @param owner Repository owner
+ * @param repo Repository name
+ * @param branch Default branch name
+ * @param sampleSize Number of commits to fetch from each end
+ * @returns Combined array of sampled commit nodes
+ */
+async function fetchOldestAndNewestCommits(
+  owner: string,
+  repo: string,
+  branch: string,
+  sampleSize: number
+): Promise<CommitNode[]> {
+  const newestCommits = await fetchCommits(owner, repo, branch, sampleSize);
+  const oldestCommits: CommitNode[] = [];
+
+  let currentCursor = newestCommits.endCursor;
+  let hasNextPage = newestCommits.hasNextPage;
+
+  while (hasNextPage) {
+    const {
+      commits,
+      endCursor,
+      hasNextPage: nextPage
+    } = await fetchCommits(owner, repo, branch, sampleSize, currentCursor);
+    oldestCommits.push(...commits);
+
+    currentCursor = endCursor;
+    hasNextPage = nextPage;
+
+    if (oldestCommits.length >= sampleSize) {
+      break;
+    }
+  }
+
+  return [...newestCommits.commits, ...oldestCommits.slice(0, sampleSize)];
+}
+
+/**
+ * Calculate the fraction of code introduced through reviewed PRs.
+ * @param owner Repository owner
+ * @param repo Repository name
+ * @returns Fraction of code introduced via reviewed PRs
  */
 export async function calculateFracPRReview(owner: string, repo: string): Promise<number> {
   try {
-    const totalCommits = 100;
-    // Attempt to fetch commits from 'main' branch, else 'master' if 'main' doesn't exist
-    let commits = await fetchCommitsWithPRs(owner, repo, "main", totalCommits);
-    if (commits.length === 0) {
-      commits = await fetchCommitsWithPRs(owner, repo, "master", totalCommits);
+    // Fetch the default branch of the repository
+    const branchQuery = `
+      query GetDefaultBranch($owner: String!, $repo: String!) {
+        repository(owner: $owner, name: $repo) {
+          defaultBranchRef {
+            name
+          }
+        }
+      }
+    `;
+    const branchData = (await getGitHubData(repo, owner, branchQuery)) as {
+      data: {
+        repository: {
+          defaultBranchRef: {
+            name: string;
+          };
+        };
+      };
+    };
+
+    const defaultBranch = branchData.data.repository.defaultBranchRef?.name || "main";
+    logger.info(`Default branch for ${repo}: ${defaultBranch}`);
+
+    // Get total number of commits in the repository
+    const totalCommitsQuery = `
+      query GetCommitCount($owner: String!, $repo: String!, $branch: String!) {
+        repository(owner: $owner, name: $repo) {
+          ref(qualifiedName: $branch) {
+            target {
+              ... on Commit {
+                history {
+                  totalCount
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    const totalCommitsData = (await getGitHubData(repo, owner, totalCommitsQuery, {
+      branch: defaultBranch
+    })) as {
+      data: {
+        repository: {
+          ref: {
+            target: {
+              history: {
+                totalCount: number;
+              };
+            };
+          };
+        };
+      };
+    };
+
+    const totalCommits = totalCommitsData.data.repository.ref?.target?.history?.totalCount || 0;
+    logger.info(`Total commits in default branch: ${totalCommits}`);
+
+    // Decide on fetching strategy
+    let commits: CommitNode[] = [];
+    const commitLimit = 600;
+    const sampleSize = 300;
+
+    if (totalCommits <= commitLimit) {
+      logger.info(`Fetching all ${totalCommits} commits from the default branch.`);
+      commits = (await fetchCommits(owner, repo, defaultBranch, totalCommits)).commits;
+    } else {
+      logger.info(`Fetching ${sampleSize} newest and ${sampleSize} oldest commits.`);
+      commits = await fetchOldestAndNewestCommits(owner, repo, defaultBranch, sampleSize);
     }
 
-    if (commits.length === 0) {
-      logger.error(`No commits found in 'main' or 'master' branches for ${repo}`);
-      return 0;
-    }
+    // Calculate total code changes across all commits
+    const totalChanges = commits.reduce((sum, commit) => sum + commit.additions, 0);
 
-    // Calculate total additions and deletions for all commits
-    const totalAdditions = commits.reduce((sum, commit) => sum + commit.additions, 0);
-    const totalDeletions = commits.reduce((sum, commit) => sum + commit.deletions, 0);
-    const totalLinesChanged = totalAdditions - totalDeletions;
+    // Calculate reviewed code changes
+    const reviewedChanges = commits
+      .filter((commit) =>
+        commit.associatedPullRequests.nodes.some(
+          (pr) => pr.baseRefName === defaultBranch && pr.reviewDecision === "APPROVED"
+        )
+      )
+      .reduce((sum, commit) => sum + commit.additions, 0);
 
-    // Filter commits that are part of a PR with a review decision
-    const reviewedCommits = commits.filter((commit) => {
-      const pr = commit.associatedPullRequests.nodes[0];
-      return pr && pr.reviewDecision !== null;
-    });
+    logger.info(`Total lines changed in default branch: ${totalChanges}`);
+    logger.info(`Reviewed lines changed: ${reviewedChanges}`);
 
-    // Calculate total additions and deletions for reviewed commits
-    const reviewedAdditions = reviewedCommits.reduce((sum, commit) => sum + commit.additions, 0);
-    const reviewedDeletions = reviewedCommits.reduce((sum, commit) => sum + commit.deletions, 0);
-    const reviewedLinesChanged = reviewedAdditions - reviewedDeletions;
-
-    logger.info(`Total lines changed in last ${commits.length} commits: ${totalLinesChanged}`);
-    logger.info(`Total lines changed in reviewed PR commits: ${reviewedLinesChanged}`);
-
-    const fraction = totalLinesChanged !== 0 ? reviewedLinesChanged / totalLinesChanged : 0;
-
+    // Calculate the fraction
+    const fraction = totalChanges > 0 ? reviewedChanges / totalChanges : 0;
     logger.info(`Fraction of code introduced through reviewed PRs: ${(fraction * 100).toFixed(2)}%`);
-
     return Math.max(0, Math.min(fraction, 1));
   } catch (error) {
-    logger.error(`Error calculating PR impact for ${repo}:`, error);
+    logger.error(`Error calculating fraction for ${repo}: ${error}`);
     return 0;
   }
 }
