@@ -33,7 +33,12 @@ export async function findPackageJsonFiles(dir: string): Promise<string[]> {
   const packageJsonFiles: string[] = [];
   const traverseDir = async (currentDir: string) => {
     try {
+      const files = await fs.readdir(currentDir, { withFileTypes: true });
       const fullPath = path.join(currentDir, "package.json");
+      const packageJsonFound = files.some((file) => file.isFile() && file.name === "package.json");
+      if (!packageJsonFound && currentDir === dir) {
+        throw new Error(`No package.json found in the root directory: ${dir}`);
+      }
       packageJsonFiles.push(fullPath);
     } catch (error) {
       logger.error(`Error reading directory ${currentDir}: ${(error as Error).message}`);
