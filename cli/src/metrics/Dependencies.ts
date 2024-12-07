@@ -85,15 +85,13 @@ export async function calculatePinnedDependencyFraction(
       const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8"));
       const dependencies = {
         ...packageJson.dependencies,
-        ...packageJson.devDependencies,
-        ...packageJson.optionalDependencies,
-        ...packageJson.peerDependencies,
         ...packageJson.bundledDependencies
       };
       // Iterate through dependencies and check if they are pinned
       for (const [, versionConstraint] of Object.entries(dependencies)) {
         totalDependencies++;
         if (typeof versionConstraint == "string" && isPinnedToMajorMinor(versionConstraint)) {
+          logger.info(`Pinned dependency found in ${packageJsonPath}: ${versionConstraint}`);
           pinnedDependencies++;
         }
       }

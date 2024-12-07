@@ -89,7 +89,7 @@ describe("calculatePinnedDependencyFraction", () => {
     readFile.mockResolvedValueOnce(mockPackageJson);
 
     const fraction = await calculatePinnedDependencyFraction("owner", "repo", "/fake-dir");
-    expect(fraction).toBe(2 / 3); // two out of three dependencies are pinned to at least a major/minor version
+    expect(fraction).toBe(1 / 2); // two out of three dependencies are pinned to at least a major/minor version
   });
 
   it("should return 1.0 if no dependencies are found", async () => {
