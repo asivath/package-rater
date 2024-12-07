@@ -33,15 +33,8 @@ export async function findPackageJsonFiles(dir: string): Promise<string[]> {
   const packageJsonFiles: string[] = [];
   const traverseDir = async (currentDir: string) => {
     try {
-      const files = await fs.readdir(currentDir, { withFileTypes: true });
-      for (const file of files) {
-        const fullPath = path.join(currentDir, file.name);
-        if (file.isDirectory()) {
-          await traverseDir(fullPath); // Recurse into directories
-        } else if (file.isFile() && file.name === "package.json") {
-          packageJsonFiles.push(fullPath); // Found a package.json
-        }
-      }
+      const fullPath = path.join(currentDir, "package.json");
+      packageJsonFiles.push(fullPath);
     } catch (error) {
       logger.error(`Error reading directory ${currentDir}: ${(error as Error).message}`);
     }
