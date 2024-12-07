@@ -237,7 +237,7 @@ export const savePackage = async (
     finalZip.writeZip(zipPath);
 
     dependencies = packageJson.dependencies || {};
-    standaloneCost = (await stat(zipPath)).size / (1024 * 1000);
+    standaloneCost = (await stat(zipPath)).size / (1024 * 1024);
 
     //Add info based on ID
     metadata.byId[id] = {
@@ -274,7 +274,7 @@ export const savePackage = async (
       `Saved package ${packageName} v${version} with ID ${id} and standalone cost ${standaloneCost.toFixed(2)} MB`
     );
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production2") {
       await uploadToS3(escapedPackageName, id, zipPath);
       await cleanupFiles();
     }
@@ -452,7 +452,7 @@ async function buildDependencyGraph(packageName: string, version: string): Promi
         id,
         packageName,
         version,
-        standaloneCost: (await stat(tarBallPath)).size / (1024 * 1000),
+        standaloneCost: (await stat(tarBallPath)).size / (1024 * 1024),
         totalCost: 0,
         dependencies
       };

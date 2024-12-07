@@ -60,7 +60,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
 
   let streamToString = "";
   try {
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production2") {
       const params = {
         Bucket: bucketName,
         Key: `${escapedPackageName}/${id}/${escapedPackageName}.zip`
