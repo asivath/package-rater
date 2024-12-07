@@ -1,11 +1,7 @@
-import { describe, it, expect, vi, Mock, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { calculateBusFactor } from "../metrics/BusFactor";
-import { getGitHubData } from "../graphql";
 import * as shared from "@package-rater/shared";
 
-vi.mock("../graphql", () => ({
-  getGitHubData: vi.fn()
-}));
 vi.mock("@package-rater/shared", async (importOriginal) => {
   const original = await importOriginal<typeof shared>();
   return {
@@ -18,94 +14,67 @@ vi.mock("@package-rater/shared", async (importOriginal) => {
   };
 });
 
-describe("calculateBusFactor", () => {
-  const owner = "ownerName";
-  const name = "repoName";
+describe("Bus Factor Calculation", () => {
+  global.fetch = vi.fn();
+  const mockLogger = shared.getLogger("test");
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  beforeEach(() => {
+    vi.resetAllMocks();
   });
 
-  it("calculates bus factor correctly for a single page of commits", async () => {
-    const mockData = {
-      data: {
-        repository: {
-          defaultBranchRef: {
-            target: {
-              history: {
-                edges: [
-                  {
-                    node: {
-                      author: {
-                        user: { login: "user1" }
-                      }
-                    }
-                  },
-                  {
-                    node: {
-                      author: {
-                        user: { login: "user2" }
-                      }
-                    }
-                  },
-                  {
-                    node: {
-                      author: {
-                        user: { login: "user1" }
-                      }
-                    }
-                  }
-                ],
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                }
-              }
-            }
-          }
-        }
-      }
-    };
+  it("should return 0 if no contributors are found", async () => {
+    (global.fetch as Mock).mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockResolvedValue([])
+    });
 
-    (getGitHubData as Mock).mockResolvedValueOnce(mockData);
-
-    const busFactor = await calculateBusFactor(owner, name);
-
-    // Here we expect the bus factor to be 5, since user1 has 2 commits and user2 has 1.
-    expect(busFactor).toBe(0.5);
+    const result = await calculateBusFactor("owner", "repo", 2000);
+    expect(result).toBe(0);
+    expect(mockLogger.info).toHaveBeenCalledWith("No contributors found for owner/repo. Returning 0.");
   });
 
-  it("handles no commits gracefully", async () => {
-    const mockData = {
-      data: {
-        repository: {
-          defaultBranchRef: {
-            target: {
-              history: {
-                edges: [],
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: null
-                }
-              }
-            }
-          }
-        }
-      }
-    };
-    (getGitHubData as Mock).mockResolvedValueOnce(mockData);
-    const busFactor = await calculateBusFactor(owner, name);
+  it("should return 0 if contributors are fewer than the desired bus factor", async () => {
+    (global.fetch as Mock).mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockResolvedValue([
+        { author: { login: "user1" }, total: 10 },
+        { author: { login: "user2" }, total: 20 }
+      ])
+    });
 
-    // If there are no commits, bus factor should be 0
-    expect(busFactor).toBe(0.5);
+    const result = await calculateBusFactor("owner", "repo", 10000);
+    expect(result).toBe(0);
+    expect(mockLogger.info).toHaveBeenCalledWith("Total contributors (2) is less than desired (3). Returning 0.");
   });
 
-  it("logs an error if fetching data fails", async () => {
-    (getGitHubData as Mock).mockRejectedValue(new Error("Network Error"));
+  it("should calculate a valid bus factor score", async () => {
+    (global.fetch as Mock).mockResolvedValueOnce({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockResolvedValue([
+        { author: { login: "user1" }, total: 100 },
+        { author: { login: "user2" }, total: 50 },
+        { author: { login: "user3" }, total: 25 },
+        { author: { login: "user4" }, total: 25 }
+      ])
+    });
 
-    const busFactor = await calculateBusFactor(owner, name);
+    const result = await calculateBusFactor("owner", "repo", 10000);
+    expect(result).toBeGreaterThan(0);
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Bus factor for owner/repo:"));
+  });
 
-    // Bus factor should be 0 if there's an error fetching data
-    expect(busFactor).toBe(0);
+  it("should handle API errors gracefully", async () => {
+    (global.fetch as Mock).mockResolvedValueOnce({
+      status: 500,
+      ok: false,
+      statusText: "Internal Server Error"
+    });
+
+    const result = await calculateBusFactor("owner", "repo", 2000);
+    expect(result).toBe(0);
+    expect(mockLogger.error).toHaveBeenCalledWith("Failed to fetch contributor stats: Internal Server Error");
   });
 });

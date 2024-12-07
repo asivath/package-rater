@@ -1,140 +1,133 @@
-/**
- * Utility functions for calculating the bus factor of a repository
- */
-
 import { getLogger } from "@package-rater/shared";
-import { getGitHubData } from "../graphql.js";
 
 const logger = getLogger("cli");
-const query = `
-  query($owner: String!, $name: String!, $after: String) {
-    repository(owner: $owner, name: $name) {
-      defaultBranchRef {
-        target {
-          ... on Commit {
-            history(first: 100, after: $after) {
-              edges {
-                node {
-                  author {
-                    user {
-                      login
-                    }
-                  }
-                }
-              }
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-`;
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type Contributor = {
+  author: {
+    login: string | null;
+  };
+  total: number;
+};
 
 /**
- * Fetches the commits by user from the GitHub API
- * @param owner The owner of the repository
- * @param name The name of the repository
- * @returns The bus factor for the repository
+ * Fetch contributor stats for a GitHub repository
+ * @param owner The repository owner
+ * @param repo The repository name
+ * @returns The contributor stats
  */
-export async function calculateBusFactor(owner: string, name: string): Promise<number> {
-  let hasNextPage = true;
-  let endCursor = null;
-  const userCommits: { [key: string]: number } = {};
-  let busfactor: number = 0;
+async function fetchContributorStats(owner: string, repo: string): Promise<Contributor[] | null> {
+  const maxRetries = 10;
+  const delay = 3000;
 
-  let pagesFetched = 0;
-  const maxPages = 1;
-  try {
-    while (hasNextPage && pagesFetched < maxPages) {
-      const data = (await getGitHubData("graphql.js", "octokit", query, {
-        owner,
-        name,
-        after: endCursor
-      })) as {
-        data: {
-          repository: {
-            defaultBranchRef: {
-              target: {
-                history: {
-                  edges: Array<{
-                    node: {
-                      author: {
-                        user: {
-                          login: string;
-                        } | null;
-                      };
-                    };
-                  }>;
-                  pageInfo: {
-                    hasNextPage: boolean;
-                    endCursor: string;
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-
-      const commits = data.data.repository.defaultBranchRef.target.history.edges;
-
-      type Commit = {
-        node: {
-          author: {
-            user: {
-              login: string;
-            } | null;
-          };
-        };
-      };
-
-      commits.forEach((commit: Commit) => {
-        const author = commit.node.author.user?.login;
-        if (author) {
-          if (!userCommits[author]) {
-            userCommits[author] = 0;
-          }
-          userCommits[author] += 1;
-        }
-      });
-
-      hasNextPage = data.data.repository.defaultBranchRef.target.history.pageInfo.hasNextPage;
-      endCursor = data.data.repository.defaultBranchRef.target.history.pageInfo.endCursor;
-      pagesFetched++;
-    }
-    const commitnumbers: number[] = [];
-
-    Object.entries(userCommits).forEach((commits) => {
-      commitnumbers.push(commits[1]);
-    });
-    commitnumbers.sort((a, b) => b - a);
-    let sum: number = 0;
-    commitnumbers.forEach((commits) => {
-      sum = sum + commits;
-    });
-    let currentsum: number = 0;
-    for (const commits of commitnumbers) {
-      currentsum += commits;
-      busfactor += 1;
-      if (currentsum > sum / 2) {
-        break;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/stats/contributors`, {
+      headers: {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        "User-Agent": "bus-factor-calc",
+        Accept: "application/vnd.github.v3+json"
       }
+    });
+
+    if (response.status === 202) {
+      if (attempt < maxRetries - 1) {
+        logger.warn(`Contributor stats not ready yet. Waiting ${delay / 1000}s before retry...`);
+        await sleep(delay);
+      } else {
+        logger.error("Contributor stats not ready after waiting ~30s. Try again later.");
+        return null;
+      }
+      continue;
     }
 
-    if (commitnumbers.length == 0) {
-      return 0.5;
+    if (!response.ok) {
+      logger.error(`Failed to fetch contributor stats: ${response.statusText}`);
+      return [];
     }
 
-    busfactor /= commitnumbers.length;
-    logger.info(`Bus factor for ${owner}/${name}: ${busfactor}`);
-    return busfactor;
-  } catch (error) {
-    logger.error(`Error fetching data from GitHub API: ${(error as Error).message}`);
+    const contributors = (await response.json()) as Contributor[];
+    return Array.isArray(contributors) ? contributors : [];
   }
 
-  return 0;
+  return null;
+}
+
+/**
+ * Calculate the Gini coefficient for a set of values. The Gini coefficient is a measure of inequality.
+ * @param values The values to calculate the Gini coefficient for
+ * @returns The Gini coefficient
+ */
+function calculateGiniCoefficient(values: number[]): number {
+  const n = values.length;
+  const sum = values.reduce((a, b) => a + b, 0);
+  if (sum === 0) return 0; // If no commits, Gini is 0
+
+  const sorted = [...values].sort((a, b) => a - b);
+  let numerator = 0;
+  for (let i = 0; i < n; i++) {
+    numerator += (2 * (i + 1) - n - 1) * sorted[i];
+  }
+
+  const G = numerator / (n * sum);
+  return G;
+}
+
+/**
+ * Calculate the desired bus factor for a given lines of code (LOC) count. Scale the desired bus factor based on the LOC.
+ * @param loc The lines of code
+ * @returns The desired bus factor
+ */
+function desiredBusFactorForLOC(loc: number): number {
+  if (loc < 1000) {
+    return 2;
+  }
+  const factor = Math.floor(Math.log10(loc / 1000));
+  return 2 + factor;
+}
+
+/**
+ * Calculate the bus factor for a GitHub repository
+ * @param owner The repository owner
+ * @param repo The repository name
+ * @param loc The lines of code
+ * @returns The calculated bus factor
+ */
+export async function calculateBusFactor(owner: string, repo: string, loc: number): Promise<number> {
+  const contributors = await fetchContributorStats(owner, repo);
+  if (contributors === null) {
+    logger.info(`Contributor stats for ${owner}/${repo} not ready. Returning 0.`);
+    return 0;
+  }
+  if (contributors.length === 0) {
+    logger.info(`No contributors found for ${owner}/${repo}. Returning 0.`);
+    return 0;
+  }
+
+  const commitCounts = contributors.filter((c) => c.author && c.author.login).map((c) => c.total);
+
+  if (commitCounts.length === 0) {
+    logger.info(`No commit data found for ${owner}/${repo}. Returning 0.`);
+    return 0;
+  }
+
+  // Calculate the desired bus factor based on the lines of code
+  // If the repository has fewer contributors than the desired bus factor, return 0
+  const desired = desiredBusFactorForLOC(loc);
+  const totalContributors = commitCounts.length;
+  if (totalContributors < desired) {
+    logger.info(`Total contributors (${totalContributors}) is less than desired (${desired}). Returning 0.`);
+    return 0;
+  }
+
+  const gini = calculateGiniCoefficient(commitCounts);
+  let score = 1 - gini;
+  score = Math.min(1, score * 4);
+
+  logger.info(
+    `Bus factor for ${owner}/${repo}: ${score.toFixed(2)}, desired: ${desired}, contributors: ${totalContributors}`
+  );
+  return score;
 }
