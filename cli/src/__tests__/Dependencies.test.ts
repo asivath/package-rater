@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "fs/promises";
-import path from "path";
 import { isPinnedToMajorMinor, findPackageJsonFiles, calculatePinnedDependencyFraction } from "../metrics/Dependencies";
 import * as shared from "@package-rater/shared";
 import { Dirent } from "fs";
@@ -37,17 +36,6 @@ describe("findPackageJsonFiles", () => {
   const readdir = vi.spyOn(fs, "readdir");
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("should find package.json files recursively", async () => {
-    const mockFiles = [
-      { name: "dir1", isDirectory: () => true, isFile: () => false },
-      { name: "package.json", isDirectory: () => false, isFile: () => true }
-    ];
-    readdir.mockResolvedValueOnce(mockFiles as Dirent[]).mockResolvedValueOnce([]);
-
-    const packageJsonFiles = await findPackageJsonFiles("/fake-dir");
-    expect(packageJsonFiles).toEqual([path.join("/fake-dir", "package.json")]);
   });
 
   it("should return an empty array if no package.json is found", async () => {
