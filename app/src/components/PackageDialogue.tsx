@@ -82,7 +82,7 @@ export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, pac
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{`Package Details - ${packageData.Name} v${packageData.Version}`}</DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers tabIndex={0}>
         {loading ? (
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
             <CircularProgress />

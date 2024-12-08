@@ -72,16 +72,16 @@ export async function calculateRampup(owner: string, name: string): Promise<numb
       })) as { data: PullRequestsData };
 
       const pullRequests = data.data.repository.pullRequests.edges;
-
+      // Extract the author and creation time for each pull request
       pullRequests.forEach((pr: PullRequestNode) => {
         const author = pr.node.author;
         const createdAt = new Date(pr.node.createdAt).getTime();
-
+        // Store the creation time of the first pull request for each author
         if (author && author.login && !firstPRTimes[author.login]) {
           firstPRTimes[author.login] = createdAt;
         }
       });
-
+      // Update pagination variables
       hasNextPage = data.data.repository.pullRequests.pageInfo.hasNextPage;
       endCursor = data.data.repository.pullRequests.pageInfo.endCursor;
       pageNumber++;

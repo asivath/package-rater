@@ -1,9 +1,12 @@
+/**
+ * This file contains the functions to retrieve package information from the metadata
+ */
 import { getLogger, PackageDisplay } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { getPackageMetadata } from "../util.js";
 const logger = getLogger("server");
 
-/*
+/**
  * Retrieve package information from the metadata
  * @param request
  * @param reply
@@ -133,7 +136,7 @@ export const retrievePackageInfo = async (
   reply.code(200).send(paginatedPackages);
 };
 
-/*
+/**
  * Retrieve package information from the metadata by RegEx
  * @param request
  * @param reply
@@ -148,7 +151,7 @@ export const retrievePackageByRegEx = async (
   const offsetHeader = request.headers["offset"] || "0";
   const limit = 15;
   let offset = 0;
-
+  // The extra allFlagHeader is to get all the details of the package for our frontend, its optional
   if (Array.isArray(offsetHeader)) {
     offset = parseInt(offsetHeader[0], 10);
   } else {
@@ -171,11 +174,12 @@ export const retrievePackageByRegEx = async (
   try {
     const metadataJson = getPackageMetadata();
     const regex = new RegExp(RegEx, "m");
-
+    // Check if "*" is passed as the RegEx
     for (const [name, versions] of Object.entries(metadataJson.byName)) {
       for (const [version, details] of Object.entries(versions.versions)) {
         if (regex.test(name) || (details.readme && regex.test(details.readme))) {
           if (allFlagHeader) {
+            // for frontend
             packages.push({
               Version: version,
               Name: name,
@@ -187,6 +191,7 @@ export const retrievePackageByRegEx = async (
               UploadedWithContent: versions.uploadedWithContent
             });
           } else {
+            // what route wants
             packages.push({
               Version: version,
               Name: name,
@@ -211,11 +216,11 @@ export const retrievePackageByRegEx = async (
   }
 };
 
-/*
+/**
  * Check if the version matches the requested version
  * @param version
  * @param Version
- * @returns
+ * @returns boolean
  */
 export const isVersionMatch = (version: string, Version: string): boolean => {
   if (Version === version) return true; // Exact match
@@ -232,11 +237,11 @@ export const isVersionMatch = (version: string, Version: string): boolean => {
   return false;
 };
 
-/*
+/**
  * Check if the version satisfies the carat (^) operator
  * @param version
  * @param Version
- * @returns
+ * @returns boolean
  */
 export const satisfiesCarat = (version: string, Version: string): boolean => {
   const [major] = version.split(".");
@@ -244,11 +249,11 @@ export const satisfiesCarat = (version: string, Version: string): boolean => {
   return major === majorType;
 };
 
-/*
+/**
  * Check if the version satisfies the tilde (~) operator
  * @param version
  * @param Version
- * @returns
+ * @returns boolean
  */
 export const satisfiesTilde = (version: string, Version: string): boolean => {
   const [major, minor, patch] = version.split(".");
@@ -256,12 +261,12 @@ export const satisfiesTilde = (version: string, Version: string): boolean => {
   return major === majorType && minor === minorType && patch >= patchType; //Might be backwards
 };
 
-/*
+/**
  * Check if the version satisfies the range operator
  * @param version
  * @param minVersion
  * @param maxVersion
- * @returns
+ * @returns boolean
  */
 export const satisfiesRange = (version: string, minVersion: string, maxVersion: string): boolean => {
   return version >= minVersion && version <= maxVersion;

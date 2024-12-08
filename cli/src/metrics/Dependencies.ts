@@ -77,7 +77,8 @@ export async function calculatePinnedDependencyFraction(
       logger.error(`Error reading package.json for ${owner}/${repo}: ${(error as Error).message}`);
     }
   }
-
+  // Iterate through each package.json file and count the dependencies
+  // that are pinned to a specific major.minor version
   for (const packageJsonPath of packageJsonFiles) {
     try {
       const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8"));

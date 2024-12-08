@@ -1,3 +1,6 @@
+/**
+ * This is the main entry point of the application.
+ */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider, CssBaseline } from "@mui/material";

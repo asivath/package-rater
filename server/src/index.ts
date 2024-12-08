@@ -1,3 +1,6 @@
+/**
+ * This file contains the main server file DUH
+ */
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";

@@ -1,3 +1,7 @@
+/**
+ * This file contains the route for downloading a package from the server
+ * It fetches the package from the server via ID
+ * */
 import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
@@ -26,7 +30,7 @@ type CachedPackage = {
  * Downloads a package from the server
  * @param request
  * @param reply
- * @returns
+ * @returns The package content
  */
 export const downloadPackage = async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
   const id = request.params.id;
@@ -36,7 +40,6 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
       .send({ error: "There is missing field(s) in the PackageID or it is formed improperly, or is invalid." });
     return;
   }
-
   const cacheKey = id;
   const cachedData = cache.get(cacheKey) as CachedPackage | undefined;
   if (cachedData) {
@@ -60,7 +63,8 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
 
   let streamToString = "";
   try {
-    if (process.env.NODE_ENV === "production2") {
+    // If the server is in production, fetch the package from S3
+    if (process.env.NODE_ENV === "production") {
       const params = {
         Bucket: bucketName,
         Key: `${escapedPackageName}/${id}/${escapedPackageName}.zip`
@@ -75,6 +79,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
       const zipData = await data.Body.transformToByteArray();
       streamToString = Buffer.from(zipData).toString("base64");
     } else {
+      // If the server is in development, fetch the package from the local file system
       const zipPath = join(packagesDirPath, escapedPackageName, id, `${escapedPackageName}.zip`);
       const zipData = await readFile(zipPath);
       streamToString = zipData.toString("base64");

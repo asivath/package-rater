@@ -104,22 +104,33 @@ test.describe("PackageTable Component Tests", () => {
     await expect(snackbar).toHaveText("Error fetching packages.");
   });
 
-  test("should display settings dialog when settings button is clicked with checkbox for regex and textbox for version", async ({
+  test("should display settings dialog with regex checkbox and version input, and update visibility correctly", async ({
     page
   }) => {
     await page.goto("http://localhost:5173");
 
-    const settingsButton = page.locator('role=button[name="Settings"]');
+    // Open settings via the settings button
+    const settingsButton = page.locator('button[aria-label="Settings"]');
     await settingsButton.click();
 
-    const settingsDialog = page.locator("role=menu");
-    await expect(settingsDialog).toBeVisible();
-
-    const regexCheckbox = page.locator('input[type="checkbox"]');
+    // Locate the regex checkbox using its label text
+    const regexCheckbox = page.locator('label:has-text("Search By RegEx") >> input[type="checkbox"]');
     await expect(regexCheckbox).toBeVisible();
 
+    // Locate and verify the version input is visible initially
     const versionInput = page.locator('input[placeholder="Enter version..."]');
     await expect(versionInput).toBeVisible();
+
+    // Check the regex checkbox and verify the version input is hidden
+    await regexCheckbox.check();
+    await expect(versionInput).not.toBeVisible();
+
+    // Uncheck the regex checkbox and verify the version input reappears
+    await regexCheckbox.uncheck();
+    await expect(versionInput).toBeVisible();
+
+    // Close the settings menu
+    await page.locator("body").click();
   });
 
   test("should remove version input when regex checkbox is checked", async ({ page }) => {
@@ -138,24 +149,37 @@ test.describe("PackageTable Component Tests", () => {
   test("should fetch packages by regex when regex checkbox is checked", async ({ page }) => {
     await page.goto("http://localhost:5173");
 
-    const settingsButton = page.locator('role=button[name="Settings"]');
+    // Open settings menu via the settings button
+    const settingsButton = page.locator('button[aria-label="Settings"]');
     await settingsButton.click();
 
-    const regexCheckbox = page.locator('input[type="checkbox"]');
+    // Locate and check the regex checkbox
+    const regexCheckbox = page.locator('label:has-text("Search By RegEx") >> input[type="checkbox"]');
     await regexCheckbox.check();
 
+    // Close the settings menu
     await page.locator("body").click();
 
+    // Mock data
     const mockRegex = ".*";
     const mockPackageName = "TestPackage";
     const mockVersion = "1.0.0";
     const mockId = "12345";
     const mockNetScore = 0.9;
 
+    // Fill in the regex pattern in the search bar
     const searchBar = page.locator('input[placeholder="Type package name..."]');
     await searchBar.fill(mockRegex);
 
+    // Intercept the API call for regex search
     await page.route("**/package/byRegEx", async (route) => {
+      const request = route.request();
+      const requestBody = await request.postDataJSON();
+
+      // Validate the request body contains the regex pattern
+      expect(requestBody).toEqual({ RegEx: mockRegex });
+
+      // Respond with mock package data
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -169,10 +193,21 @@ test.describe("PackageTable Component Tests", () => {
         ])
       });
     });
-    await page.locator('role=button[name="Search"]').click();
 
+    // Click the search button to trigger the search
+    const searchButton = page.locator('button:has-text("Search")');
+    await searchButton.click();
+
+    // Verify the package appears in the table
     const tableRow = page.locator(`text=${mockPackageName}`);
     await expect(tableRow).toBeVisible();
+
+    // Verify other fields in the table
+    const expandButton = page.locator(`button[aria-label="expand row"]`);
+    await expandButton.click();
+    await expect(page.locator(`text=${mockVersion}`)).toBeVisible();
+    await expect(page.locator(`text=${mockId}`)).toBeVisible();
+    await expect(page.locator(`text=${mockNetScore}`)).toBeVisible();
   });
 
   test("should send version and package name when search button is clicked with version input filled", async ({
@@ -192,8 +227,7 @@ test.describe("PackageTable Component Tests", () => {
     const versionInput = page.locator('input[placeholder="Enter version..."]');
     await versionInput.fill(mockVersion);
 
-    await page.locator("header").click({ force: true });
-    await page.locator('[aria-label="Settings Menu"]').dispatchEvent("click");
+    await page.locator("body").click();
 
     await page.route("**/packages", async (route) => {
       const request = route.request();
@@ -213,6 +247,7 @@ test.describe("PackageTable Component Tests", () => {
       });
     });
 
-    await page.locator('role=button[name="Search"]').click();
+    const searchButton = page.locator('role=button[name="Search"]');
+    await searchButton.click();
   });
 });
