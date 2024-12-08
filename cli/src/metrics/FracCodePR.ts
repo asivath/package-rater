@@ -211,8 +211,8 @@ export async function calculateFracPRReview(owner: string, repo: string): Promis
 
     // Decide on fetching strategy
     let commits: CommitNode[] = [];
-    const commitLimit = 600;
-    const sampleSize = 300;
+    const commitLimit = 600; // Max commits to fetch
+    const sampleSize = 300; // Number of commits to sample from latest and oldest
 
     if (totalCommits <= commitLimit) {
       logger.info(`Fetching all ${totalCommits} commits from the default branch.`);

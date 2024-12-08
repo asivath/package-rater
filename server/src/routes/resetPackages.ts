@@ -1,3 +1,8 @@
+/**
+ * Reset packages route
+ * This file contains the route for resetting the packages on the server
+ * It clears the packages from the server and S3 bucket
+ * */
 import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { fileURLToPath } from "url";
@@ -15,6 +20,12 @@ const packagesDirPath = join(__dirname, "..", "..", "packages");
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const bucketName = process.env.AWS_BUCKET_NAME;
 
+/**
+ * Reset packages
+ * @param _
+ * @param reply
+ * @returns A message indicating the packages were reset successfully
+ * */
 export const resetPackages = async (_: FastifyRequest, reply: FastifyReply) => {
   try {
     cache.flushAll();

@@ -75,7 +75,7 @@ export async function calculateCorrectness(owner: string, repo: string, totalLin
     logger.info(`No LOC found for ${owner}/${repo}`);
     return 0;
   }
-
+  // Calculate the resolved issues ratio and normalized bug ratio
   const resolvedIssuesRatio = totalIssues > 0 ? resolvedIssues / totalIssues : 1;
   const normalizedBugRatio = totalLinesOfCode > 0 ? totalBugs / totalLinesOfCode : 0;
 

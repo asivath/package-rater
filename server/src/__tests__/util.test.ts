@@ -11,7 +11,7 @@ import {
 import * as shared from "@package-rater/shared";
 import * as s3Client from "@aws-sdk/client-s3";
 import * as tar from "tar";
-// import * as util from "util";
+import * as util from "util";
 import * as esbuild from "esbuild";
 import * as fsPromises from "fs/promises";
 import * as AdmZip from "adm-zip";
@@ -473,105 +473,105 @@ describe("savePackage", () => {
     }
   };
   const testPackageId = calculatePackageId("test-package", "1.0.0");
-  // const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
-  // it("should save a package from file path and upload to S3 in prod", async () => {
-  //   vi.stubEnv("NODE_ENV", "production");
-  //   vi.stubEnv("CLI_API_URL", "https://test-api.com");
-  //   const mockedZipInstance = {
-  //     // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
-  //     ...AdmZip.default(),
-  //     getEntries: vi
-  //       .fn()
-  //       .mockReturnValueOnce([
-  //         { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
-  //       ])
-  //   };
-  //   // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
-  //   vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
-  //   (global.fetch as Mock).mockResolvedValueOnce({
-  //     ok: true,
-  //     json: async () => ({
-  //       success: true,
-  //       result: { ...mockNdJson }
-  //     })
-  //   });
-  //   vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true));
+  const testPackageId2 = calculatePackageId("test-package2", "1.0.0");
+  it("should save a package from file path and upload to S3 in prod", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CLI_API_URL", "https://test-api.com");
+    const mockedZipInstance = {
+      // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+      ...AdmZip.default(),
+      getEntries: vi
+        .fn()
+        .mockReturnValueOnce([
+          { entryName: "package.json", getData: vi.fn().mockReturnValue(Buffer.from(JSON.stringify(packageJson))) }
+        ])
+    };
+    // @ts-expect-error - mockedZipInstance is not a valid AdmZip instance
+    vi.mocked(AdmZip.default).mockImplementationOnce(() => mockedZipInstance);
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: { ...mockNdJson }
+      })
+    });
+    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true));
 
-  //   const result = await savePackage(
-  //     "test-package",
-  //     "1.0.0",
-  //     testPackageId,
-  //     false,
-  //     mockedZipInstance as unknown as AdmZip,
-  //     undefined
-  //   );
-  //   expect(result.success).toBe(true);
+    const result = await savePackage(
+      "test-package",
+      "1.0.0",
+      testPackageId,
+      false,
+      mockedZipInstance as unknown as AdmZip,
+      undefined
+    );
+    expect(result.success).toBe(true);
 
-  //   expect(logger.info).toHaveBeenCalledWith(
-  //     `Uploaded package test-package to S3: test-package/${testPackageId}/test-package.zip`
-  //   );
-  //   expect(logger.info).toHaveBeenCalledWith(
-  //     `Saved package test-package v1.0.0 with ID ${testPackageId} and standalone cost 0.50 MB`
-  //   );
-  // });
+    expect(logger.info).toHaveBeenCalledWith(
+      `Uploaded package test-package to S3: test-package/${testPackageId}/test-package.zip`
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      `Saved package test-package v1.0.0 with ID ${testPackageId} and standalone cost 0.50 MB`
+    );
+  });
 
-  // it("should save a package from URL and upload to S3 in prod", async () => {
-  //   vi.stubEnv("CLI_API_URL", "https://test-api.com");
-  //   const url = "https://www.npmjs.com/package/test-package2";
-  //   (global.fetch as Mock)
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       body: new ReadableStream()
-  //     })
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       json: async () => ({
-  //         success: true,
-  //         result: { ...mockNdJson }
-  //       })
-  //     })
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       body: new ReadableStream()
-  //     });
-  //   vi.mocked(fsPromises.stat)
-  //     .mockResolvedValueOnce(createMockStat(true))
-  //     .mockResolvedValueOnce(createMockStat(true))
-  //     .mockResolvedValueOnce(createMockStat(false));
+  it("should save a package from URL and upload to S3 in prod", async () => {
+    vi.stubEnv("CLI_API_URL", "https://test-api.com");
+    const url = "https://www.npmjs.com/package/test-package2";
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: { ...mockNdJson }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false));
 
-  //   const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
+    const result = await savePackage("test-package2", "1.0.0", testPackageId2, false, undefined, url);
 
-  //   expect(result.success).toBe(true);
-  //   expect(logger.info).toHaveBeenCalledWith(
-  //     `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.zip`
-  //   );
-  //   expect(logger.info).toHaveBeenCalledWith(
-  //     `Saved package test-package2 v1.0.0 with ID ${testPackageId2} and standalone cost 0.50 MB`
-  //   );
-  // });
+    expect(result.success).toBe(true);
+    expect(logger.info).toHaveBeenCalledWith(
+      `Uploaded package test-package2 to S3: test-package2/${testPackageId2}/test-package2.zip`
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      `Saved package test-package2 v1.0.0 with ID ${testPackageId2} and standalone cost 0.50 MB`
+    );
+  });
 
-  // it("should return an error if package score is too low", async () => {
-  //   vi.stubEnv("NODE_ENV", "dev");
-  //   vi.mocked(util.promisify).mockReturnValueOnce(async () => {
-  //     return Promise.resolve({
-  //       stdout: JSON.stringify({ ...mockNdJson, NetScore: 0.4 }),
-  //       stderr: null
-  //     });
-  //   });
-  //   vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
+  it("should return an error if package score is too low", async () => {
+    vi.stubEnv("NODE_ENV", "dev");
+    vi.mocked(util.promisify).mockReturnValueOnce(async () => {
+      return Promise.resolve({
+        stdout: JSON.stringify({ ...mockNdJson, NetScore: 0.4 }),
+        stderr: null
+      });
+    });
+    vi.mocked(fsPromises.stat).mockResolvedValueOnce(createMockStat(true)).mockResolvedValueOnce(createMockStat(false));
 
-  //   const result = await savePackage(
-  //     "test-package",
-  //     "1.0.0",
-  //     testPackageId,
-  //     false,
-  //     undefined,
-  //     "https://www.npmjs.com/package/test-package"
-  //   );
+    const result = await savePackage(
+      "test-package",
+      "1.0.0",
+      testPackageId,
+      false,
+      undefined,
+      "https://www.npmjs.com/package/test-package"
+    );
 
-  //   expect(result.success).toBe(false);
-  //   expect(result.reason).toBe("Package score is too low");
-  // });
+    expect(result.success).toBe(false);
+    expect(result.reason).toBe("Package score is too low");
+  });
 
   it("should return an error if both file path and URL are provided", async () => {
     const result = await savePackage(
@@ -848,93 +848,93 @@ describe("calculateTotalPackageCost", () => {
     );
   });
 
-  // it("should calculate total costs recursively for all dependencies", async () => {
-  //   vi.mocked(fsPromises.readFile)
-  //     .mockResolvedValueOnce(JSON.stringify({ dependencies: { "grandchild-package": "1.0.0" } }))
-  //     .mockResolvedValueOnce(JSON.stringify({ dependencies: {} }));
-  //   vi.mocked(fsPromises.stat)
-  //     .mockResolvedValueOnce(createMockStat(true))
-  //     .mockResolvedValueOnce(createMockStat(false))
-  //     .mockResolvedValueOnce(createMockStat(true))
-  //     .mockResolvedValueOnce(createMockStat(true))
-  //     .mockResolvedValueOnce(createMockStat(false))
-  //     .mockResolvedValueOnce(createMockStat(true));
-  //   (global.fetch as Mock)
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       json: async () => ({
-  //         versions: {
-  //           "1.0.0": {}
-  //         }
-  //       })
-  //     })
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       body: new ReadableStream()
-  //     })
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       json: async () => ({
-  //         versions: {
-  //           "1.0.0": {}
-  //         }
-  //       })
-  //     })
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       body: new ReadableStream()
-  //     });
-  //   const metadata = getPackageMetadata();
-  //   metadata.costCache = {
-  //     "2985548229775954": {
-  //       // completed-dep-1.0.0
-  //       totalCost: 0.5,
-  //       standaloneCost: 0.5,
-  //       dependencies: []
-  //     }
-  //   };
-  //   expect(metadata.costCache).toStrictEqual({
-  //     "2985548229775954": {
-  //       // in original mock
-  //       totalCost: 0.5,
-  //       standaloneCost: 0.5,
-  //       dependencies: []
-  //     }
-  //   });
+  it("should calculate total costs recursively for all dependencies", async () => {
+    vi.mocked(fsPromises.readFile)
+      .mockResolvedValueOnce(JSON.stringify({ dependencies: { "grandchild-package": "1.0.0" } }))
+      .mockResolvedValueOnce(JSON.stringify({ dependencies: {} }));
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          versions: {
+            "1.0.0": {}
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          versions: {
+            "1.0.0": {}
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
+    const metadata = getPackageMetadata();
+    metadata.costCache = {
+      "2985548229775954": {
+        // completed-dep-1.0.0
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: []
+      }
+    };
+    expect(metadata.costCache).toStrictEqual({
+      "2985548229775954": {
+        // in original mock
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: []
+      }
+    });
 
-  //   const result = await calculateTotalPackageCost("parent-package", "1.0.0");
-  //   const packageId = calculatePackageId("parent-package", "1.0.0");
+    const result = await calculateTotalPackageCost("parent-package", "1.0.0");
+    const packageId = calculatePackageId("parent-package", "1.0.0");
 
-  //   expect(result).toBe(1.75);
-  //   expect(metadata.byId[packageId].costStatus).toBe("completed");
-  //   expect(metadata.byId[packageId].totalCost).toBe(1.75);
-  //   expect(metadata.costCache).toStrictEqual({
-  //     "2985548229775954": {
-  //       // in original mock
-  //       totalCost: 0.5,
-  //       standaloneCost: 0.5,
-  //       dependencies: []
-  //     },
-  //     "2239244831680780": {
-  //       // child-package-1.0.0 w dependency grandchild-package-1.0.0
-  //       totalCost: 1,
-  //       standaloneCost: 0.5,
-  //       dependencies: ["6704071252909611"]
-  //     },
-  //     "6704071252909611": {
-  //       // grandchild-package-1.0.0
-  //       totalCost: 0.5,
-  //       standaloneCost: 0.5,
-  //       dependencies: []
-  //     },
-  //     "5555118188997178": {
-  //       // parent-package-1.0.0 w dependency child-package-1.0.0 and grandchild-package-1.0.0
-  //       dependencies: ["2239244831680780"],
-  //       standaloneCost: 0.75,
-  //       totalCost: 1.75
-  //     }
-  //   });
-  // });
+    expect(result).toBe(1.75);
+    expect(metadata.byId[packageId].costStatus).toBe("completed");
+    expect(metadata.byId[packageId].totalCost).toBe(1.75);
+    expect(metadata.costCache).toStrictEqual({
+      "2985548229775954": {
+        // in original mock
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: []
+      },
+      "2239244831680780": {
+        // child-package-1.0.0 w dependency grandchild-package-1.0.0
+        totalCost: 1,
+        standaloneCost: 0.5,
+        dependencies: ["6704071252909611"]
+      },
+      "6704071252909611": {
+        // grandchild-package-1.0.0
+        totalCost: 0.5,
+        standaloneCost: 0.5,
+        dependencies: []
+      },
+      "5555118188997178": {
+        // parent-package-1.0.0 w dependency child-package-1.0.0 and grandchild-package-1.0.0
+        dependencies: ["2239244831680780"],
+        standaloneCost: 0.75,
+        totalCost: 1.75
+      }
+    });
+  });
 
   it("should update cost status to 'failed' if dependency calculation fails but not throw error", async () => {
     (global.fetch as Mock).mockResolvedValueOnce({
@@ -953,37 +953,37 @@ describe("calculateTotalPackageCost", () => {
     expect(result).toBe(0.5);
   });
 
-  // it("should handle circular dependencies gracefully", async () => {
-  //   (global.fetch as Mock)
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       json: async () => ({
-  //         versions: {
-  //           "1.0.0": {}
-  //         }
-  //       })
-  //     })
-  //     .mockResolvedValueOnce({
-  //       ok: true,
-  //       body: new ReadableStream()
-  //     });
-  //   vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
-  //     JSON.stringify({ dependencies: { "recursion-package": "1.0.0", "completed-dep": "1.0.0" } })
-  //   );
-  //   vi.mocked(fsPromises.stat)
-  //     .mockResolvedValueOnce(createMockStat(true))
-  //     .mockResolvedValueOnce(createMockStat(false))
-  //     .mockResolvedValueOnce(createMockStat(true));
-  //   const metadata = getPackageMetadata();
+  it("should handle circular dependencies gracefully", async () => {
+    (global.fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          versions: {
+            "1.0.0": {}
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream()
+      });
+    vi.mocked(fsPromises.readFile).mockResolvedValueOnce(
+      JSON.stringify({ dependencies: { "recursion-package": "1.0.0", "completed-dep": "1.0.0" } })
+    );
+    vi.mocked(fsPromises.stat)
+      .mockResolvedValueOnce(createMockStat(true))
+      .mockResolvedValueOnce(createMockStat(false))
+      .mockResolvedValueOnce(createMockStat(true));
+    const metadata = getPackageMetadata();
 
-  //   const result = await calculateTotalPackageCost("recursion-package", "1.0.0");
-  //   const packageId = calculatePackageId("recursion-package", "1.0.0");
-  //   const recursionPackage2Id = calculatePackageId("recursion-package-2", "1.0.0");
+    const result = await calculateTotalPackageCost("recursion-package", "1.0.0");
+    const packageId = calculatePackageId("recursion-package", "1.0.0");
+    const recursionPackage2Id = calculatePackageId("recursion-package-2", "1.0.0");
 
-  //   expect(result).toBe(1.75);
-  //   expect(metadata.byId[packageId].costStatus).toBe("completed");
-  //   expect(metadata.byId[packageId].totalCost).toBe(1.75);
-  //   expect(metadata.costCache[packageId].totalCost).toBe(0.625);
-  //   expect(metadata.costCache[recursionPackage2Id].totalCost).toBe(0.625);
-  // });
+    expect(result).toBe(1.75);
+    expect(metadata.byId[packageId].costStatus).toBe("completed");
+    expect(metadata.byId[packageId].totalCost).toBe(1.75);
+    expect(metadata.costCache[packageId].totalCost).toBe(0.625);
+    expect(metadata.costCache[recursionPackage2Id].totalCost).toBe(0.625);
+  });
 });

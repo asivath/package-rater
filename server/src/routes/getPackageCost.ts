@@ -1,3 +1,7 @@
+/**
+ * Get the total cost of a package via dependecies
+ * We don't get dev dep and peer dep costs
+ */
 import { FastifyRequest, FastifyReply } from "fastify";
 import { getPackageMetadata, calculateTotalPackageCost, calculatePackageId } from "../util.js";
 import { assertIsPackageCostResponse, getLogger, PackageCostResponse } from "@package-rater/shared";
@@ -5,10 +9,10 @@ import { assertIsPackageCostResponse, getLogger, PackageCostResponse } from "@pa
 const logger = getLogger("server");
 
 /**
- * Get the total cost of a package
+ * Get the total cost of a package via dependecies
  * @param request
  * @param reply
- * @returns
+ * @returns The total cost of the package
  */
 export const getPackageCost = async (
   request: FastifyRequest<{
@@ -20,6 +24,10 @@ export const getPackageCost = async (
   const { id } = request.params;
   const { dependency = false } = request.query;
 
+  if (!id) {
+    reply.code(400).send({ error: "There is missing field(s) in the PackageID" });
+  }
+  // Get the package metadata
   const metadata = getPackageMetadata();
   const packageMetadata = metadata.byId[id];
   if (!packageMetadata) {
@@ -27,6 +35,7 @@ export const getPackageCost = async (
     return;
   }
 
+  // If the cost status is not completed, calculate the total cost
   try {
     if (packageMetadata.costStatus !== "completed") {
       try {
@@ -46,6 +55,11 @@ export const getPackageCost = async (
       return;
     }
 
+    /**
+     * Collect the costs of the package and its dependencies
+     * @param currentId
+     * @returns The total cost of the package and its dependencies
+     */
     async function collectCosts(currentId: string) {
       if (visited.has(currentId)) {
         return;

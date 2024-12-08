@@ -1,3 +1,6 @@
+/**
+ * Theme configuration
+ */
 import { ThemeOptions, createTheme } from "@mui/material/styles";
 
 const themeOptions: ThemeOptions = {

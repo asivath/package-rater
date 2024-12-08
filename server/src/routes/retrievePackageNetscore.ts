@@ -1,3 +1,9 @@
+/*
+ * Retrieve Netscore of a package from the metadata
+ * @param request
+ * @param reply
+ * @returns
+ */
 import { getLogger } from "@package-rater/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { getPackageMetadata } from "../util.js";

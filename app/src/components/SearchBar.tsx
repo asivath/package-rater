@@ -12,8 +12,7 @@ import {
   Checkbox,
   FormControlLabel,
   IconButton,
-  Menu,
-  MenuItem
+  Popover
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -21,6 +20,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 type SearchBarProps = {
   onSearch: (searchValue: string, searchByRegex: boolean, version?: string) => void;
 };
+
 export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   const [searchValue, setSearchValue] = useState("");
   const [searchByRegex, setSearchByRegex] = useState(false);
@@ -66,7 +66,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
               endAdornment: (
                 <>
                   <InputAdornment position="end">
-                    <IconButton onClick={(event) => setAnchorEl(event.currentTarget)} aria-label="Settings">
+                    <IconButton
+                      onClick={(event) => setAnchorEl(event.currentTarget)}
+                      aria-label="Settings"
+                      aria-haspopup="true">
                       <SettingsIcon />
                     </IconButton>
                   </InputAdornment>
@@ -85,19 +88,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         />
       </Box>
 
-      <Menu
+      <Popover
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
-        aria-label="Settings Menu"
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: theme.palette.background.paper,
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-            padding: 1,
-            outline: "1px solid gray"
-          }
-        }}
         anchorOrigin={{
           vertical: "bottom",
           horizontal: "right"
@@ -105,33 +99,41 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         transformOrigin={{
           vertical: "top",
           horizontal: "right"
+        }}
+        PaperProps={{
+          sx: {
+            backgroundColor: theme.palette.background.paper,
+            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
+            padding: 2,
+            outline: "1px solid gray",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1
+          }
         }}>
-        <MenuItem>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={searchByRegex}
-                onChange={(event) => setSearchByRegex(event.target.checked)}
-                size="medium"
-              />
-            }
-            label="Search By RegEx"
-          />
-        </MenuItem>
-        {!searchByRegex && (
-          <MenuItem>
-            <TextField
-              variant="outlined"
-              value={version}
-              onChange={(event) => setVersion(event.target.value)}
-              placeholder="Enter version..."
-              fullWidth
-              size="small"
-              sx={{ marginTop: 1 }}
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={searchByRegex}
+              onChange={(event) => setSearchByRegex(event.target.checked)}
+              size="medium"
             />
-          </MenuItem>
+          }
+          label="Search By RegEx"
+        />
+
+        {!searchByRegex && (
+          <TextField
+            variant="outlined"
+            value={version}
+            onChange={(event) => setVersion(event.target.value)}
+            placeholder="Enter version..."
+            fullWidth
+            size="small"
+            sx={{ marginTop: 1 }}
+          />
         )}
-      </Menu>
+      </Popover>
     </Box>
   );
 };

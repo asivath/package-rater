@@ -168,7 +168,7 @@ export const UploadPackageForm: React.FC<{
     <Box>
       {uploadVersion ? (
         <IconButton
-          aria-label="perform action"
+          role="button"
           color="primary"
           onClick={(event) => {
             event.stopPropagation();
@@ -176,11 +176,15 @@ export const UploadPackageForm: React.FC<{
           }}>
           {uploadedWithContent ? (
             <Tooltip title="Upload Content Version" arrow>
-              <DriveFolderUploadIcon />
+              <Box role="button">
+                <Icon fontSize="large">
+                  <DriveFolderUploadIcon />
+                </Icon>
+              </Box>
             </Tooltip>
           ) : (
             <Tooltip title="Upload URL Version" arrow>
-              <Box>
+              <Box role="button">
                 <Icon fontSize="large">
                   <CloudUploadIcon />
                 </Icon>
@@ -191,7 +195,7 @@ export const UploadPackageForm: React.FC<{
       ) : (
         <Button
           color="secondary"
-          component="label"
+          component="button"
           sx={{
             marginLeft: "auto",
             background: "none",
@@ -241,10 +245,18 @@ export const UploadPackageForm: React.FC<{
           <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2}>
             {(uploadedWithContent || !uploadVersion) && (
               <>
-                <Button variant="outlined" component="label">
+                <Button variant="outlined" onClick={() => fileInputRef.current?.click()}>
                   Upload ZIP File
-                  <input hidden type="file" accept=".zip" ref={fileInputRef} onChange={handleFileUpload} />
                 </Button>
+                <input
+                  hidden
+                  type="file"
+                  accept=".zip"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  aria-label="Upload Zip File"
+                />
+                <input hidden type="file" accept=".zip" ref={fileInputRef} aria-label="Upload Zip File" />
                 {file && (
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Typography variant="body2" noWrap>

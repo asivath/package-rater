@@ -44,6 +44,10 @@ type PackageDisplay = {
   UploadedWithContent: boolean;
 };
 
+/**
+ * Checks if the given object is a PackageDisplay object
+ * @param o 
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   if (!o || typeof o !== "object") {
@@ -77,6 +81,11 @@ function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
   }
 }
 
+/**
+ * Row component that displays the package name and its versions in a collapsible table format
+ * @param props
+ * @returns some amazing table
+ */
 function Row(props: { row: PackageDisplay[] }) {
   const { row } = props;
   const [open, setOpen] = useState(false);
@@ -204,7 +213,9 @@ function Row(props: { row: PackageDisplay[] }) {
     </>
   );
 }
-
+/**
+ * Returns table of packages and the entirety of our frontend basically
+ */
 export function PackageTable() {
   const [rows, setRows] = useState<Record<string, PackageDisplay[]>>({});
   const [hasSearched, setHasSearched] = useState(false);

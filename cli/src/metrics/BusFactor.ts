@@ -1,3 +1,6 @@
+/**
+ * Calculate the bus factor for a GitHub repository by using the Gini coefficient
+ */
 import { getLogger } from "@package-rater/shared";
 
 const logger = getLogger("cli");

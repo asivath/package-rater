@@ -1,3 +1,4 @@
+/** This file contains all of our types */
 import { Ndjson, assertIsNdjson } from "@package-rater/shared";
 /**
  * Metadata for all packages and their versions

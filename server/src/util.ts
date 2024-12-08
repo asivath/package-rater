@@ -274,7 +274,7 @@ export const savePackage = async (
       `Saved package ${packageName} v${version} with ID ${id} and standalone cost ${standaloneCost.toFixed(2)} MB`
     );
 
-    if (process.env.NODE_ENV === "production2") {
+    if (process.env.NODE_ENV === "production") {
       await uploadToS3(escapedPackageName, id, zipPath);
       await cleanupFiles();
     }
@@ -642,6 +642,9 @@ export async function calculateTotalPackageCost(packageName: string, version: st
   if (packageCostPromisesMap.has(id)) return packageCostPromisesMap.get(id)!;
 
   const start = Date.now();
+  // Calculate the total cost of the package by
+  // building a dependency graph and calculating the total
+  // cost of each node in the graph
   const calculateCost = async () => {
     const graph = await buildDependencyGraph(packageName, version);
     const totalCost = await calculateTotalCost(graph);
@@ -814,6 +817,8 @@ export const getGithubDetails = async (url: string) => {
   const repoDir = await cloneRepo(url, "repo");
   if (repoDir) {
     try {
+      // Check if package.json exists in the root directory
+      // If it doesn't exist, fall back to the GitHub repo name
       const packageJsonFile = await readFile(`${repoDir}/package.json`);
       const packageJson = JSON.parse(packageJsonFile.toString());
       packageName = packageJson.name;
@@ -826,6 +831,9 @@ export const getGithubDetails = async (url: string) => {
   } else {
     logger.error("Error cloning the repository");
   }
+  // If package.json doesn't exist, fall back to the GitHub repo name
+  // If the GitHub repo name is invalid, return null
+  // If the version is not found, fall back to version 1.0.0
   if (!packageName) {
     logger.warn("No package.json or package name found, falling back to GitHub repo name.");
     const githubRegex = /github\.com\/(?<owner>[^/]+)\/(?<repo>[^/]+)/;

@@ -7,6 +7,10 @@ import { ResetButton } from "./ResetButton";
 import { UploadPackageForm } from "./UploadPackage";
 import logo from "../assets/logo.webp";
 
+/**
+ * This component is the navigation bar of the application.
+ * @returns The navigation bar of the application
+ */
 export const NavBar = () => {
   return (
     <AppBar position="static">

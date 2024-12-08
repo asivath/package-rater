@@ -1,3 +1,6 @@
+/** This file contains the route for uploading a package to the server
+ * It saves the package to the server and S3 bucket
+ */
 import { FastifyReply, FastifyRequest } from "fastify";
 import { getLogger } from "@package-rater/shared";
 import {
@@ -15,7 +18,7 @@ const logger = getLogger("server");
  * Uploads a package to the server
  * @param request
  * @param reply
- * @returns
+ * @returns A message indicating the package was uploaded successfully
  */
 export const uploadPackage = async (
   request: FastifyRequest<{ Body: { Content: string; URL: string; debloat: boolean } }>,
@@ -49,6 +52,7 @@ export const uploadPackage = async (
         reply.code(400).send({ error: "No package.json found in the package" });
         return;
       }
+      // By default, we take the first package.json found in the zip
       const packageJson = JSON.parse(packageJsonEntry.getData().toString());
       packageName = packageJson.name;
       version = packageJson.version || "1.0.0";
@@ -58,6 +62,7 @@ export const uploadPackage = async (
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
+      // Save the package to the server and S3 bucket
       const result = await savePackage(packageName, version, id, debloat, zip);
       if (result.success === false) {
         logger.error(`Error saving the package ${packageName}: ${result.reason}`);
@@ -65,6 +70,7 @@ export const uploadPackage = async (
         return;
       }
     } else {
+      // If the URL is provided, we need to download the package and save it
       const normalizedURL = URL.replace("www.npmjs.org", "www.npmjs.com");
       if (normalizedURL.includes("npmjs.com")) {
         const pathParts = normalizedURL.split("/");
@@ -74,11 +80,13 @@ export const uploadPackage = async (
           reply.code(400).send({ error: "Invalid npm URL" });
           return;
         }
+        // Extract the package name and version from the URL
         let npmPackageName = decodeURIComponent(pathParts[packageIndex + 1]);
         if (npmPackageName.startsWith("@")) {
           npmPackageName += `/${decodeURIComponent(pathParts[packageIndex + 2])}`;
         }
         const npmPackageVersion = pathParts.includes("v") ? pathParts[pathParts.indexOf("v") + 1] : null;
+        // If the version is not provided, we get the latest version from the npm registry
         if (!npmPackageVersion) {
           const npmPackageDetails = await getNpmPackageDetails(npmPackageName);
           if (!npmPackageDetails) {
@@ -92,6 +100,7 @@ export const uploadPackage = async (
         }
         packageName = npmPackageName;
       } else {
+        // If the URL is a Github URL, we extract the package name and version from the URL
         const details = await getGithubDetails(normalizedURL);
         if (!details) {
           logger.error(`Invalid Github URL: ${normalizedURL}`);
@@ -102,12 +111,14 @@ export const uploadPackage = async (
         version = details.version;
       }
       id = calculatePackageId(packageName, version);
+      // Check if the package already exists
       if (checkIfPackageExists(id)) {
         logger.error(`Package ${packageName} with version ${version} already exists, use the update route`);
         reply.code(409).send({ error: "Package already exists" });
         return;
       }
       const result = await savePackage(packageName, version, id, debloat, undefined, normalizedURL);
+      // Save the package to the server and S3 bucket
       if (result.success === false) {
         if (result.reason === "Package score is too low") {
           logger.error(`Package ${packageName} is not uploaded due to the disqualified rating.`);

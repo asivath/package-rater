@@ -1,3 +1,6 @@
+/**
+ * @fileoverview App component
+ */
 import { NavBar, PackageTable } from "./components";
 import { Box } from "@mui/material";
 
