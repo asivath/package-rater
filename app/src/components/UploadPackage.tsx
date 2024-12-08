@@ -29,6 +29,14 @@ import { fetcher } from "../util";
 import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
+/**
+ * UploadPackageForm
+ * @param uploadVersion - boolean to determine if the package is being uploaded with a version
+ * @param id - string to determine the package id
+ * @param name - string to determine the package name
+ * @param uploadedWithContent - boolean to determine if the package was uploaded with content
+ * @returns a form to upload a package
+ */
 export const UploadPackageForm: React.FC<{
   uploadVersion: boolean;
   id?: string;
@@ -51,6 +59,11 @@ export const UploadPackageForm: React.FC<{
     }
   };
 
+  /**
+   * Handles the form submission
+   * @param event - form event
+   * @returns void
+   * */
   const handleSubmit = async (event: React.FormEvent) => {
     setError(null);
     setSuccess(false);
@@ -76,9 +89,11 @@ export const UploadPackageForm: React.FC<{
         data: { debloat: debloat }
       };
     }
+    // Upload the package
     try {
       if (!uploadVersion) {
         endpoint = "/package";
+        // If the file is provided, we extract the package name and version from the package.json
         if (file) {
           (body as { Content?: string }).Content = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -90,10 +105,12 @@ export const UploadPackageForm: React.FC<{
             reader.onerror = () => reject("Error reading file");
             reader.readAsDataURL(file);
           });
+          // If the URL is provided, we use the URL
         } else if (packageUrl) {
           (body as { URL?: string }).URL = packageUrl;
         }
       } else {
+        // Upload the version
         endpoint = `/package/${id}`;
         if (file) {
           (
@@ -112,6 +129,7 @@ export const UploadPackageForm: React.FC<{
             reader.readAsDataURL(file);
           });
         } else if (packageUrl) {
+          // If the URL is provided, we use the URL for version upload
           (
             body as {
               metadata: { Name: string; Version: string; ID: string };
@@ -120,6 +138,7 @@ export const UploadPackageForm: React.FC<{
           ).data.URL = packageUrl;
         }
       }
+      // Make the api request to either upload the package or the version
       const response = await fetcher(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

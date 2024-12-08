@@ -1,3 +1,6 @@
+/**
+ * This file contains the types used in the shared code
+ */
 export type Ndjson = {
   BusFactor: number;
   BusFactorLatency: number;

@@ -10,7 +10,7 @@ const logger = getLogger("server");
  * Retrieve package information from the metadata
  * @param request
  * @param reply
- * @returns
+ * @returns A message if the package was uploaded successfully
  */
 export const retrievePackageInfo = async (
   request: FastifyRequest<{ Body: Array<{ Name: string; Version?: string }> }>,
@@ -44,6 +44,7 @@ export const retrievePackageInfo = async (
     return;
   }
 
+  // Fetch all packages from metadata
   const packages: PackageDisplay[] = [];
   try {
     const metadataJson = getPackageMetadata();
@@ -140,7 +141,7 @@ export const retrievePackageInfo = async (
  * Retrieve package information from the metadata by RegEx
  * @param request
  * @param reply
- * @returns
+ * @returns A message if the package was uploaded successfully
  */
 export const retrievePackageByRegEx = async (
   request: FastifyRequest<{ Body: { RegEx: string } }>,
@@ -170,6 +171,7 @@ export const retrievePackageByRegEx = async (
     return;
   }
 
+  // Fetch all packages from metadata
   const packages: PackageDisplay[] = [];
   try {
     const metadataJson = getPackageMetadata();
@@ -206,6 +208,7 @@ export const retrievePackageByRegEx = async (
       return;
     }
 
+    // Sort the packages by name
     packages.sort((a, b) => a.Name.localeCompare(b.Name));
 
     const paginatedPackages = packages.slice(offset, offset + limit);
@@ -218,9 +221,9 @@ export const retrievePackageByRegEx = async (
 
 /**
  * Check if the version matches the requested version
- * @param version
- * @param Version
- * @returns boolean
+ * @param version The version of the package
+ * @param Version The requested version
+ * @returns boolean if the version matches the requested version
  */
 export const isVersionMatch = (version: string, Version: string): boolean => {
   if (Version === version) return true; // Exact match
@@ -239,9 +242,9 @@ export const isVersionMatch = (version: string, Version: string): boolean => {
 
 /**
  * Check if the version satisfies the carat (^) operator
- * @param version
- * @param Version
- * @returns boolean
+ * @param version The version of the package
+ * @param Version The requested version
+ * @returns boolean if the version satisfies the carat operator
  */
 export const satisfiesCarat = (version: string, Version: string): boolean => {
   const [major] = version.split(".");
@@ -251,9 +254,9 @@ export const satisfiesCarat = (version: string, Version: string): boolean => {
 
 /**
  * Check if the version satisfies the tilde (~) operator
- * @param version
- * @param Version
- * @returns boolean
+ * @param version The version of the package
+ * @param Version The requested version
+ * @returns boolean if the version satisfies the tilde operator
  */
 export const satisfiesTilde = (version: string, Version: string): boolean => {
   const [major, minor, patch] = version.split(".");
@@ -266,7 +269,7 @@ export const satisfiesTilde = (version: string, Version: string): boolean => {
  * @param version
  * @param minVersion
  * @param maxVersion
- * @returns boolean
+ * @returns boolean if the version satisfies the range operator
  */
 export const satisfiesRange = (version: string, minVersion: string, maxVersion: string): boolean => {
   return version >= minVersion && version <= maxVersion;

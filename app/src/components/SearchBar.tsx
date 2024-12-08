@@ -17,6 +17,10 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
 
+/**
+ * SearchBarProps is the type for the props of the SearchBar component.
+ * @param onSearch - A function that takes a search value, search by regex boolean, and an optional version string as input and returns void.
+ */
 type SearchBarProps = {
   onSearch: (searchValue: string, searchByRegex: boolean, version?: string) => void;
 };

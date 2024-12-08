@@ -1,3 +1,6 @@
+/**
+ * Utility functions for shared functionality
+ */
 import { getLogger } from "./logger.js";
 import { SimpleGit, simpleGit } from "simple-git";
 import path from "path";
@@ -27,6 +30,7 @@ export async function getGithubRepo(url: string): Promise<string | null> {
       const response = await fetch(`https://registry.npmjs.org/${packageName}`);
       const data = await response.json();
 
+      // Extract the GitHub repository URL from the NPM package metadata
       let repoURL = data?.repository?.url;
       if (repoURL) {
         repoURL = repoURL.replace(/^git\+/, "").replace(/\.git$/, "");

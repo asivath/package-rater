@@ -15,7 +15,7 @@ import AdmZip from "adm-zip";
 const logger = getLogger("server");
 
 /**
- * Uploads a package to the server
+ * Uploads a new package to the server
  * @param request
  * @param reply
  * @returns A message indicating the package was uploaded successfully
@@ -41,6 +41,7 @@ export const uploadPackage = async (
   let id = "";
   try {
     if (Content) {
+      // If the Content is provided, we extract the package name and version from the package.json
       const buffer = Buffer.from(Content, "base64");
       const zip = new AdmZip(buffer);
       const packageJsonEntry = zip

@@ -76,6 +76,7 @@ export const getPackageCost = async (
         totalCost: costCache.totalCost
       };
 
+      // Collect the costs of the dependencies
       const dependencies = costCache.dependencies;
       for (const depName in dependencies) {
         const depVersion = dependencies[depName];

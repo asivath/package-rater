@@ -33,6 +33,7 @@ export async function findPackageJsonFiles(dir: string): Promise<string[]> {
   const packageJsonFiles: string[] = [];
   const traverseDir = async (currentDir: string) => {
     try {
+      // Read the directory and filter out package.json files
       const files = await fs.readdir(currentDir, { withFileTypes: true });
       const fullPath = path.join(currentDir, "package.json");
       const packageJsonFound = files.some((file) => file.isFile() && file.name === "package.json");
@@ -70,6 +71,7 @@ export async function calculatePinnedDependencyFraction(
   let totalDependencies = 0;
   let pinnedDependencies = 0;
   let packageJsonFiles: string[] = [];
+  // Find all package.json files in the cloned repository
   try {
     packageJsonFiles = await findPackageJsonFiles(repoDir);
   } catch (error) {

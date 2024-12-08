@@ -45,6 +45,11 @@ const runCLI = (url: string): Promise<number> => {
   });
 };
 
+/**
+ * This function calls the Lambda function with the given URL
+ * @param url 
+ * @returns 
+ */
 const callLambda = async (url: string): Promise<number> => {
   const start = performance.now();
   await fetch(lambdaURL, {
@@ -55,6 +60,12 @@ const callLambda = async (url: string): Promise<number> => {
   return performance.now() - start;
 };
 
+/**
+ * This function runs the client worker wrapper around function to run
+ * @param clientId 
+ * @param metrics 
+ * @param requestFn 
+ */
 const clientWorker = async (
   clientId: number,
   metrics: Metrics,
@@ -81,6 +92,12 @@ const clientWorker = async (
   spinner.succeed(`Client ${clientId} completed`);
 };
 
+/**
+ * This function calculates the mean median and 99th percentile latencies and throughput
+ * @param metrics 
+ * @param duration 
+ * @returns 
+ */
 const calculateMetrics = (metrics: Metrics, duration: number) => {
   const meanLatency =
     metrics.latencies.reduce((a, b) => a + b, 0) / metrics.latencies.length;
@@ -98,6 +115,11 @@ const calculateMetrics = (metrics: Metrics, duration: number) => {
   };
 };
 
+/**
+ * This function starts the workers for lambda and local tests
+ * @param testName 
+ * @param requestFn 
+ */
 const runLoadTest = async (
   testName: string,
   requestFn: (url: string) => Promise<number>

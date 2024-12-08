@@ -27,10 +27,10 @@ type CachedPackage = {
 };
 
 /**
- * Downloads a package from the server
+ * Gets package base-64 content from the server
  * @param request
  * @param reply
- * @returns The package content
+ * @returns base-64 content of the package
  */
 export const downloadPackage = async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
   const id = request.params.id;
@@ -40,6 +40,8 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
       .send({ error: "There is missing field(s) in the PackageID or it is formed improperly, or is invalid." });
     return;
   }
+
+  // Check if the package exists in cache
   const cacheKey = id;
   const cachedData = cache.get(cacheKey) as CachedPackage | undefined;
   if (cachedData) {
@@ -50,6 +52,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
     return;
   }
 
+  // Get the package metadata and checks for existance
   const metadataJson = getPackageMetadata();
   if (!metadataJson.byId[id]) {
     logger.error(`Package with ID ${id} not found`);
@@ -57,6 +60,7 @@ export const downloadPackage = async (request: FastifyRequest<{ Params: { id: st
     return;
   }
 
+  // Get the package name and version
   const name: string = metadataJson.byId[id].packageName;
   const version: string = metadataJson.byId[id].version;
   const escapedPackageName = name.replace("/", "_");

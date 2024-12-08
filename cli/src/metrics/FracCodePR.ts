@@ -92,12 +92,14 @@ async function fetchCommits(
     after
   })) as CommitResponse;
 
+  // Extract commits and pagination info
   const history = data.data.repository.ref?.target?.history;
   if (!history) {
     logger.error(`No commit history found for branch ${branch} in repo ${repo}`);
     return { commits: [], endCursor: null, hasNextPage: false };
   }
 
+  // Extract commit nodes
   const commits = history.edges.map((edge) => edge.node);
   const { hasNextPage, endCursor } = history.pageInfo;
 
@@ -124,6 +126,7 @@ async function fetchOldestAndNewestCommits(
   let currentCursor = newestCommits.endCursor;
   let hasNextPage = newestCommits.hasNextPage;
 
+  // Fetch oldest commits
   while (hasNextPage) {
     const {
       commits,
@@ -161,6 +164,7 @@ export async function calculateFracPRReview(owner: string, repo: string): Promis
         }
       }
     `;
+    // Get the default branch of the repository
     const branchData = (await getGitHubData(repo, owner, branchQuery)) as {
       data: {
         repository: {
@@ -190,6 +194,7 @@ export async function calculateFracPRReview(owner: string, repo: string): Promis
         }
       }
     `;
+    // Get the total number of commits in the default branch
     const totalCommitsData = (await getGitHubData(repo, owner, totalCommitsQuery, {
       branch: defaultBranch
     })) as {
