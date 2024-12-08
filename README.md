@@ -1,124 +1,140 @@
+# **Package Rater**
 
-# Trustworthy Model Re-use CLI Tool
 
-## Overview
-This is a Command-Line Interface (CLI) tool designed to process npm and GitHub repository URLs and generate essential metrics to evaluate the trustworthiness and quality of open-source projects. The tool provides key metrics such as Bus Factor, Correctness, Ramp-Up Time, Responsiveness, and License Compatibility, allowing users to make informed decisions about project dependencies.
 
-## Features
-- **CLI Tool**: Supports three modes: 
-  - `install`: Install the necessary dependencies.
-  - `URL_FILE`: Process repository URLs from a file.
-  - `test`: Run test cases using Jest.
-- **Metrics Calculation**:
-  - **Bus Factor**: Evaluates how critical contributors are to the project.
-  - **Correctness**: Analyzes code quality based on issue resolution and static analysis.
-  - **Ramp-Up Time**: Measures the time required for a new developer to contribute.
-  - **Responsiveness**: Tracks the maintainers' response times to issues and PRs.
-  - **License Compatibility**: Ensures the repository license is compatible with LGPL v2.1.
+### **Overview**
 
-## Installation
+The **Package Rater** tool streamlines package management by enabling users to upload, update, search, download, and reset packages. It helps assess the quality and performance of packages using predefined metrics. This system is designed to enhance decision-making when managing package dependencies in software projects.
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/mohammed-alaa40123/ECE461_Project_Phase1
-   cd ECE461_Project_Phase1
-   ```
+The tool operates on an EC2 instance during development, while production environments leverage AWS Lambda for metric calculations.
 
-2. Install the required dependencies:
-   ```bash
-   npm install
-   tsc
-   ```
+---
 
-3. Create a `.env` file in the root directory with the following content:
-   ```bash
-   GITHUB_TOKEN=<your_github_token>
-   LOG_FILE=<path_to_log_file>
-   LOG_LEVEL=<log_level: 0|1|2>
-   ```
+### **Features**
 
-## Usage
+* **Package Management**  
+  * **Upload**: Upload packages to the system for evaluation. Ensures the package meets a passable net score.  
+  * **Update**: Upload new versions of existing packages for re-evaluation.  
+  * **Search**: Search for packages by name or using regular expressions (regex) to search across the repository, README, or version numbers.  
+  * **Download**: Download the latest version of a package as a zip file for use in projects.  
+  * **Reset**: Reset the entire Package Rater system.  
+* **System Environment**  
+  * **Development**: Runs on an EC2 instance.  
+  * **Production**: Metric calculations are performed on AWS Lambda.
 
-To run the CLI tool, use the following command structure:
+---
 
-```bash
-./run <mode>
-```
+### **Installation**
 
-Where `<mode>` is one of the following:
-- `install`: Installs the necessary project dependencies.
-- `URL_FILE`: Processes a file containing repository URLs (npm or GitHub).
-- `test`: Executes unit tests using Jest.
+1. **Clone the repository**  
+   `git clone https://github.com/asivath/package-rater.git`  
+   `cd package-rater`  
+2. **Install dependencies**  
+   `yarn`  
+   `yarn build`  
+3. **Run locally**  
+   `yarn dev`  
+   This will start the backend APIs on port 3000 and the frontend on port 5173\.
 
-### Example
-To process a file with repository URLs:
-```bash
-./run URL_FILE ./path_to_url_file.txt
-```
+**Switch between development and production**:  
+To run in production mode, create a `.env` file in the `server` directory with the following content:  
+`NODE_ENV=production`  
+`AWS_BUCKET_NAME=<bucket_name>`  
+`AWS_REGION=us-east-1`  
+`AWS_ACCESS_KEY_ID=<ID>`  
+`AWS_SECRET_ACCESS_KEY=<secret_id>`  
 
-To run the test suite:
-```bash
-./run test
-```
 
-## Logging
 
-Logging is implemented using the `winston` library. Logs are stored in the file specified by the `$LOG_FILE` environment variable, with verbosity controlled by the `$LOG_LEVEL` variable:
-- `0`: Silent
-- `1`: Informational messages
-- `2`: Debug messages
+---
 
-## Metrics
+### **Usage**
 
-### Bus Factor
-- **Description**: Measures how many contributors are critical to the repository.
-- **Formula**: Number of contributors with >50% commits.
+The **Package Rater CLI** supports the following commands:
 
-### Correctness
-- **Description**: Evaluates the quality of the code based on issue resolution and code errors.
-- **Formula**: `(Resolved Issues / Total Issues) + (Errors/Bugs / Lines of Code) / 2`.
+* **Upload a Package**  
+  `POST /package`  
+  Uploads a package for evaluation, ensuring it has a passable net score.  
+* **Update a Package**  
+  `POST /package/{id}`  
+  Uploads a new version of an existing package for re-evaluation.  
+* **Search for a Package**  
+  `GET /packages`  
+  `GET /package/{id}/ByRegEx`  
+  Searches the repository for a specific package by name. Supports regex search in README files or version numbers.  
+* **Download a Package**  
+  `GET /package/{id}`  
+  Downloads the specified package as a zip file for use in your projects.  
+* **Reset the Package Rater**  
+  `DELETE /reset`  
+  Resets the entire system, removing all stored packages and data.  
+* **Retrieve Cost / Rating**  
+  `GET /package/{id}/cost`  
+  `GET /package/{id}/rate`  
+  Retrieves cost and rating information for the specified package.
 
-### Ramp-Up Time
-- **Description**: Time it takes for a new contributor to make their first pull request.
+  For more detailed information on endpoints in use, observe the `swagger.json` in root
 
-### Responsiveness
-- **Description**: Measures the average response time of maintainers to issues and pull requests.
+---
 
-### License Compatibility
-- **Description**: Ensures that the repository's license complies with LGPL v2.1 requirements.
+### **Metrics**
 
-## Testing
-Unit tests have been implemented using [Jest](https://jestjs.io/). You can run the tests by executing the following command:
-```bash
-./run test
-```
+* **Bus Factor**: Measures how many contributors are critical to the repository.  
+* **Correctness**: Evaluates the quality of the code based on issue resolution and code errors.  
+* **Ramp-Up Time**: Time it takes for a new contributor to make their first pull request.  
+* **Responsiveness**: Measures the average response time of maintainers to issues and pull requests.  
+* **License Compatibility**: Ensures that the repository's license complies with LGPL v2.1 requirements.
+* **Good Pinning Practices**: Ensures that the repository's dependencies are pinned to specific version and not at risk of change
+* **Code through PRs**: Ensures a sufficient amount of lines within main are megred via PR
 
-- Aim for 80% code coverage.
-- Test cases cover core functionalities and error handling.
 
-## Contribution
+---
 
-1. Fork the repository.
-2. Create a feature branch:
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m 'Add some feature'
-   ```
-4. Push to the branch:
-   ```bash
-   git push origin feature/your-feature
-   ```
-5. Open a pull request.
+### **Logging**
 
-## License
-This project is licensed under the LGPL v2.1 License - see the [LICENSE](LICENSE) file for details.
+Logs are output to `package-rater.log`.
 
-## Contact
+---
+
+### **Testing**
+
+Unit tests are implemented using **Vitest**. Front end testing uses **Playwright**. Run the test suite by executing:
+
+
+`yarn test`
+
+* Aim for at least **60%** code coverage.  
+* Tests cover core functionalities, edge cases, and error handling.
+
+Run coverage by entering a desired directory and running
+
+`yarn test:coverage`
+
+---
+
+### **Contribution**
+
+1. **Fork the repository.**  
+2. **Create a feature branch**:  
+   `git checkout -b feature/your-feature`  
+3. **Commit your changes**:  
+   `git commit -m 'Add new feature'`  
+4. **Push to the branch**:  
+   `git push origin feature/your-feature`  
+5. **Open a pull request.**
+
+---
+
+### **License**
+
+This project is licensed under the **MIT License**. See the LICENSE file for more details.
+
+---
+
+### **Contact**
+
 For any questions or support, please contact:
-- **Andrew Cali**: acali@purdue.edu
-- **Amar AlAzizy**: aalazizy@purdue.edu
-- **Bola Warsy**: bwarsy@purdue.edu
-- **Mohamed Ahmed**: mohame43@purdue.edu
+
+* **Aditya Sivathanu**: asivath@purdue.edu  
+* **Kevin Chang**: chang820@purdue.edu  
+* **Ellis Selznick**: eselznic@purdue.edu
