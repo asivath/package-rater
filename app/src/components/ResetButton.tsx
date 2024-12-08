@@ -6,8 +6,8 @@
 import React, { useState } from "react";
 import { fetcher } from "../util";
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography } from "@mui/material";
-import { HelpCenterSharp } from "@mui/icons-material";
-xport const ResetButton: React.FC = () => {
+
+export const ResetButton: React.FC = () => {
   const [open, setOpen] = useState(false);
   const isProd = import.meta.env.PROD;
 
