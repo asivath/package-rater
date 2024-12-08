@@ -442,7 +442,7 @@ function createMockStat(isDirectory: boolean) {
     uid: 0,
     gid: 0,
     rdev: 0,
-    size: 512000,
+    size: 524288,
     blksize: 0,
     blocks: 0,
     atimeMs: 0,
