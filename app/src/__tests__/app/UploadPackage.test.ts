@@ -22,32 +22,43 @@ test.describe("UploadPackageForm", () => {
   });
 
   test("should show error when both file and URL are provided", async ({ page }) => {
-    await page.click('role=button[name="Upload Package"]');
+    // Open the upload package dialog
+    await page.click('button:has-text("Upload Package")');
 
+    // Attach a file to the file input
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "test.zip"));
 
+    // Enter a URL in the URL input
     await page.fill('input[placeholder="Enter URL to GitHub or npm package"]', "https://github.com/sample/repo");
 
+    // Click the submit button
     await page.click('button:has-text("Submit")');
+
+    // Assert that the appropriate error message is displayed
     await expect(page.locator("text=Provide either a file or a URL, not both")).toBeVisible();
   });
 
   test("should submit successfully with a file upload", async ({ page }) => {
-    await page.click('role=button[name="Upload Package"]');
+    // Open the upload package dialog
+    await page.click('button:has-text("Upload Package")');
 
+    // Attach a file to the file input
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "test.zip"));
 
+    // Intercept the API call
     await page.route("**/package", async (route) => {
       const request = route.request();
       const postData = await request.postDataJSON();
 
+      // Validate the request body
       expect(postData).not.toHaveProperty("URL");
       expect(postData).toHaveProperty("Content");
       expect(postData.Content).toMatch(/^.+$/);
       expect(postData).toHaveProperty("debloat", false);
 
+      // Respond with a success status
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -55,7 +66,10 @@ test.describe("UploadPackageForm", () => {
       });
     });
 
+    // Click the submit button
     await page.click('button:has-text("Submit")');
+
+    // Assert that the success message is displayed
     await expect(page.locator("text=Package uploaded successfully")).toBeVisible();
   });
 
@@ -138,6 +152,7 @@ test.describe("UploadPackageForm", () => {
   }) => {
     await page.goto("http://localhost:5173");
 
+    // Mock data for packages
     const contentPackageName = "TestPackage";
     const URLPackageName = "URLPackage";
     const mockVersion = "1.0.0";
@@ -145,9 +160,11 @@ test.describe("UploadPackageForm", () => {
     const URLMockId = "54321";
     const mockNetScore = 0.9;
 
+    // Locate and fill the search bar
     const searchBar = page.locator('input[placeholder="Type package name..."]');
     await searchBar.fill("");
 
+    // Intercept the API call for fetching packages
     await page.route("**/packages", async (route) => {
       await route.fulfill({
         status: 200,
@@ -171,26 +188,33 @@ test.describe("UploadPackageForm", () => {
       });
     });
 
-    await page.locator('role=button[name="Search"]').click();
+    // Trigger the search
+    await page.locator('button:has-text("Search")').click();
 
+    // Verify the content package row is visible in the table
     const tableRow = page.locator(`text=${contentPackageName}`);
     await expect(tableRow).toBeVisible();
 
+    // Click the "new version upload" button for the content package
     const newVersion = tableRow.locator('[data-testid="DriveFolderUploadIcon"]');
     await newVersion.click();
 
+    // Attach a file for the new version
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(path.resolve(__dirname, "..", "__files__", "test.zip"));
 
+    // Intercept the API call for uploading the package
     await page.route("**/package", async (route) => {
       const request = route.request();
       const postData = await request.postDataJSON();
 
+      // Validate the request payload
       expect(postData).not.toHaveProperty("URL");
       expect(postData).toHaveProperty("Content");
       expect(postData.Content).toMatch(/^.+$/);
       expect(postData).toHaveProperty("debloat", false);
 
+      // Respond with success
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -198,8 +222,10 @@ test.describe("UploadPackageForm", () => {
       });
     });
 
+    // Submit the package
     await page.click('button:has-text("Submit")');
 
+    // Verify the uploaded file name is visible in the UI
     await expect(page.locator("text=test.zip")).toBeVisible();
   });
 
@@ -321,18 +347,24 @@ test.describe("UploadPackageForm", () => {
   });
 
   test("should clear the selected file when Clear File button is clicked", async ({ page }) => {
-    await page.click('role=button[name="Upload Package"]');
+    // Open the upload package dialog
+    await page.click('button:has-text("Upload Package")');
 
+    // Attach a file to the file input
     const fileInput = page.locator('input[type="file"]');
     const testFilePath = path.resolve(__dirname, "..", "__files__", "test.zip");
     await fileInput.setInputFiles(testFilePath);
 
+    // Verify that the selected file is displayed
     await expect(page.locator("text=Selected file: test.zip")).toBeVisible();
 
+    // Click the "Clear File" button
     await page.click('button:has-text("Clear File")');
 
+    // Verify that the selected file text is no longer visible
     await expect(page.locator("text=Selected file:")).not.toBeVisible();
 
+    // Verify that the file input value is cleared
     const fileInputValue = await fileInput.evaluate((input: HTMLInputElement) => input.value);
     expect(fileInputValue).toBe("");
   });

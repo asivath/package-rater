@@ -256,7 +256,6 @@ export const UploadPackageForm: React.FC<{
                   onChange={handleFileUpload}
                   aria-label="Upload Zip File"
                 />
-                <input hidden type="file" accept=".zip" ref={fileInputRef} aria-label="Upload Zip File" />
                 {file && (
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Typography variant="body2" noWrap>
