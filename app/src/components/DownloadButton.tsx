@@ -12,8 +12,8 @@ interface DownloadButtonProps {
 
 /**
  * This component is a button that allows the user to download the package as a zip file
- * @param param0 
- * @returns 
+ * @param param0
+ * @returns
  */
 export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
   const handleDownload = async () => {

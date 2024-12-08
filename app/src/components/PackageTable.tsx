@@ -46,7 +46,7 @@ type PackageDisplay = {
 
 /**
  * Checks if the given object is a PackageDisplay object
- * @param o 
+ * @param o
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
