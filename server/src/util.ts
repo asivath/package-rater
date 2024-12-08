@@ -26,10 +26,7 @@ const packagesDirPath = path.join(__dirname, "..", "packages");
 const metadataPath = path.join(packagesDirPath, "metadata.json");
 let metadata: Metadata;
 /**
- * Calculates the ID of a package
- * @param packageName The name of the package
- * @param version The version of the package
- * @returns The ID of the package
+ * loads the metadata from the metadata file
  */
 async function loadMetadata(): Promise<void> {
   const metadataFile = JSON.parse(await readFile(metadataPath, "utf-8"));
@@ -684,10 +681,10 @@ export const checkIfPackageExists = (id: string) => {
 };
 
 /**
- * Checks if the package version exists
- * @param packageName The name of the package
- * @param version The version of the package
- * @returns Whether the package version exists
+ * Checks if the given version's patch is not lower than the latest patch (within the same major and minor version)
+ * @param availablePackageVersions The available versions of the package
+ * @param newVersion The new version to check
+ * @returns
  */
 export const checkIfContentPatchValid = (availablePackageVersions: string[], newVersion: string) => {
   const [newMajor, newMinor, newPatch] = newVersion.split(".").map(Number);
@@ -719,7 +716,7 @@ export const writeMetadata = () => {
 };
 
 /**
- * Deletes a package from the server
+ * Clears the metadata in memory and writes an empty metadata object to the metadata file
  * @param id The ID of the package
  */
 export const clearMetadata = async () => {

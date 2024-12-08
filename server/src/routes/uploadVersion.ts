@@ -15,10 +15,9 @@ import AdmZip from "adm-zip";
 const logger = getLogger("server");
 
 /**
- * Uploads a package to the server
+ * Updates the version of a specific package on the server (based on id)
  * @param request
  * @param reply
- * @returns
  */
 export const uploadVersion = async (
   request: FastifyRequest<{
@@ -91,6 +90,7 @@ export const uploadVersion = async (
         return reply.code(400).send({ error: "No package.json found in the package" });
       }
 
+      // Check if the package.json name and version match the provided package name and version
       const packageJson = JSON.parse(packageJsonEntry.getData().toString());
       if (!packageJson.name || !packageJson.version || packageJson.name !== Name || packageJson.version !== Version) {
         logger.error("Package.json name/version mismatch");

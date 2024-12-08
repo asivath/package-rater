@@ -7,6 +7,10 @@ import React, { useState } from "react";
 import { fetcher } from "../util";
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography } from "@mui/material";
 
+/**
+ * ResetButton component is a button that opens a dialog to confirm the reset action.
+ * @returns A button that opens a dialog to confirm the reset action
+ */
 export const ResetButton: React.FC = () => {
   const [open, setOpen] = useState(false);
   const isProd = import.meta.env.PROD;
@@ -19,6 +23,7 @@ export const ResetButton: React.FC = () => {
     setOpen(false);
   };
 
+  // Reset the S3 bucket or local packages
   const reset = async () => {
     try {
       await fetcher("/reset", { method: "DELETE" });

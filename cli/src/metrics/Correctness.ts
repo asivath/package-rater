@@ -45,7 +45,7 @@ async function fetchIssues(owner: string, repo: string): Promise<IssuesData> {
           }
         }
       `;
-
+    // Fetch the issues data from the GitHub API
     const result = await getGitHubData(repo, owner, query);
     logger.info(`Fetched issues for ${owner}/${repo}: ${JSON.stringify(result)}`);
     return result as IssuesData;

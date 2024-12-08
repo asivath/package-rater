@@ -46,7 +46,7 @@ type PackageDisplay = {
 
 /**
  * Checks if the given object is a PackageDisplay object
- * @param o
+ * @param o The object to check
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function assertIsPackageDisplay(o: any): asserts o is PackageDisplay {
@@ -233,6 +233,12 @@ export function PackageTable() {
     setSnackbarOpen(true);
   }
 
+  /**
+   * Fetches packages by name
+   * @param searchValue - The search value
+   * @param version - The version of the package
+   * @param fetchOffset - The offset to fetch packages from
+   */
   const fetchViaName = async (searchValue: string, version?: string, fetchOffset = 0) => {
     try {
       version = version || "0.0.0-999999.999999.999999";
@@ -278,6 +284,7 @@ export function PackageTable() {
           return updatedRows;
         });
       }
+      // Check if there are more packages to fetch
       if (data.length < 15) {
         setHasMore(false);
       } else {
@@ -289,6 +296,11 @@ export function PackageTable() {
     }
   };
 
+  /**
+   * Fetches packages by regex
+   * @param searchValue - The search value
+   * @param fetchOffset - The offset to fetch packages from
+   */
   const fetchViaRegex = async (searchValue: string, fetchOffset = 0) => {
     try {
       const response = await fetcher("/package/byRegEx", {
@@ -307,6 +319,7 @@ export function PackageTable() {
         setHasMore(false);
         return;
       }
+      // Group the packages by name
       const groupedData: Record<string, PackageDisplay[]> = {};
       data.forEach((pkg: PackageDisplay) => {
         assertIsPackageDisplay(pkg);
@@ -315,6 +328,7 @@ export function PackageTable() {
         }
         groupedData[pkg.Name].push(pkg);
       });
+      // Sort each package's versions in descending order by Version number
       Object.keys(groupedData).forEach((packageName) => {
         groupedData[packageName].sort((a, b) => parseFloat(b.Version) - parseFloat(a.Version));
       });
@@ -343,11 +357,18 @@ export function PackageTable() {
     }
   };
 
+  /**
+   * Function to handle search
+   * @param searchValue - The search value
+   * @param searchByRegex - Whether to search by regex
+   * @param version - The version of the package
+   **/
   const onSearch = (searchValue: string, searchByRegex: boolean, version?: string) => {
     setHasSearched(true);
     setOffset(0);
     setSearchMode(searchByRegex ? "regex" : "name");
     searchValue = searchValue.trim();
+    // Fetch packages based on search mode
     if (searchByRegex) {
       searchValue = searchValue === "" ? ".*" : searchValue;
       fetchViaRegex(searchValue);
@@ -357,6 +378,9 @@ export function PackageTable() {
     }
   };
 
+  /**
+   * Function to load more packages
+   */
   const loadMore = () => {
     if (!hasMore) return;
     setIsLoadingMore(true);

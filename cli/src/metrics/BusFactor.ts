@@ -35,6 +35,7 @@ async function fetchContributorStats(owner: string, repo: string): Promise<Contr
       }
     });
 
+    // If the response is 202, the stats are not ready yet
     if (response.status === 202) {
       if (attempt < maxRetries - 1) {
         logger.warn(`Contributor stats not ready yet. Waiting ${delay / 1000}s before retry...`);
@@ -67,7 +68,7 @@ function calculateGiniCoefficient(values: number[]): number {
   const n = values.length;
   const sum = values.reduce((a, b) => a + b, 0);
   if (sum === 0) return 0; // If no commits, Gini is 0
-
+  // Sort the values in ascending order
   const sorted = [...values].sort((a, b) => a - b);
   let numerator = 0;
   for (let i = 0; i < n; i++) {

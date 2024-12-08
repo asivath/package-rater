@@ -81,9 +81,11 @@ export async function calculateLOC(repoDir: string): Promise<number> {
       );
       return files.flat();
     };
+    // Read all files in the repository directory
     const allFiles = await readDirectory(repoDir);
     const jsTsFiles = allFiles.filter((file) => /\.(js|jsx|ts|tsx)$/.test(path.extname(file)));
     let totalLines = 0;
+    // Calculate the lines of code for each JavaScript/TypeScript file
     for (const file of jsTsFiles) {
       const content = await readFile(file, "utf-8");
       const stats = sloc(content, path.extname(file).slice(1));
@@ -115,10 +117,11 @@ export default async function calculateMetrics(url: string): Promise<Ndjson> {
     if (!repoDir) {
       throw new Error(`Repository directory is undefined for URL: ${url}`);
     }
+    // Calculate the total lines of code in the repository
     const totalLinesOfCode = await calculateLOC(repoDir);
     const end = new Date();
     const setupTime = (end.getTime() - start.getTime()) / 1000;
-
+    // Start bus factor promise first because the api can respond with 202 (accepted) and take a while to calculate
     const busFactorPromise = latencyWrapper(() => calculateBusFactor(repoOwner, repoName, totalLinesOfCode));
 
     const [busFactor, correctness, licenseCompatibility, responsiveness, rampUp, dependencies, fracPR] =

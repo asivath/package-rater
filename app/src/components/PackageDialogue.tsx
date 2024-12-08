@@ -40,6 +40,13 @@ interface PackageDialogProps {
   packageData: PackageDisplay;
 }
 
+/**
+ * PackageDialog component displays the details of the selected package
+ * @param open Whether the dialog is open
+ * @param onClose Function to close the dialog
+ * @param packageData The package data to display
+ * @returns A dialog displaying the package details
+ */
 export const PackageDialog: React.FC<PackageDialogProps> = ({ open, onClose, packageData }) => {
   const [costData, setCostData] = useState<PackageCostData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);

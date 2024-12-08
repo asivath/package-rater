@@ -1,3 +1,4 @@
+// This file is used to configure ESLint for the CLI. It extends the recommended
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import path from "node:path";

@@ -28,14 +28,17 @@ const bucketName = process.env.AWS_BUCKET_NAME;
  * */
 export const resetPackages = async (_: FastifyRequest, reply: FastifyReply) => {
   try {
+    // Clear the cache
     cache.flushAll();
 
+    // Clear the S3 bucket
     if (process.env.NODE_ENV === "production") {
       let isTruncated = true;
       while (isTruncated) {
         const listObjectsCommand = new ListObjectsV2Command({ Bucket: bucketName });
         const objectsList = await s3Client.send(listObjectsCommand);
 
+        // Delete all objects in the bucket
         if (objectsList.Contents && objectsList.Contents.length > 0) {
           const deleteParams = {
             Bucket: bucketName,
@@ -50,6 +53,7 @@ export const resetPackages = async (_: FastifyRequest, reply: FastifyReply) => {
       logger.info("S3 bucket cleared successfully");
     }
 
+    // Clear the local packages
     const files = await readdir(packagesDirPath);
     for (const file of files) {
       await rm(join(packagesDirPath, file), { recursive: true, force: true });

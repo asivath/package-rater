@@ -24,17 +24,20 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ id }) => {
       const responseJson = await response.json();
 
       const { Name: name, Version: version } = responseJson.metadata;
-
+      // Convert the base64 string to a byte array
       const streamToString = responseJson.data.Content;
       const byteArray = Uint8Array.from(atob(streamToString), (c) => c.charCodeAt(0));
 
+      // Create a blob and download the file
       const blob = new Blob([byteArray], { type: "application/zip" });
 
+      // Create a download link and click it
       const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = `${name}-${version}.zip`;
 
+      // Append the link to the body and click it
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

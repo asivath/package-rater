@@ -1,3 +1,4 @@
+// main runner for the cli entry point
 import { APIGatewayProxyHandler } from "aws-lambda";
 import fs from "fs/promises";
 import { getLogger } from "@package-rater/shared";

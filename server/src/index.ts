@@ -17,10 +17,12 @@ import { readFile, writeFile } from "fs/promises";
 import "dotenv/config";
 import fastifyRateLimit from "@fastify/rate-limit";
 
+// Create a new cache with a TTL of 1 hour
 export const cache = new NodeCache({ stdTTL: 60 * 60 });
 
 const logger = getLogger("server");
 
+// Create a new Fastify instance
 const fastify = Fastify({
   logger: {
     level: "debug",
@@ -37,6 +39,7 @@ const fastify = Fastify({
   keepAliveTimeout: 60000
 });
 
+// Add hooks to log request and response details
 fastify.addHook("preHandler", async (request) => {
   if (request.method === "OPTIONS") {
     return;
@@ -49,6 +52,7 @@ fastify.addHook("preHandler", async (request) => {
   );
 });
 
+// Add hooks to log request and response details
 fastify.addHook("onRequest", async (request) => {
   if (request.method === "OPTIONS") {
     return;
@@ -63,6 +67,7 @@ fastify.addHook("onRequest", async (request) => {
   );
 });
 
+// Add hooks to log request and response details
 fastify.addHook("onResponse", async (request, reply) => {
   if (request.method === "OPTIONS") {
     return;
@@ -77,6 +82,7 @@ fastify.addHook("onResponse", async (request, reply) => {
   );
 });
 
+// Add hooks to log request and response details
 fastify.addHook("onSend", async (request, _reply, payload) => {
   if (request.method === "OPTIONS") {
     return;
@@ -90,21 +96,25 @@ fastify.addHook("onSend", async (request, _reply, payload) => {
   return payload;
 });
 
+// Register CORS
 await fastify.register(cors, {
   origin: ["http://127.0.0.1:3000", "http://localhost:5173", process.env.CLOUDFRONT_ORIGIN].filter(Boolean),
   methods: ["GET", "POST", "PUT", "OPTIONS", "DELETE"]
 });
 
+// Register rate limiter
 await fastify.register(fastifyRateLimit, {
   max: 600,
   timeWindow: "1 minute"
 });
 
+// Register static file serving
 fastify.register(fastifyStatic, {
   root: process.cwd() + "/../app/dist",
   prefix: "/"
 });
 
+// Define the routes
 fastify.delete("/log", async (_, reply) => {
   await writeFile("server.log", "");
   await writeFile("../package-rater.log", "");
@@ -139,6 +149,7 @@ fastify.get("/tracks", async (_, reply) => {
   }
 });
 
+// Start the server
 const start = async () => {
   try {
     await fastify.listen({ port: 3000, host: "0.0.0.0" });

@@ -8,6 +8,7 @@ import { getLogger } from "@package-rater/shared";
 
 const logger = getLogger("cli");
 
+// License compatibility table
 const compatibilityTable = new Map([
   ["LGPL-2.1", 0.75],
   ["MIT", 1],

@@ -1,3 +1,4 @@
+//Typescript configuration for the CLI project.
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
